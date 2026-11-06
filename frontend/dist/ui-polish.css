@@ -155,6 +155,13 @@ body .album-full-page .detail-top{align-items:start}
 body .album-full-page .detail-top .album-header-info{
  align-self:start;box-sizing:border-box;padding-top:0;
 }
+/* Optical alignment: the visible ALBUM glyph starts below its line box.
+   Shift the metadata column, not the cover or the ribbon. */
+@media(min-width:741px){
+ body .album-full-page .detail-top .album-header-info{
+  position:relative;top:-16px;margin-top:0;
+ }
+}
 body .album-full-page .detail-top .album-header-info > .album-eyebrow{
  display:block;position:static;top:auto;transform:none;
  padding:0;margin:0 0 10px;line-height:1.2;
