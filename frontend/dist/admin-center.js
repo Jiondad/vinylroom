@@ -106,15 +106,19 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  reviewHead.querySelector('[data-action="ai"]').textContent='검토 화면 열기';
  const operationButton=analysisPane.querySelector('#vr-ai-overview [data-action="ai-operations"]');
  operationButton.closest('p').remove();
- const advanced=document.createElement('details');advanced.className='vr-ai-advanced';
- advanced.innerHTML='<summary>고급 관리 <span>작업 · 사용 한도 · API · 색인</span></summary><div class="vr-ai-advanced-body"></div>';
- const advancedBody=advanced.querySelector('.vr-ai-advanced-body');
- advancedBody.append(operationButton);
- advancedBody.append(analysisPane.querySelector('#vr-ai-connection'));
- advancedBody.append(analysisPane.querySelector('#vr-ai-index'));
- analysisPane.append(advanced);
+ const support=document.createElement('section');support.className='vr-ai-support';
+ support.innerHTML='<h3>운영 도구</h3><div class="vr-ai-support-body"></div>';
+ const supportBody=support.querySelector('.vr-ai-support-body');
+ operationButton.textContent='작업·한도 설정';
+ supportBody.append(operationButton);
+ supportBody.append(analysisPane.querySelector('#vr-ai-connection'));
+ supportBody.append(analysisPane.querySelector('#vr-ai-index'));
+ analysisPane.append(support);
+ // Historical pilot reference is retained in source but not displayed as a nested accordion.
  const report=analysisPane.querySelector('#vr-ai-review details');
- if(report){report.querySelector('summary').textContent='이전 분석 보고서';report.classList.add('vr-ai-archive');}
+ if(report)report.hidden=true;
+ reviewHead.querySelector('[data-action="ai"]').remove();
+ analysisPane.querySelector('#vr-ai-review [data-ai-review-result]').firstElementChild.textContent='분석 제안을 불러오는 중…';
 
  // VINYLROOM_ADMIN_UX_V2: compact page, actual read-only member snapshot, no writes.
  const mode='<div class="vr-preview-mode"><strong>회원 관리</strong><span>관리자와 일반 회원을 구분하여 조회합니다. 승인·권한 관리는 기존 회원관리 화면을 사용합니다.</span></div>';
@@ -138,7 +142,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  function onKey(e){if(e.key==='Escape'&&page.isConnected){e.preventDefault();close();}}
  function onSidebar(e){if(e.target.closest('.sidebar #nav button, .sidebar .brand'))close();}
  function check(){if(!canManage()){notice('관리자 인증을 확인해 주세요. 검토 화면은 유지됩니다.');throw Error('관리자 인증 확인 전 요청할 수 없습니다.');}}
- function tab(t){check();clearTimeout(summaryTimer);if(t==='analysis')openPilotReport();else{disposePilotReport?.();disposePilotReport=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
+ function tab(t){check();clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
  function openPilotReport(){
   check();if(disposePilotReport)return;
   disposePilotReport=attachReviewToAdminPanel({adminRoot:q('[data-ai-pilot-report]'),isAdminVerified:true,
