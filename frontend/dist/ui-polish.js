@@ -32,15 +32,27 @@ export function polishAlbumHeader(root,album){
   const tools=root.ownerDocument.createElement('div');tools.className='album-cover-tools';tools.append(edit);top.append(tools);
   if(review?.parentElement?.children.length===1)review.parentElement.hidden=true;
  }
- // Position by actual rendered edges, not a fixed top:-Npx guess.
- // Only desktop uses side-by-side cover/metadata columns.
+ // Force the detail-only typographic size at the final render point:
+ // legacy global/theme rules must not turn the album title back into a 43px heading.
+ const view=root.ownerDocument.defaultView,heading=hero.querySelector('h2');
+ if(heading&&view){
+  const px=view.matchMedia('(max-width:740px)').matches?21:view.matchMedia('(max-width:1199px)').matches?24:26;
+  heading.style.setProperty('font-size',px+'px','important');
+  heading.style.setProperty('font-family','"Noto Sans KR",sans-serif','important');
+  heading.style.setProperty('font-weight','320','important');
+  heading.style.setProperty('line-height','1.28','important');
+  heading.style.setProperty('letter-spacing','-.035em','important');
+ }
+ // Align the *rendered* label edge, without affecting the cover or the grid track size.
+ // The transform is applied to the whole information column rather than the label alone.
  const eyebrow=hero.querySelector('.album-eyebrow');
- if(eyebrow&&root.ownerDocument.defaultView?.matchMedia('(min-width:741px)').matches){
-  root.ownerDocument.defaultView.requestAnimationFrame(()=>{
+ if(eyebrow&&view?.matchMedia('(min-width:741px)').matches){
+  view.requestAnimationFrame(()=>{
    if(!hero.isConnected||!cover.isConnected)return;
-   hero.style.marginTop='0px';
+   hero.style.removeProperty('margin-top');
+   hero.style.removeProperty('transform');
    const delta=cover.getBoundingClientRect().top-eyebrow.getBoundingClientRect().top;
-   if(Number.isFinite(delta))hero.style.marginTop=Math.round(delta-2)+'px';
+   if(Number.isFinite(delta))hero.style.setProperty('transform','translateY('+Math.round(delta)+'px)','important');
   });
  }
 }
