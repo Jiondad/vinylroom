@@ -36,16 +36,17 @@ export function summaryResponseState(data){
 }
 let dismissCurrent=null;
 export function closeAdminCenter(){dismissCurrent?.();}
-export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndexing,openPlaybackDiagnostics,api}={}){
+export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndexing,openPlaybackDiagnostics,api,letters=[],toast=()=>{}}={}){
  if(!canManage?.())throw Error('승인된 관리자만 이용할 수 있습니다.');
  dismissCurrent?.();
  const page=document.createElement('section');page.id='vinyl-admin-center';page.className='vinyl-admin-page';
  page.setAttribute('aria-label','Vinyl Room Admin');
- page.innerHTML=`<div class="vr-admin-inner"><header class="vr-admin-header"><div><p>VINYL ROOM / ADMIN</p><h1>Admin</h1></div><button type="button" data-close aria-label="관리자센터 닫기">← 돌아가기</button></header>
+ page.innerHTML=`<div class="vr-admin-inner"><header class="vr-admin-header"><div class="vr-admin-heading"><button type="button" data-close aria-label="관리자센터 닫고 이전 화면으로 돌아가기">← 돌아가기</button><div><p>VINYL ROOM / ADMIN</p><h1>Admin</h1></div></div></header>
  <nav class="vr-admin-tabs" aria-label="관리자 메뉴">
   <button type="button" data-tab="members" aria-current="page"><strong>회원 관리</strong><small>승인 · 권한 · 접속 통계</small></button>
   <button type="button" data-tab="analysis" aria-current="false"><strong>앨범 분석</strong><small>현황 · AI 제안 검토</small></button>
-  <button type="button" data-tab="operations" aria-current="false"><strong>AI 운영</strong><small>작업 · 한도 · 색인</small></button>
+  <button type="button" data-tab="operations" aria-current="false"><strong>AI 운영</strong><small>작업 · 한도</small></button>
+  <button type="button" data-tab="indexing" aria-current="false"><strong>색인 관리</strong><small>수동 색인 · 실행 이력</small></button>
   <button type="button" data-tab="catalog" aria-current="false"><strong>앨범 통계 관리</strong><small>소장 현황 · 변화 추이</small></button>
  </nav>
  <p class="vr-admin-status" role="status" aria-live="polite"></p>
@@ -86,6 +87,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
   </section>
  </section>
  <section data-pane="operations" hidden><div class="vr-admin-section-head"><div><h2>AI 운영</h2><p>분석 대기열·호출 한도를 확인하고 필요한 작업만 실행합니다.</p></div></div><div data-ai-operations-inline></div></section>
+ <section data-pane="indexing" hidden><div class="vr-admin-section-head"><div><h2>수동 색인</h2><p>대상 폴더와 색인 방식을 선택한 뒤 직접 실행합니다.</p></div></div><div data-indexing-inline></div><div data-indexing-support></div></section>
  <section data-pane="catalog" hidden>
   <div class="vr-admin-section-head"><div><h2>앨범 통계 관리</h2><p>NAS 카탈로그의 실제 집계만 표시합니다.</p></div><button data-action="catalog">새로고침</button></div>
   <div data-catalog-result><p>아직 통계를 조회하지 않았습니다.</p></div>
@@ -110,10 +112,16 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  const operationsPane=page.querySelector('[data-pane="operations"]');
  const support=page.createElement?.('section')||document.createElement('section');
  support.className='vr-ai-operations-links';
- support.innerHTML='<h3>연결·색인</h3>';
+ support.innerHTML='<h3>API 연결</h3>';
  support.append(analysisPane.querySelector('#vr-ai-connection'));
- support.append(analysisPane.querySelector('#vr-ai-index'));
  operationsPane.append(support);
+ const indexSection=analysisPane.querySelector('#vr-ai-index');
+ const indexSupport=page.querySelector('[data-indexing-support]');
+ if(indexSection){
+  indexSection.querySelector('[data-action="indexing"]')?.closest('article')?.remove();
+  indexSection.querySelector('.vr-admin-section-head h3').textContent='연결 및 진단';
+  indexSupport.append(indexSection);
+ }
  const legacyOperations=analysisPane.querySelector('#vr-ai-overview [data-action="ai-operations"]');
  legacyOperations?.closest('p')?.remove();
  const report=analysisPane.querySelector('#vr-ai-review details');
@@ -133,17 +141,15 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  header.insertAdjacentHTML('afterend',adminSection+memberStats+memberListing);
  const oldManage=page.querySelector('[data-action="members"]');
  if(oldManage){oldManage.textContent='회원 승인·권한 관리 ↗';}
- const indexButton=page.querySelector('[data-action="indexing"]');
- if(indexButton){indexButton.textContent='기존 색인 관리 열기 ↗';}
- document.body.append(page);document.body.classList.add('vinyl-admin-page-open');
- let closed=false,version=0,accountRevision=0,disposeProposals=null,disposePilotReport=null,summaryRequest=null,summaryTimer=null,summarySeen=false,summaryLive=false,operationsPanel=null;const controller=new AbortController(),q=s=>page.querySelector(s);
+  document.body.append(page);document.body.classList.add('vinyl-admin-page-open');
+ let closed=false,version=0,accountRevision=0,disposeProposals=null,disposePilotReport=null,summaryRequest=null,summaryTimer=null,summarySeen=false,summaryLive=false,operationsPanel=null,indexingPanelInstance=null,indexingRequest=null;const controller=new AbortController(),q=s=>page.querySelector(s);
  function notice(msg){if(!closed)q('.vr-admin-status').textContent=String(msg??'');}
- function close(){if(closed)return;closed=true;operationsPanel?.close();clearTimeout(summaryTimer);document.removeEventListener('visibilitychange',onSummaryVisibility);disposePilotReport?.();disposePilotReport=null;version++;controller.abort();disposeProposals?.();editor?.close();editor?.remove();editor=null;page.remove();document.body.classList.remove('vinyl-admin-page-open');window.removeEventListener('vinyl-account-change',onAccount);window.removeEventListener('vinyl-approval-change',onAccount);window.removeEventListener('keydown',onKey);document.removeEventListener('click',onSidebar,true);if(dismissCurrent===close)dismissCurrent=null;}
+ function close(){if(closed)return;closed=true;indexingPanelInstance?.dispose();indexingPanelInstance=null;operationsPanel?.close();clearTimeout(summaryTimer);document.removeEventListener('visibilitychange',onSummaryVisibility);disposePilotReport?.();disposePilotReport=null;version++;controller.abort();disposeProposals?.();editor?.close();editor?.remove();editor=null;page.remove();document.body.classList.remove('vinyl-admin-page-open');window.removeEventListener('vinyl-account-change',onAccount);window.removeEventListener('vinyl-approval-change',onAccount);window.removeEventListener('keydown',onKey);document.removeEventListener('click',onSidebar,true);if(dismissCurrent===close)dismissCurrent=null;}
  function onAccount(){accountRevision++;if(!canManage())notice('관리자 인증을 확인해 주세요. 검토 화면은 유지되며 권한 확인 전 저장은 차단됩니다.');}
  function onKey(e){if(e.key==='Escape'&&page.isConnected){e.preventDefault();close();}}
  function onSidebar(e){if(e.target.closest('.sidebar #nav button, .sidebar .brand'))close();}
  function check(){if(!canManage()){notice('관리자 인증을 확인해 주세요. 검토 화면은 유지됩니다.');throw Error('관리자 인증 확인 전 요청할 수 없습니다.');}}
- function tab(t){check();clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
+ function tab(t){check();clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}if(t!=='indexing'){indexingPanelInstance?.dispose();indexingPanelInstance=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='indexing'&&!indexingPanelInstance)void openInlineIndexing().catch(error=>notice(error?.message||'색인 관리 화면을 불러오지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
  function openPilotReport(){
   check();if(disposePilotReport)return;
   disposePilotReport=attachReviewToAdminPanel({adminRoot:q('[data-ai-pilot-report]'),isAdminVerified:true,
@@ -299,6 +305,22 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
   host.innerHTML='<p class="vr-admin-caution">'+esc(diagnosis)+'</p><div class="vr-preview-member-list"><table><thead><tr><th>API</th><th>연결 상태</th><th>조회 결과</th></tr></thead><tbody>'+
    rows.map(row=>'<tr><td>'+esc(row.name)+'</td><td>'+esc(row.state)+'</td><td>'+esc(row.detail)+'</td></tr>').join('')+
    '</tbody></table></div><p class="vr-admin-caution">조회 시점의 결과이며, Gemini API 직접 호출이나 AI 작업 실행 여부를 뜻하지 않습니다.</p>';
+ }
+ async function openInlineIndexing(){
+  check();
+  if(indexingPanelInstance||indexingRequest)return indexingRequest;
+  indexingRequest=(async()=>{
+   const {indexingPanel,mountIndexing}=await import('./indexing-ui.js');
+   check();
+   if(closed||q('[data-pane="indexing"]').hidden)return;
+   const host=q('[data-indexing-inline]');
+   host.className='vr-inline-index';
+   host.innerHTML=indexingPanel();
+   indexingPanelInstance=mountIndexing({dialog:host,api,
+    canManage:()=>!closed&&canManage()&&!q('[data-pane="indexing"]').hidden,
+    letters,toast});
+  })();
+  try{await indexingRequest;}finally{indexingRequest=null;}
  }
  async function openInlineOperations(){
   check();
