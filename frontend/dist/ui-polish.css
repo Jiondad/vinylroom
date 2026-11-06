@@ -149,3 +149,9 @@ main[data-artist-index] #content .artist-index{margin-top:0;margin-bottom:6px}
  main[data-artist-index] .artist-index-heading h1{font-size:16px!important}
  main[data-artist-index] .artist-index-heading p{font-size:11px}
 }
+
+/* Album detail: align the top of the ALBUM eyebrow with the cover edge (desktop). */
+@media(min-width:741px){
+ body .album-full-page .album-header-info{padding-top:0;align-self:start}
+ body .album-full-page .album-header-info>.album-eyebrow{margin-top:-2px;line-height:1.25}
+}
