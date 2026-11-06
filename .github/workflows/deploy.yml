@@ -29,6 +29,24 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Check production frontend entrypoint
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          page = Path('dist/index.html')
+          if not page.is_file():
+              raise SystemExit('HOLD: dist/index.html is missing')
+          html = page.read_text(encoding='utf-8')
+          matches = re.findall(r'<script[^>]+type=["\']module["\'][^>]+src=["\']([^"\']+)', html)
+          if len(matches) != 1:
+              raise SystemExit('HOLD: expected exactly one module entrypoint')
+          entry = matches[0].split('?', 1)[0]
+          if 'dev-audio-owner' in entry or not entry.startswith('releases/header-actions-') or not (Path('dist') / entry).is_file():
+              raise SystemExit('HOLD: wrong or missing v267 production entrypoint: ' + entry)
+          print('Production entrypoint OK:', entry)
+          PY
+
       - name: Upload Vinyl Room
         uses: actions/upload-pages-artifact@v4
         with:
