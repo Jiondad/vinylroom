@@ -19,7 +19,7 @@
 - NAS GitHub Origin 허용 범위는 일부 GET/POST로 제한됨. 미확인 관리 기능을 CORS 전체 허용으로 해결하지 않는다.
 - `/v2/edit`, `/v2/hide`, `/v2/artist` 등 앨범·아티스트 관리자 변경 기능은 GitHub Origin에서 동작 확인 없음.
 - AI Worker 설정/큐/제어 POST는 별도 승인·검증 없이 GitHub Origin 예외 추가 금지.
-- 개인 플레이리스트 저장/갱신, 회원관리 수정, 재생 대기열 자동 전환은 GitHub 정식 주소에서 전체 동등성 미확인.
+- 개인 플레이리스트 생성·곡 추가·새로고침 후 재조회·삭제는 GitHub 정식 주소에서 정상 (2026-11-06 사용자 현장 확인). 회원관리 수정 및 재생 대기열 자동 전환의 동등성은 미확인.
 - 공유 링크는 GitHub 정식 URL로 생성되며 새 탭 직접 진입 정상 (2026-11-06 사용자 현장 확인).
 
 ## 장애 시 접근 복귀 (서비스 데이터 변경 없이)
@@ -38,7 +38,7 @@
 ## 후속 코드 확인 — 2026-11-06
 - **회원 승인/권한 수정:** `frontend/dist/member-management.js`는 Supabase `rpc/vinyl_review_member`, `functions/v1/vinyl-admin-create-member`를 사용한다. NAS Origin 예외 추가 대상이 아니다. 실제 수정/승인 동작은 GitHub 주소에서 별도 확인되지 않음.
 - **회원 이름·닉네임 수정:** `frontend/dist/admin-center.js`는 Supabase `rpc/vinyl_admin_update_member_profile`로 직접 요청한다. 실제 정보 수정은 수행하지 않음.
-- **개인 플레이리스트:** `frontend/dist/playlists.js`는 NAS `GET/POST /v2/playlists`에 Bearer 토큰을 전송한다. GitHub Origin의 OPTIONS/POST 허용 경로는 이전부터 존재하지만 플레이리스트 저장·재조회 성공까지 확인된 것은 아님.
+- **개인 플레이리스트:** `frontend/dist/playlists.js`는 NAS `GET/POST /v2/playlists`에 Bearer 토큰을 전송한다. GitHub 정식 사이트에서 생성·곡 추가·새로고침 후 재조회·삭제 정상 (2026-11-06 사용자 현장 확인).
 - **관리자 앨범 변경:** GitHub Origin의 `/v2/edit`, `/v2/artist`, `/v2/hide` OPTIONS 204 및 CORS 헤더 확인 완료(사용자 NAS 로그). 실제 POST는 미검증.
 - **공유 링크:** `frontend/dist/album-share.js`가 GitHub 주소에서 `/vinylroom/?album=<UUID>` 형태로 생성하며 브라우저 새 탭 직접 진입 정상 (2026-11-06 사용자 현장 확인).
 - 이번 소스 확인으로 NAS 전체 CORS 허용이나 계정/데이터 쓰기 시험은 필요하다고 판단되지 않음.
