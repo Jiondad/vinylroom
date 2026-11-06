@@ -1,3 +1,5 @@
+import {NextQueuePlayer as QueuePlayer} from './next-player/engine.js';
+import {bindNextMediaSession} from './next-player/media-session.js';
 import {mountReferencePlayer} from './reference-ui.js';
 import {getPlaybackAudio} from './playback-audio.js';
 import {mountDesktopPlayer} from './desktop-player.js';
@@ -29,40 +31,8 @@ export function matchTrack(album,item){
  if(matches.length===1)return matches[0].i;
  throw Error('이 곡의 파일이나 색인이 변경됐습니다. 앨범에서 다시 추가해 주세요.');
 }
-export class QueuePlayer {
- constructor(audio,resolve,onChange=()=>{}){
-  this.audio=audio;this.resolve=resolve;this.onChange=onChange;this.items=[];this.index=-1;this.shuffle=false;this.repeat='off';this.shuffleBag=[];this.history=[];this.token=0;this.ending=false;this.start=0;this.end=null;this.loading=false;this.message='';this.queueRevision=0;this.nextChoice=undefined;this.prefetched=null;this.diagnosticTransitionId=null;audio.volume=.5;
-  playbackDiagnostics.initialize(audio,()=>{const item=this.items[this.index];return {trackId:trackIdentity(item),queueIndex:this.index>=0?this.index:null,playbackState:globalThis.navigator?.mediaSession?.playbackState||null};});
-  audio.addEventListener('playing',()=>{this.ending=false;if(this.loading){this.loading=false;this.onChange();}});
-  audio.addEventListener('ended',()=>{playbackDiagnostics.record('ended-handler-enter',{reason:audio.ended?'audio-ended-true':'audio-ended-false'},{nativeEvent:true,immediate:true});if(audio.ended)this.finishCurrent();});
-  audio.addEventListener('timeupdate',()=>{const duration=this.end??Number(audio.duration),remaining=Number(duration)-Number(audio.currentTime);if(Number.isFinite(remaining)&&remaining>=0&&remaining<=30&&!this.ending)this.prepareNext();if(this.end&&audio.currentTime>=this.end){playbackDiagnostics.record('cue-end-detected',{milestone:'cue-boundary'},{nativeEvent:true,immediate:true});playbackDiagnostics.requestPause('cue-end');audio.pause();this.finishCurrent();return;}if(audio.ended||(audio.paused&&Number.isFinite(Number(audio.duration))&&Number(audio.duration)>0&&audio.currentTime>=audio.duration)){playbackDiagnostics.record('timeupdate-end-detected',{milestone:audio.ended?'ended-flag':'duration-reached'},{nativeEvent:true,immediate:true});this.finishCurrent();}});
-  audio.addEventListener('error',()=>{if(audio.getAttribute('src')){playbackDiagnostics.record('queue-audio-error-handler',{errorCode:Number.isFinite(audio.error?.code)?audio.error.code:null,errorName:audio.error?.name||'MediaError'},{nativeEvent:true,immediate:true});this.loading=false;this.message='재생할 수 없는 곡입니다. 다시 재생하거나 다음 곡을 선택해 주세요.';this.onChange();}});
- }
- invalidatePrepared(){this.queueRevision++;this.nextChoice=undefined;this.prefetched=null;}
- peekNextIndex(){if(this.nextChoice!==undefined)return this.nextChoice;let index=null;if(this.shuffle){this.shuffleBag=this.shuffleBag.filter(i=>i>=0&&i<this.items.length&&i!==this.index);if(!this.shuffleBag.length&&this.repeat==='all')this.shuffleBag=this.items.map((_,i)=>i).filter(i=>i!==this.index);if(this.shuffleBag.length)index=this.shuffleBag[Math.floor(Math.random()*this.shuffleBag.length)];else if(this.repeat==='all'&&this.items.length===1)index=0;}else{index=this.index+1;if(index>=this.items.length)index=this.repeat==='all'&&this.items.length?0:null;}this.nextChoice=index;return index;}
- prepareNext(){let index=this.peekNextIndex(),item=this.items[index];if(!Number.isInteger(index)||!item)return;if(this.prefetched&&this.prefetched.index===index&&this.prefetched.item===item&&this.prefetched.revision===this.queueRevision){if(Date.now()-this.prefetched.createdAt<30000)return this.prefetched.promise;this.prefetched=null;this.nextChoice=undefined;index=this.peekNextIndex();item=this.items[index];}const slot={index,item,revision:this.queueRevision,createdAt:Date.now(),result:null,promise:null};this.prefetched=slot;slot.promise=Promise.resolve().then(()=>this.resolve(item,{queueIndex:index,transitionId:null,reason:'prefetch'})).then(result=>{if(this.prefetched===slot&&slot.revision===this.queueRevision)slot.result=result;return result;}).catch(error=>{playbackDiagnostics.record('prefetch-ticket-failure',{errorName:error?.name||'Error'},{context:{trackId:trackIdentity(item),queueIndex:index,transitionId:null},immediate:true});if(this.prefetched===slot)this.prefetched=null;throw error;});slot.promise.catch(()=>{});return slot.promise;}
- add(items){this.invalidatePrepared();const first=this.items.length;this.items.push(...items);if(this.shuffle)this.shuffleBag.push(...items.map((_,i)=>first+i));this.onChange();}
- move(from,to){
-  if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<0||from>=this.items.length||to>=this.items.length||from===to)return false;
-  const remap=index=>index===from?to:from<to&&index>from&&index<=to?index-1:from>to&&index>=to&&index<from?index+1:index;
-  this.invalidatePrepared();const [item]=this.items.splice(from,1);this.items.splice(to,0,item);
-  this.index=remap(this.index);this.shuffleBag=this.shuffleBag.map(remap);this.history=this.history.map(remap);this.onChange();return true;
- }
- setShuffle(enabled){this.invalidatePrepared();this.shuffle=!!enabled;this.shuffleBag=this.items.map((_,i)=>i).filter(i=>i!==this.index);this.history=[];this.onChange();}
- setRepeat(mode){if(!['off','all','one'].includes(mode))return;this.invalidatePrepared();this.repeat=mode;this.onChange();}
- next(automatic=false){const index=this.peekNextIndex();this.nextChoice=undefined;if(Number.isInteger(index)&&this.items[index]){playbackDiagnostics.record('next-selection',{reason:'next-track-selected'},{context:{trackId:trackIdentity(this.items[index]),queueIndex:index},immediate:true});return this.play(index,0,true,automatic);}playbackDiagnostics.record('next-selection-failed',{reason:'no-next-item'},{immediate:true});this.message='재생이 끝났습니다.';this.onChange();}
- previous(){const index=this.shuffle?this.history.pop():(this.index>0?this.index-1:this.repeat==='all'?this.items.length-1:-1);if(Number.isInteger(index)&&this.items[index])return this.play(index,0,false);}
- async play(index,resume=0,remember=true,automatic=false){if(!this.items[index]){playbackDiagnostics.record('queue-selection-failed',{reason:'requested-index-missing'},{context:{queueIndex:index},immediate:true});return;}const item=this.items[index],previousIndex=this.index,slot=this.prefetched,prepared=slot&&slot.index===index&&slot.item===item&&slot.revision===this.queueRevision&&Date.now()-slot.createdAt<40000?slot:null;if(!prepared)this.invalidatePrepared();this.nextChoice=undefined;if(remember&&this.index>=0&&this.index!==index)this.history.push(this.index);this.shuffleBag=this.shuffleBag.filter(i=>i!==index);const token=++this.token;this.diagnosticTransitionId=playbackDiagnostics.beginTransition(item,index,'queue-player-play');playbackDiagnostics.record('queue-selection-requested',{reason:'play-called',previousQueueIndex:previousIndex},{context:{trackId:trackIdentity(item),queueIndex:index},immediate:true});playbackDiagnostics.requestPause('transition-replace-track');this.audio.pause();this.index=index;playbackDiagnostics.record('queue-index-selected',{reason:'current-index-updated',previousQueueIndex:previousIndex},{context:{trackId:trackIdentity(item),queueIndex:index},immediate:true});this.loading=true;this.message='곡을 불러오는 중…';this.onChange();playbackDiagnostics.record('player-ui-updated',{reason:'onChange-complete',previousQueueIndex:previousIndex},{context:{trackId:trackIdentity(item),queueIndex:index},immediate:true});try{let result;if(prepared?.result)result=prepared.result;else if(prepared?.promise){try{result=await prepared.promise;}catch{result=await this.resolve(item,{queueIndex:index,transitionId:this.diagnosticTransitionId,reason:'play-after-prefetch-failure'});}}else result=await this.resolve(item,{queueIndex:index,transitionId:this.diagnosticTransitionId,reason:'play'});if(token!==this.token)return;if(this.prefetched===prepared)this.prefetched=null;this.start=Number(result.start)||0;this.end=result.cue&&Number(result.duration)>0?this.start+Number(result.duration):null;this.audio.onloadedmetadata=()=>{if(token!==this.token)return;this.audio.currentTime=this.start+Math.max(0,Math.min(resume,this.end?this.end-this.start-.1:Math.max(0,this.audio.duration-this.start-.1)));playbackDiagnostics.record('metadata-seek-applied',{reason:'loadedmetadata'},{immediate:true});};this.audio.src=result.url;playbackDiagnostics.sourceChanged('src-assigned',true);this.message='';
-  // Ask the existing media element to continue immediately on track changes. Waiting for
-  // loadedmetadata before calling play() can let Android drop the lock-screen media session
-  // while the next file is opening in the background.
-  const playAttemptId=playbackDiagnostics.playPromiseRequested();let playResult;try{playResult=this.audio.play();}catch(error){playbackDiagnostics.playPromiseRejected(playAttemptId,error);throw error;}Promise.resolve(playResult).then(()=>playbackDiagnostics.playPromiseResolved(playAttemptId)).catch(error=>{playbackDiagnostics.playPromiseRejected(playAttemptId,error);if(token!==this.token)return;this.loading=false;this.message='재생 버튼을 눌러 주세요.';this.onChange();});
- }catch(e){playbackDiagnostics.record('queue-transition-failed',{errorName:e?.name||'Error',status:Number.isInteger(e?.status)?e.status:null},{context:{trackId:trackIdentity(item),queueIndex:index,transitionId:this.diagnosticTransitionId},immediate:true});if(token===this.token){playbackDiagnostics.requestPause('transition-error-cleanup');this.audio.pause();playbackDiagnostics.sourceRemovalRequested('transition-error-cleanup');this.audio.removeAttribute('src');playbackDiagnostics.sourceChanged('src-removed-transition-error',false);this.audio.load();this.loading=false;this.message=e.message;}}finally{if(token===this.token)this.onChange();}}
- advance(){if(this.repeat==='one'&&this.items[this.index])return this.play(this.index,0,true,true);return this.next(true);}
- remove(index){this.invalidatePrepared();if(index===this.index){this.token++;playbackDiagnostics.requestPause('remove-current-track');this.audio.pause();playbackDiagnostics.sourceRemovalRequested('remove-current-track');this.audio.removeAttribute('src');playbackDiagnostics.sourceChanged('src-removed-current-track',false);this.audio.load();this.index=-1;this.loading=false;}else if(index<this.index)this.index--;this.items.splice(index,1);this.history=[];this.shuffleBag=this.shuffleBag.filter(i=>i!==index).map(i=>i>index?i-1:i);this.onChange();}
- clear(){this.invalidatePrepared();this.token++;playbackDiagnostics.record('queue-clear-requested',{reason:'user-or-access-clear'},{immediate:true});playbackDiagnostics.requestPause('queue-clear');this.audio.pause();playbackDiagnostics.sourceRemovalRequested('queue-clear');this.audio.removeAttribute('src');playbackDiagnostics.sourceChanged('src-removed-queue-clear',false);this.audio.load();this.items=[];this.index=-1;this.shuffleBag=[];this.history=[];this.loading=false;this.message='';this.onChange();}
- finishCurrent(){playbackDiagnostics.record('finish-current-enter',{reason:this.ending?'duplicate-guard':'accepted'},{immediate:true});if(this.index<0||this.ending){playbackDiagnostics.record('finish-current-rejected',{reason:this.index<0?'no-current-index':'ending-guard'},{immediate:true});return;}this.ending=true;this.end=null;return this.advance();}
-}
+export {QueuePlayer};
+
 let instance;
 export function syncPlayButtons(){
  if(!instance)return;
@@ -98,7 +68,7 @@ export async function playAlbum(album,player=getPlayer()){
 export async function playItem(item){
  const p=getPlayer(),current=p.items[p.index];
  if(current&&current.album_id===item.album_id&&current.index===item.index&&p.audio.getAttribute('src')){
-  if(p.audio.paused){const playAttemptId=playbackDiagnostics.playPromiseRequested();try{await p.audio.play();playbackDiagnostics.playPromiseResolved(playAttemptId);}catch(error){playbackDiagnostics.playPromiseRejected(playAttemptId,error);throw error;}}else{playbackDiagnostics.requestPause('player-toggle-pause');p.audio.pause();}
+  if(p.audio.paused){const playAttemptId=playbackDiagnostics.playPromiseRequested();try{await p.resume();playbackDiagnostics.playPromiseResolved(playAttemptId);}catch(error){playbackDiagnostics.playPromiseRejected(playAttemptId,error);throw error;}}else{playbackDiagnostics.requestPause('player-toggle-pause');p.pause();}
   syncPlayButtons();return;
  }
  p.add([item]);await p.play(p.items.length-1);
@@ -114,7 +84,7 @@ export function getPlayer(){
   const requestJson=async(kind,url,options)=>{
    const requestId=playbackDiagnostics.beginRequest(kind,item,queueIndex,transitionId),requestTrace=playbackDiagnostics.getRequestContext(requestId);
    let response;
-   try{response=await fetch(url,typeof options==='function'?await options():options);}catch(error){playbackDiagnostics.requestFailure(requestId,kind,error,item,queueIndex,transitionId);throw error;}
+   try{const requestOptions=typeof options==='function'?await options():options;const signal=trace.signal?AbortSignal.any([trace.signal,requestOptions.signal].filter(Boolean)):requestOptions.signal;response=await fetch(url,{...requestOptions,signal});}catch(error){playbackDiagnostics.requestFailure(requestId,kind,error,item,queueIndex,transitionId);throw error;}
    playbackDiagnostics.requestResult(requestId,kind,response.status,item,queueIndex,transitionId);
    let data;try{data=await response.json();}catch(error){playbackDiagnostics.record('nas-response-json-failure',{requestId,requestKind:kind,errorName:error?.name||'SyntaxError',status:response.status},{context:requestTrace,immediate:true});throw error;}
    if(!response.ok){const error=Error(data.message||(kind==='album-detail'?'앨범을 찾을 수 없습니다. 목록을 새로고침해 주세요.':kind==='top100-ticket'?'Top100 재생 연결 실패':'재생 연결 실패'));error.status=response.status;throw error;}
@@ -133,20 +103,8 @@ export function getPlayer(){
   playbackDiagnostics.record('ticket-issued',{requestId:ticket.requestId,requestKind:'track-ticket',reason:'validated-ticket-path'},{context:ticket.trace,immediate:true});
   return {...data,url:NAS_URL+data.path};
  },()=>{const item=player.items[player.index];host.hidden=!player.items.length;document.body.classList.toggle('has-player',!!player.items.length);host.querySelector('#now-title').textContent=item?.title||'재생 대기열';host.querySelector('#now-artist').textContent=item?[item.artist,item.album_title].filter(Boolean).join(' · '):'';host.querySelector('#player-message').textContent=player.message;host.querySelector('#previous-track').disabled=player.index<=0;host.querySelector('#next-track').disabled=player.index+1>=player.items.length;updateArtwork(item);renderQueue();mobilePlayer?.update();desktopPlayer?.update();referencePlayer?.update();syncPlayButtons();syncMediaSession();if(!restoring)save();});
- function syncMediaSession(){
-  if(typeof navigator==='undefined'||!navigator.mediaSession)return;
-  const session=navigator.mediaSession,item=player.items[player.index];
-  try{session.metadata=item&&typeof MediaMetadata==='function'?new MediaMetadata({title:item.title||'재생 대기열',artist:item.artist||'',album:item.album_title||'Vinyl Room'}):null;}catch{}
-  try{session.playbackState=item?(audio.paused&&!player.loading?'paused':'playing'):'none';playbackDiagnostics.playbackStateChanged(session.playbackState);}catch{}
-  if(!mediaSessionHandlersBound){
-   try{session.setActionHandler('play',async()=>{if(audio.getAttribute('src')){const id=playbackDiagnostics.playPromiseRequested();try{await audio.play();playbackDiagnostics.playPromiseResolved(id);}catch(error){playbackDiagnostics.playPromiseRejected(id,error);}}else if(player.items.length)await player.play(Math.max(0,player.index));});}catch{}
-   try{session.setActionHandler('pause',()=>{playbackDiagnostics.requestPause('media-session-pause');audio.pause();});}catch{}
-   try{session.setActionHandler('nexttrack',()=>player.next());}catch{}
-   try{session.setActionHandler('previoustrack',()=>player.previous());}catch{}
-   try{session.setActionHandler('seekto',event=>{const duration=player.end??audio.duration;if(Number.isFinite(duration)&&Number.isFinite(event.seekTime))audio.currentTime=Math.max(player.start,Math.min(duration,player.start+event.seekTime));});}catch{}
-   mediaSessionHandlersBound=true;
-  }
- }
+ playbackDiagnostics.initialize(audio,()=>({trackId:trackIdentity(player.items[player.index]),queueIndex:player.index>=0?player.index:null,playbackState:globalThis.navigator?.mediaSession?.playbackState||null}));
+ function syncMediaSession(){bindNextMediaSession(player).sync();}
  let coverId=null;
  function updateArtwork(item){
   const id=item?.album_id||'';if(id===coverId)return;coverId=id;

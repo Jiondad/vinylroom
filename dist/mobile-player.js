@@ -8,7 +8,7 @@ export function playbackWindow(player){
 }
 export function seekPlayback(player,position){
  const {duration}=playbackWindow(player);
- if(duration&&player.audio.getAttribute('src'))player.audio.currentTime=(Number(player.start)||0)+Math.max(0,Math.min(duration,Number(position)||0));
+ if(duration&&player.audio.getAttribute('src'))player.seek(Number(position)||0);
 }
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
@@ -54,8 +54,8 @@ export function mountMobilePlayer(player,host){
  async function toggle(){
   if(!player.items.length)return;
   if(!audio.getAttribute('src')){const resume=host.querySelector('#resume-playback');if(resume)resume.click();else await player.play(Math.max(0,player.index));}
-  else if(audio.paused){const id=playbackDiagnostics.playPromiseRequested();try{await audio.play();playbackDiagnostics.playPromiseResolved(id);}catch(error){playbackDiagnostics.playPromiseRejected(id,error);player.message='재생 버튼을 다시 눌러 주세요.';player.onChange();}}
-  else{playbackDiagnostics.requestPause('mobile-player-toggle');audio.pause();}
+  else if(audio.paused){const id=playbackDiagnostics.playPromiseRequested();try{await player.resume();playbackDiagnostics.playPromiseResolved(id);}catch(error){playbackDiagnostics.playPromiseRejected(id,error);player.message='재생 버튼을 다시 눌러 주세요.';player.onChange();}}
+  else{playbackDiagnostics.requestPause('mobile-player-toggle');player.pause();}
  }
  for(const root of [mini,expanded]){
   root.querySelector('[data-toggle]').onclick=toggle;
@@ -68,7 +68,7 @@ export function mountMobilePlayer(player,host){
  expanded.querySelector('[data-shuffle]').onclick=()=>player.setShuffle(!player.shuffle);
  expanded.querySelector('[data-repeat]').onclick=()=>player.setRepeat({off:'all',all:'one',one:'off'}[player.repeat||'off']);
  expanded.querySelector('[data-volume]').addEventListener('input',e=>{audio.volume=Number(e.target.value);});
- expanded.querySelector('[data-stop]').onclick=()=>{playbackDiagnostics.requestPause('mobile-player-stop');audio.pause();seekPlayback(player,0);progress();};
+ expanded.querySelector('[data-stop]').onclick=()=>{playbackDiagnostics.requestPause('mobile-player-stop');player.pause();seekPlayback(player,0);progress();};
  function save(){const detail=player.items.map(t=>({...t}));closeSheets();window.dispatchEvent(new CustomEvent('save-playlist-tracks',{detail}));}
  expanded.querySelector('[data-save]').onclick=save;
  function inlineArea(){queue.querySelector('.queue-inline-form')?.remove();const host=document.createElement('div');host.className='queue-inline-form';queue.querySelector('ol').before(host);return host;}

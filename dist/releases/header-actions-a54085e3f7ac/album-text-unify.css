@@ -1,0 +1,7 @@
+/* User-approved album metadata/track text: PC/mobile Noto Sans KR 13px/selected weight (default320)/1.45. */
+@layer vr-album-text-unify, vr-operational-typography, vr-a2-typography, vr-v2-controls;
+@layer vr-album-text-unify{
+ body.vr-ds-v2 .album-full-page.ui6-album :is(.album-facts dt,.album-facts dd,.ui6-track-table td:nth-child(-n+4),.ui6-track-number,.desktop-track-title,.guest-track-title,.mobile-track-title-play,.mobile-track-meta){font-family:"Noto Sans KR",sans-serif!important;font-size:13px!important;font-weight:var(--vr-user-font-weight,var(--vr-album-text-weight,320))!important;letter-spacing:-0.025em!important;line-height:1.45!important;font-synthesis:none!important}
+ body.vr-ds-v2 .album-full-page.ui6-album :is(.desktop-track-title,.guest-track-title,.mobile-track-title-play){white-space:normal!important;overflow-wrap:anywhere;overflow:visible!important;text-overflow:clip;-webkit-line-clamp:unset;max-height:none}
+}
+body.vr-ds-v2 .album-full-page.ui6-album .ui6-track-row{height:auto}
