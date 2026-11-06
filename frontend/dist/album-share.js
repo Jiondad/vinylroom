@@ -1,11 +1,23 @@
 // Reuses the earlier albumShareUrl / albumShareData candidate; no NAS or media requests.
 export const LEGACY_ORIGIN='https://vinylroom.shinekjh.chatgpt.site';
+export const GITHUB_PREVIEW='https://jiondad.github.io/vinylroom/';
+const shareBase=(origin)=>{
+ const u=new URL(origin);
+ if(u.username||u.password||u.search||u.hash)return null;
+ if(u.origin===LEGACY_ORIGIN&&u.pathname==='/')return LEGACY_ORIGIN+'/';
+ if(u.origin==='https://jiondad.github.io'&&u.pathname==='/vinylroom/')return GITHUB_PREVIEW;
+ return null;
+};
+export function currentShareOrigin(location=globalThis.location){
+ if(location?.origin==='https://jiondad.github.io'&&location?.pathname?.startsWith('/vinylroom/'))return GITHUB_PREVIEW;
+ return LEGACY_ORIGIN;
+}
 export const validAlbumId=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 export function albumShareUrl({origin=LEGACY_ORIGIN,albumId}){
- const u=new URL(origin);
- if(u.origin!==LEGACY_ORIGIN||u.username||u.password||u.search||u.hash||u.pathname!=='/')throw new TypeError('approved legacy origin required');
+ const base=shareBase(origin);
+ if(!base)throw new TypeError('approved share origin required');
  if(!validAlbumId(albumId))throw new TypeError('invalid album id');
- const link=new URL('/',LEGACY_ORIGIN);link.searchParams.set('album',albumId);return link.href;
+ const link=new URL(base);link.searchParams.set('album',albumId);return link.href;
 }
 export function albumShareData({origin=LEGACY_ORIGIN,albumId,title,artist}){
  const clean=value=>String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,200);
@@ -37,7 +49,7 @@ export async function shareAlbum(data,navigator){
 export function bindAlbumShare(root,album,{navigator=globalThis.navigator}={}){
  const button=root.querySelector('[data-album-share]');if(!button)return;
  // Only public identity fields may enter a share payload; never spread the album object.
- const data=albumShareData({albumId:album.id,title:album.title,artist:album.artist});
+ const data=albumShareData({origin:currentShareOrigin(root.ownerDocument?.defaultView?.location),albumId:album.id,title:album.title,artist:album.artist});
  let dialog=null;
  function close(){if(!dialog)return;const node=dialog;dialog=null;if(node.open)node.close();node.remove();}
  button.onclick=()=>{
