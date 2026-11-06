@@ -19,9 +19,9 @@ export function mountAlbumAiStatus({container,albumId,api,canManage}){
  if(!container.ownerDocument.querySelector('#vr-album-ai-status-style')){
   const style=container.ownerDocument.createElement('style');style.id='vr-album-ai-status-style';
   style.textContent=`
-.album-full-page .detail-top .cover{position:relative}
+.album-full-page .detail-top .cover{position:relative;overflow:visible}\n.album-full-page .detail-top .cover > img{border-radius:inherit}
 .album-full-page .detail-top .cover .vr-album-ai-ribbon{
- position:absolute;z-index:3;top:0;right:12px;
+ position:absolute;z-index:3;top:-6px;right:12px;
  display:flex;align-items:flex-start;justify-content:center;
  width:23px;height:34px;box-sizing:border-box;
  padding:6px 0 0;margin:0;
