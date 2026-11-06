@@ -1,0 +1,1 @@
+{"name":"music-library","version":"0.1.0","private":true,"type":"module","scripts":{"start":"node scripts/serve.mjs","test":"node scripts/next-player-release.mjs --production && node --test --test-concurrency=1 tests/*.test.mjs","check":"node --check dist/app.js && node --check dist/core.js","test:album-ui":"node --test tests/album-ui-regression.test.mjs"}}

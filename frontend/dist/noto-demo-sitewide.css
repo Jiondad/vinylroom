@@ -1,0 +1,48 @@
+/* Vinyl Room Noto Sans KR 350 — real source, Sites integration candidate.
+ * Source of visual constants: reference/VinylRoom_Font_Comparison_Noto_vs_Pretendard.html
+ * Demo .sample: weight:350; letter-spacing:-.025em; line-height:1.45.
+ * DO NOT override approved title/body/meta/track font-sizes: preserve current Work unification.
+ * Do NOT use universal !important; existing typography rules use cascade layers.
+ * This stylesheet must be inserted AFTER existing typography-a2/design-v2/operational styles.
+ * Work MUST verify computed font on actual Sites renderer and fix owner CSS if overridden.
+ */
+:root {
+  --vr-demo-noto-family: 'Noto Sans KR','Noto Sans CJK KR',sans-serif;
+  --vr-demo-tracking: -.025em;
+  --vr-demo-weight: 350;
+}
+body.vr-ds-v2 {
+  --vr-font: var(--vr-demo-noto-family);
+  --vr-weight-body: 350;
+  --vr-weight-secondary: 350;
+  --vr-weight-nav: 350;
+  --vr-weight-button: 350;
+  --vr-weight-page: 350;
+  --vr-weight-section: 350;
+  --vr-weight-album-detail: 350;
+  font-family:var(--vr-font);
+  font-weight:var(--vr-demo-weight);
+  font-synthesis:none;
+  letter-spacing:var(--vr-demo-tracking);
+}
+/* The legacy v2 theme includes hardcoded 200/300/400 weights and multiple font stacks.
+ * Resolve font ownership at their source after measuring, not via blanket * !important.
+ * This low-specificity rule covers ordinary text where styles inherit. */
+body.vr-ds-v2 :where(main,.sidebar,dialog,#dialog,#global-player,#queue-panel,
+ .album-full-page,.vinyl-admin-page,.vinyl-members-panel,.vinyl-ai-panel,
+ .mobile-player-sheet,.vr-ai-root,#vinyl-auth-gate,#personal-dialog) {
+  font-family:var(--vr-font);
+  font-synthesis:none;
+}
+/* Exact demo tracking on typical content text; intentionally excludes icon glyphs,
+ * svg/path, interactive hit areas, status glyphs, and high-tracking eyebrow labels. */
+body.vr-ds-v2 :is(.album h3,.artist-name,.album-artist-line,
+ .ui6-album-info h2,.album-facts dt,.album-facts dd,
+ .desktop-track-title,.guest-track-title,.mobile-track-title-play,
+ .mobile-track-meta,.ui6-track-table td,.top100-track strong,
+ .random-track strong,.playlist-tracks strong,.player-info strong,
+ .mini-info strong,.ui6-track-heading,.artist-home h1,
+ #page-title,.queue-title,.mobile-queue-list strong) {
+  letter-spacing:var(--vr-demo-tracking);
+}
+/* This is a controlled typography stylesheet, NOT a font-size or layout reset. */

@@ -1,0 +1,3 @@
+/* Only the new read-only report slot; the existing admin center is unchanged. */
+#vinyl-admin-center [data-vinyl-ai-review] :is(h3,p,[role=status]){font-family:var(--vr-font,'Noto Sans KR',sans-serif);font-weight:var(--vr-user-font-weight,320);letter-spacing:-.025em;line-height:1.45;font-synthesis:none}
+#vinyl-admin-center [data-vinyl-ai-review] [role=status]{display:block;margin-top:6px;overflow-wrap:anywhere}

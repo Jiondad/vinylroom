@@ -1,0 +1,116 @@
+/* Vinyl Room Artist Gallery — scoped, slim white/ivory/gold theme.
+   Does not set global fonts, weight, sidebar styles, or album-cover policies.
+   Uses the parent site's Noto Sans KR 300/320/350 setting via inherit. */
+.vr-ae-toolbar{display:inline-flex;gap:2px;align-items:center;padding:3px;border:1px solid #eae5dd;border-radius:8px;background:#f7f5f1}
+.vr-ae-switch{display:inline-flex;align-items:center;justify-content:center;min-height:26px;gap:7px;padding:0 6px;border:0;border-radius:5px;background:transparent;color:#998f82;font-family:inherit;font-weight:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.vr-ae-switch:hover{color:#775e40;background:#f0ebe3}.vr-ae-switch.vr-ae-selected{color:#7d613b}.vr-ae-switch.vr-ae-selected .vr-ae-switch-face{background:#fff;box-shadow:0 1px 4px rgba(75,56,35,.08)}
+.vr-ae-switch-face{display:inline-flex;align-items:center;height:26px;padding:2px 6px;border-radius:5px;box-sizing:border-box}
+.vr-ae-gallery{margin-top:16px;min-width:0;width:100%}
+.vr-ae-gallery-status{margin:0 0 16px;font-size:11px;color:#9d9589;line-height:1.5}
+.vr-ae-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:28px 17px;align-items:start;min-width:0}
+.vr-ae-card{position:relative;min-width:0;display:flex;flex-direction:column;gap:4px;font-family:inherit;font-weight:inherit}
+.vr-ae-card-image{display:block;position:relative;width:100%;aspect-ratio:1;background:#eeeae3;border:0;border-radius:9px;overflow:hidden;cursor:zoom-in;padding:0;text-align:left}
+.vr-ae-card-image img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 34%;transition:transform 240ms ease}
+.vr-ae-card-image:hover img{transform:scale(1.035)}
+.vr-ae-card-placeholder{display:grid;place-items:center;cursor:pointer;background:#eae6de}
+.vr-ae-card-placeholder::before{content:'';position:absolute;width:73%;height:73%;border:1px solid rgba(126,108,83,.19);border-radius:50%}
+.vr-ae-card-placeholder::after{content:'';position:absolute;width:110%;height:54%;transform:rotate(-21deg);background:rgba(255,255,255,.19);top:-23%;left:-14%;border-radius:40%}
+.vr-ae-placeholder-icon{position:relative;z-index:1;font-size:42px;font-weight:inherit;line-height:1;color:#b19b7a}
+.vr-ae-card-name{font-family:inherit;font-weight:inherit;font-size:13px;line-height:1.45;color:#39342f;text-align:left;border:0;background:transparent;cursor:pointer;padding:5px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vr-ae-card-name:hover{color:#a2763d}.vr-ae-card-meta{font-family:inherit;font-size:11px;color:#a39a8e;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vr-ae-more{display:block;margin:30px auto 4px;padding:10px 23px;border:1px solid #e4ddd0;border-radius:7px;background:#fff;color:#796851;font-family:inherit;font-weight:inherit;font-size:11px;cursor:pointer}
+.vr-ae-home-trigger{display:block;position:relative;border:0;background:#eeeae2;padding:0;overflow:hidden;width:152px;height:152px;border-radius:10px;cursor:zoom-in}
+.vr-ae-home-photo{width:100%;height:100%;object-fit:cover;object-position:center 34%;display:block}
+.artist-portrait-column{display:flex;flex:none;flex-direction:column;align-items:center;gap:6px;width:max-content;align-self:flex-start}.artist-portrait-column .vr-ae-manage{display:inline-flex;align-items:center;justify-content:center;align-self:center;margin:0;border:1px solid #dedbd5;border-radius:5px;background:#fff;padding:3px 11px;min-height:23px;min-width:44px;color:#777;font-family:"Noto Sans KR",sans-serif!important;font-weight:320!important;font-size:11px!important;line-height:1.45;letter-spacing:-.025em;font-synthesis:none;cursor:pointer}
+.vr-ae-backdrop{position:fixed;inset:0;z-index:2147483000;padding:24px;display:flex;align-items:center;justify-content:center;background:rgba(19,19,18,.90)}
+.vr-ae-viewer{max-width:90vw;max-height:92dvh;display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;color:#f3f0eb;font-family:inherit;font-weight:inherit}
+.vr-ae-large-photo{display:block;max-width:85vw;max-height:76dvh;object-fit:contain;width:auto;height:auto;border-radius:5px;box-shadow:0 20px 70px rgba(0,0,0,.55)}
+.vr-ae-viewer-close{position:fixed;top:24px;right:28px;width:44px;height:44px;border:1px solid rgba(255,255,255,.35);border-radius:50%;background:rgba(255,255,255,.09);color:#fff;font-family:inherit;font-weight:inherit;font-size:25px;cursor:pointer}
+.vr-ae-credit{font-size:11px;line-height:1.6;color:#c9bfb3;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;text-align:center}.vr-ae-credit a{color:#e3bf8c;text-decoration:underline}
+.vr-ae-switch:focus-visible,.vr-ae-card button:focus-visible,.vr-ae-viewer button:focus-visible,.vr-ae-more:focus-visible,.vr-ae-manage:focus-visible{outline:2px solid #b58a4d;outline-offset:2px}
+.vr-ae-gallery[hidden],.vr-ae-grid[hidden],.vr-ae-more[hidden]{display:none!important}
+@media(max-width:900px){.vr-ae-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:22px 12px}}
+@media(max-width:600px){.vr-ae-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:21px 11px}.vr-ae-gallery{margin-top:12px}.vr-ae-home-trigger{width:104px;height:104px}.vr-ae-backdrop{padding:12px}.vr-ae-large-photo{max-width:94vw;max-height:74dvh}.vr-ae-card-name{font-size:12px}.vr-ae-viewer-close{right:12px;top:12px}}
+@media(prefers-reduced-motion:reduce){.vr-ae-card-image img{transition:none}.vr-ae-card-image:hover img{transform:none}}
+
+/* Integration-only sizing: no change to the existing no-photo Artist Home. */
+[data-artist-gallery-tools]{display:flex;justify-content:flex-end;margin:0 0 10px;min-width:0}
+.vr-ae-gallery,.vr-ae-gallery *,.vr-ae-toolbar,.vr-ae-toolbar *,.vr-ae-backdrop,.vr-ae-backdrop *{box-sizing:border-box}
+.artist-portrait.vr-ae-home-portrait{width:152px;height:152px;border-radius:9px}
+.vr-ae-viewer-status{font:inherit;font-size:12px;margin:0}
+@media(max-width:600px){.artist-portrait.vr-ae-home-portrait{width:104px;height:104px}.vr-ae-switch{min-height:44px;padding:0}.vr-ae-card-name{min-height:44px}.vr-ae-toolbar{padding:0 3px}}
+.vr-ae-editor-backdrop{position:fixed;inset:0;z-index:2147483001;background:rgba(20,19,17,.6);display:grid;place-items:center;padding:14px;box-sizing:border-box}
+.vr-ae-editor{width:min(520px,100%);max-height:90dvh;overflow:auto;display:grid;gap:10px;padding:18px;border-radius:9px;background:#fff;color:#3a352e;font:inherit;box-sizing:border-box}
+.vr-ae-editor h2{font:inherit;font-size:18px;margin:0}.vr-ae-editor label{display:grid;gap:4px;font:inherit;font-size:12px}
+.vr-ae-editor label:has([type=checkbox]){display:flex;align-items:center}.vr-ae-editor input:not([type=checkbox]),.vr-ae-editor select{min-height:40px;width:100%;box-sizing:border-box;font:inherit;border:1px solid #ded8ce;border-radius:5px;padding:6px;background:#fff}
+.vr-ae-editor-actions{display:flex;flex-wrap:wrap;gap:6px}.vr-ae-editor-actions button{min-height:40px;padding:5px 9px;font:inherit;background:#fff;color:#7a6341;border:1px solid #ded8ce;border-radius:5px}
+
+/* Local selection only: upload remains behind the existing explicit save action. */
+.vr-ae-editor .vr-ae-file-drop{border:1px dashed #cdbb9d;border-radius:7px;padding:14px;text-align:center;background:#fdfcf9;cursor:pointer;min-width:0}
+.vr-ae-file-drop.vr-ae-drop-active{border-color:#b58c44;background:#f7f2e8}
+.vr-ae-drop-hint,.vr-ae-file-info{display:block;font:inherit;font-size:11px;overflow-wrap:anywhere}
+.vr-ae-upload-preview{display:block;max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;margin:8px auto;border-radius:5px}
+.vr-ae-upload-preview[hidden]{display:none!important}
+.vr-ae-editor .vr-ae-file-drop input{cursor:pointer;max-width:100%}
+
+/* Compact artist photo dialog, scoped to the existing editor. */
+.vr-ae-editor{width:min(462px,100%);padding:18px 17px 14px;gap:0;border:1px solid #e1e1e1;border-radius:17px;background:#fcfcfc;color:#252525}
+.vr-ae-editor-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.vr-ae-editor-header h2{font-size:18px;line-height:1.45}
+.vr-ae-editor-close{border:0;background:transparent;color:#666;font:inherit;font-size:22px;min-width:32px;min-height:32px;padding:0;cursor:pointer}
+.vr-ae-editor .vr-ae-file-drop{position:relative;border:1px solid transparent;border-radius:10px;min-height:156px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:16px 8px;background:transparent;text-align:center}
+.vr-ae-editor .vr-ae-file-drop input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.vr-ae-editor .vr-ae-file-drop:focus-within{outline:1px solid #b58c44;outline-offset:2px}
+.vr-ae-editor .vr-ae-file-drop.vr-ae-drop-active{background:#f7f2e8;border-color:#b58c44}
+.vr-ae-upload-icon{width:27px;height:27px;color:#666;margin-bottom:2px}.vr-ae-upload-icon svg{width:100%;height:100%}
+.vr-ae-editor .vr-ae-drop-hint{font-size:17px;color:#202020}
+.vr-ae-click-hint,.vr-ae-size-hint{font-size:13px;color:#737373;line-height:1.45}
+.vr-ae-existing:empty,.vr-ae-editor-message:empty,.vr-ae-file-info:empty{display:none}
+.vr-ae-existing{margin-top:18px;margin-bottom:3px;min-width:0}
+.vr-ae-existing-caption{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#777;font-size:14px;margin-bottom:14px}
+.vr-ae-existing-caption small{font-size:12px}
+.vr-ae-editor .vr-ae-existing-card{position:relative;display:flex;align-items:center;gap:13px;border:1px solid #e0e0e0;border-radius:9px;padding:12px;min-height:74px;box-sizing:border-box}
+.vr-ae-existing-icon{display:grid;place-items:center;flex:0 0 45px;height:45px;background:#f3f3f3;border-radius:8px;color:#666;font-size:20px}
+.vr-ae-existing-card>span:nth-child(2){display:grid;gap:3px;min-width:0;font-size:14px}
+.vr-ae-existing-card small{font-size:12px;color:#777}
+.vr-ae-editor .vr-ae-existing-card select{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.vr-ae-existing-card:after{content:'⌄';margin-left:auto;color:#666}
+.vr-ae-existing-card:focus-within{outline:1px solid #b58c44}
+.vr-ae-existing-card:has(option[value="auto"]:checked){border-color:#b58c44;background:#faf7f1}
+.vr-ae-editor-actions{border-top:1px solid #e4e4e4;padding-top:10px;margin-top:12px;background:transparent;gap:6px}
+.vr-ae-editor-actions button{font-size:12px;min-height:40px;padding:7px 10px;border-color:#ded8ce;color:#927c59}
+.vr-ae-editor-message{font-size:12px;color:#9b4934;margin:10px 0 0;overflow-wrap:anywhere}
+@media(max-width:480px){.vr-ae-existing-caption{font-size:13px}.vr-ae-existing-caption small{font-size:10px}.vr-ae-editor{padding:14px}.vr-ae-editor-header h2{font-size:17px}}
+
+/* Artist Home only: preserve the full image's composition and intrinsic ratio. */
+.artist-portrait-column:has(.vr-ae-home-portrait){max-width:400px;min-width:0}
+.artist-portrait.vr-ae-home-portrait{width:max-content;height:auto;max-width:100%;background:transparent}
+.artist-portrait.vr-ae-home-portrait .vr-ae-home-trigger{width:auto;height:auto;max-width:100%;background:transparent}
+.artist-portrait.vr-ae-home-portrait .vr-ae-home-photo{display:block;width:auto;height:auto;max-width:400px;max-height:200px;object-fit:contain;object-position:center}
+@media(max-width:600px){
+ .artist-profile{flex-wrap:wrap}
+ .artist-portrait-column:has(.vr-ae-home-portrait){max-width:100%}
+ .artist-portrait.vr-ae-home-portrait .vr-ae-home-photo{max-height:130px;max-width:min(400px,calc(100vw - 56px))}
+ .artist-intro{flex:1 1 120px;min-width:0}
+}
+
+.vr-ae-editor .vr-ae-introduction{display:grid;gap:7px;margin-top:14px;font-size:13px;color:#777}.vr-ae-introduction textarea{box-sizing:border-box;width:100%;min-width:0;min-height:90px;resize:vertical;border:1px solid #dedbd5;border-radius:7px;padding:9px;background:#fff;color:#444;font:inherit;line-height:1.6}
+
+/* Home image lifecycle: reserve before fetch and reveal only a decoded image. */
+.artist-home .artist-profile .artist-portrait-column:has(.vr-ae-home-slot){width:var(--vr-photo-reserved-pc,400px);max-width:400px;min-width:0}
+.artist-home .artist-profile .artist-portrait.vr-ae-home-slot{width:100%;height:200px;max-width:100%;background:transparent;overflow:hidden;display:grid;place-items:start center}
+.artist-home .vr-ae-home-slot .vr-ae-home-trigger{width:100%;height:100%;max-width:100%;display:grid;place-items:start center;background:transparent;border:0;padding:0}
+.artist-home .vr-ae-home-slot .vr-ae-home-photo{display:block;width:auto;height:auto;max-width:100%;max-height:200px;object-fit:contain}
+.artist-home .artist-profile .artist-portrait-column:has(.vr-ae-home-known-empty){width:148px}
+.artist-home .artist-profile .artist-portrait.vr-ae-home-slot.vr-ae-home-known-empty{height:148px}
+.artist-home .vr-ae-home-slot[data-photo-state=loading]{color:transparent}
+.artist-home .vr-ae-home-slot.vr-ae-home-fallback{place-items:center}
+.artist-home .vr-ae-home-fallback>span{display:grid;place-items:center;width:148px;height:148px;max-width:100%;background:#eee9de;border-radius:9px;color:#ab9166}
+@media(max-width:600px){
+ .artist-home .artist-profile .artist-portrait-column:has(.vr-ae-home-slot){width:var(--vr-photo-reserved-mobile,calc(100% - 134px));max-width:calc(100% - 134px)}
+ .artist-home .artist-profile .artist-portrait.vr-ae-home-slot{height:130px}
+ .artist-home .vr-ae-home-slot .vr-ae-home-photo{max-height:130px}
+ .artist-home .artist-profile .artist-portrait-column:has(.vr-ae-home-known-empty){width:88px}
+ .artist-home .artist-profile .artist-portrait.vr-ae-home-slot.vr-ae-home-known-empty{height:88px}
+ .artist-home .vr-ae-home-fallback>span{width:88px;height:88px}
+}

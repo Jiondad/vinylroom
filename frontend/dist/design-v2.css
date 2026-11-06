@@ -1,0 +1,148 @@
+/* DESIGN_LOCK: VINYL_ROOM_V2_0_20261030. Scoped adaptation of legacy components. */
+html:has(>body.vr-ds-v2){background:#fff}
+body.vr-ds-v2{--vr-v2-hit:32px;--ink:var(--vr-text);--muted:var(--vr-text-secondary);--line:var(--vr-border);--gold:var(--vr-gold);--vr-canvas:#fff;--vr-muted:var(--vr-text-secondary);--vr-line:var(--vr-border);--vr-ivory:var(--vr-surface-muted);--vr-gold-soft:var(--vr-surface-muted);--vr-primary:var(--vr-gold-strong);--ui6-gold:var(--vr-gold);--ui6-line:var(--vr-border);--ui6-bg:#fff;font-synthesis:none;background:#fff;font-family:var(--vr-font);font-size:14px;font-weight:var(--vr-weight-body);line-height:1.45;color:var(--vr-text)}
+.vr-ds-v2 :is(main,.sidebar,.album-full-page,#personal-dialog,#dialog,.vinyl-admin-page,.vinyl-members-panel,.vinyl-ai-panel,.vinyl-lyrics-panel,.mobile-player-sheet,#queue-panel,#global-player,.vr-ai-root){font-family:var(--vr-font)!important;font-size:14px;font-weight:var(--vr-weight-body);color:var(--vr-text);background:var(--vr-panel-bg,var(--vr-bg));box-shadow:none}
+.vr-ds-v2 :where(main,.album-full-page,.vinyl-admin-page,.vinyl-members-panel,.vinyl-ai-panel,.vinyl-lyrics-panel,#personal-dialog,#dialog,.vr-ai-root) :is(h1,h2,h3,h4,strong,b,th){font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important;color:var(--vr-text)}
+.vr-ds-v2 :is(#page-title,.artist-home h1,.vr-admin-header h1,#vinyl-auth-gate h1){font-size:25px!important;font-weight:var(--vr-weight-body)!important;line-height:1.25!important}
+.vr-ds-v2 :is(.ui6-track-heading,.related-heading h2,.vr-admin-section-head h2,.vr-ai-head h2,.modal-head h2,.mobile-player-sheet h2,.ui6-queue-header h2){font-size:17px!important;font-weight:var(--vr-weight-body)!important;line-height:1.3!important}
+body.vr-ds-v2 .album-full-page.ui6-album .ui6-album-info h2{font-family:var(--vr-font)!important;font-size:40px!important;font-weight:var(--vr-weight-album-detail)!important;line-height:1.2!important;letter-spacing:normal;color:var(--vr-text)!important}
+.vr-ds-v2 :is(.album h3,.random-track strong,.search-song strong,.ui6-track-table td,.top100-track strong,.playlist-tracks strong,.mobile-queue-list strong,.queue-title,.ui6-now strong,.player-info strong,.mini-info strong){font-family:var(--vr-font)!important;font-size:14px!important;font-weight:var(--vr-weight-body)!important;line-height:var(--vr-card-line,1.45)!important;color:var(--vr-text)!important}
+.vr-ds-v2 :is(.artist-name,.album-artist-link,.album-artist-line,.random-track .random-artist,.random-track .random-album,.meta,.artist-aliases,.artist-facts,.artist-holdings,.ui6-album-meta,.ui6-album-quality,.ui6-album-description,.playlist-tracks small,.mobile-queue-list small,.ui6-now-main div>span,.mini-info small){font-family:var(--vr-font)!important;font-size:13px!important;font-weight:var(--vr-weight-body)!important;line-height:var(--vr-card-line,1.4)!important;color:var(--vr-text-secondary)!important}
+.vr-ds-v2 :is(.ui6-eyebrow,.ui6-queue-time,.ui6-now-timeline small,.desktop-timeline span,.expanded-time,.side-label,.breadcrumb,.vr-ai-root small,.vinyl-admin-page small,.album-facts dt,.ui6-disc-header small){font-family:var(--vr-font)!important;font-size:12px!important;font-weight:var(--vr-weight-body)!important;line-height:1.35!important;color:var(--vr-text-secondary)!important}
+.vr-ds-v2 .sidebar{background:var(--vr-surface);color:var(--vr-text);border-right:1px solid var(--vr-border)}
+.vr-ds-v2 .sidebar .brand{font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important;color:var(--vr-text);box-shadow:none}
+.vr-ds-v2 .sidebar :is(.brand small,.side-bottom p,.side-bottom small,.stat,.stat b,.stat span){font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important;color:var(--vr-text-secondary)}
+.vr-ds-v2 .sidebar #nav button{letter-spacing:var(--vr-demo-tracking,-.025em);font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important;font-size:13px!important;line-height:1.35!important;color:var(--vr-text-secondary);box-shadow:none;width:100%!important;padding:0!important;justify-content:flex-start}
+.vr-ds-v2 .sidebar #nav button.active{background:var(--vr-surface-muted);color:var(--vr-gold-strong);box-shadow:none}
+.vr-ds-v2 .sidebar #nav .vr-btn__face{justify-content:flex-start;width:100%;color:inherit;gap:8px}
+.vr-ds-v2 main{--vr-panel-bg:#fff;padding-inline:24px;background:#fff}
+body.vr-ds-v2 .album-full-page.ui6-album{--vr-panel-bg:#fff;--ui6-bg:#fff;background:#fff}
+.vr-ds-v2 :is(.album,.artist-card,.vr-ai-card,.vr-admin-caution,.ui6-disc-card,.artist-profile-details,.playlist-list li){background:var(--vr-surface);border-color:var(--vr-border);border-radius:8px;box-shadow:none}
+.vr-ds-v2 :is(.vr-ai-card,.vr-admin-caution,.artist-profile-details){padding:16px}
+.vr-ds-v2 :is(.cover,.album-cover,.artist-portrait){box-shadow:none!important;border-color:var(--vr-border);border-radius:8px}
+.vr-ds-v2 :is(.search,.toolbar select,.category-filter,.artist-index,.ui6-disc-header,.vr-ai-summary){background:var(--vr-surface-muted);border-color:var(--vr-border);color:var(--vr-text)}
+.vr-ds-v2 :is(main,#personal-dialog,#dialog,.vinyl-admin-page,.vinyl-ai-panel) :is(input:not([type=range]):not([type=checkbox]):not([type=radio]),select,textarea){font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important;color:var(--vr-text);border-color:var(--vr-border);border-radius:6px;min-width:0;max-width:100%}
+@layer vr-v2-controls{
+.vr-ds-v2 .sidebar #nav button,.vr-ds-v2 .sidebar #nav button>.vr-btn__face{font-weight:var(--vr-weight-body)!important;font-size:13px!important;line-height:1.35!important}
+@media(max-width:599px){.vr-ds-v2 .sidebar #nav button,.vr-ds-v2 .sidebar #nav button>.vr-btn__face{font-size:12px!important}}
+
+.vr-ds-v2 button.vr-btn{letter-spacing:var(--vr-demo-tracking,-.025em);box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center;min-height:var(--vr-v2-hit)!important;height:auto!important;min-width:var(--vr-btn-hit-width,var(--vr-v2-hit))!important;max-width:100%;width:auto!important;margin-block:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--vr-text)!important;box-shadow:none!important;flex:0 0 auto!important;font-family:var(--vr-font)!important;font-size:12px!important;font-weight:var(--vr-weight-body)!important;line-height:16px!important;white-space:normal!important;overflow:visible!important;isolation:auto}
+.vr-ds-v2 button.vr-btn::before,.vr-ds-v2 button.vr-btn::after{content:none!important}
+.vr-ds-v2 button.vr-btn>.vr-btn__face{letter-spacing:var(--vr-demo-tracking,-.025em);pointer-events:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:26px;height:26px;padding:2px var(--vr-button-padding-x,6px);border:1px solid var(--vr-border);border-radius:6px;background:var(--vr-surface);color:var(--vr-text);font-family:var(--vr-font);font-size:12px;font-weight:var(--vr-weight-body);line-height:16px;box-shadow:none;white-space:nowrap}
+.vr-ds-v2 button.vr-btn[data-vr-role=primary]>.vr-btn__face{background:var(--vr-gold-strong);border-color:var(--vr-gold-strong);color:var(--vr-surface)}
+.vr-ds-v2 button.vr-btn[data-vr-role=danger]>.vr-btn__face{color:var(--vr-danger)}
+.vr-ds-v2 button.vr-btn:is([data-vr-role=tertiary],[data-vr-role=icon])>.vr-btn__face{background:transparent;border-color:transparent}
+.vr-ds-v2 button.vr-btn.vr-transport>.vr-btn__face{padding:0;border:0;background:transparent;color:var(--vr-gold-strong)}
+.vr-ds-v2 button.vr-btn svg{width:18px;height:18px;stroke-width:1.6;flex:none}
+.vr-ds-v2 button.vr-btn:focus-visible{outline:2px solid var(--vr-gold-strong)!important;outline-offset:2px}
+.vr-ds-v2 button.vr-btn[hidden]{display:none!important}
+.vr-ds-v2 button.vr-btn:disabled{opacity:.55}
+.vr-ds-v2 button.vr-btn[data-vr-wrap=true]>.vr-btn__face{height:auto;min-height:26px;white-space:normal;max-width:100%;overflow-wrap:anywhere}
+.vr-ds-v2 #vinyl-header-actions #member-account>.vr-btn__face{position:static!important;width:auto!important;height:26px!important;margin:0!important;padding:2px 6px!important;overflow:visible!important;clip-path:none!important;white-space:normal!important}
+.vr-ds-v2 button.vr-btn.vr-transport{min-width:44px!important;min-height:44px!important}
+}
+.vr-ds-v2 :is(.ui6-up-next,.top100-length,.top100-mobile-meta){font-family:var(--vr-font)!important;font-size:var(--vr-caption-font-size,12px)!important;font-weight:var(--vr-weight-body)!important;color:var(--vr-text-secondary)!important}
+.vr-ds-v2 :is(.top100-song-name,.search-title,.artist-summary,.vinyl-lyrics-line){font-family:var(--vr-font)!important;font-size:var(--vr-song-font-size,14px)!important;font-weight:var(--vr-weight-body)!important;line-height:var(--vr-song-line,1.45)!important}
+.vr-ds-v2 :is(.top100-mobile-artist,.top100-mobile-album,.random-artist-link,.random-album-link){font-family:var(--vr-font)!important;font-size:var(--vr-artist-font-size,13px)!important;font-weight:var(--vr-weight-body)!important;color:var(--vr-text-secondary)!important}
+.vr-ds-v2 .album-full-page.ui6-album .ui6-album-info .album-artist-line>:is(button,a){font-family:var(--vr-font)!important;font-size:inherit!important;font-weight:var(--vr-weight-body)!important}
+.vr-ds-v2 .ui6-queue [data-remove]>.vr-btn__face,.vr-ds-v2 .ui6-queue [data-queue-remove]>.vr-btn__face{border-color:transparent;background:transparent}
+.vr-ds-v2 :is(.vr-ds-group,.album-primary-actions,.queue-inline-form .actions){gap:var(--vr-action-gap,6px)!important;flex-wrap:var(--vr-action-wrap,wrap)!important}
+.vr-ds-v2 :is(.mini-controls,.desktop-transport,.expanded-controls){gap:4px!important}
+.vr-ds-v2 :is(.mini-controls,.desktop-transport,.expanded-controls) button{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.vr-ds-v2 .queue-inline-form{padding:8px 12px;background:var(--vr-surface-muted);border:1px solid var(--vr-border);border-radius:8px}
+.vr-ds-v2 .queue-inline-form label{display:block;color:var(--vr-text-secondary);font:300 12px/1.35 var(--vr-font)}
+.vr-ds-v2 .queue-inline-form :is(input,select){width:100%;min-height:44px;margin:4px 0 8px}
+.vr-ds-v2 .queue-inline-form [role=status]{font:300 12px/1.35 var(--vr-font);color:var(--vr-text-secondary)}
+@media(min-width:600px) and (max-width:1023px){.vr-ds-v2 main{padding-inline:16px}.vr-ds-v2 #content .grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important}.vr-ds-v2.home-view #content .cover{width:100%!important;max-width:none!important}}
+@media(max-width:599px){
+ body.vr-ds-v2{--vr-v2-hit:44px}
+ .vr-ds-v2 main,.vr-ds-v2 .album-full-page.ui6-album{padding-inline:12px!important}
+ .vr-ds-v2 :is(#page-title,.artist-home h1,.vr-admin-header h1,#vinyl-auth-gate h1){font-size:21px!important}
+ .vr-ds-v2 :is(.ui6-track-heading,.related-heading h2,.vr-admin-section-head h2,.vr-ai-head h2,.modal-head h2,.mobile-player-sheet h2){font-size:16px!important}
+ body.vr-ds-v2 .album-full-page.ui6-album .ui6-album-info h2{font-size:29px!important}
+ .vr-ds-v2 :is(.artist-name,.album-artist-link,.album-artist-line,.meta,.mini-info small,.mobile-queue-list small){font-size:12.5px!important}
+ .vr-ds-v2 .sidebar #nav button{letter-spacing:var(--vr-demo-tracking,-.025em);font-size:12px!important;min-height:44px!important}
+ .vr-ds-v2 button.vr-btn{letter-spacing:var(--vr-demo-tracking,-.025em);min-width:var(--vr-btn-hit-width,44px)!important;min-height:44px!important}
+ .vr-ds-v2 :is(.vr-ai-card,.vr-admin-caution,.artist-profile-details){padding:12px}
+ .vr-ds-v2 :is(.toolbar,.random-actions,.top100-actions,.album-primary-actions){flex-wrap:var(--vr-action-wrap,wrap)!important;gap:var(--vr-action-gap,6px)!important;overflow:visible!important}
+ .vr-ds-v2 .mobile-queue.ui6-queue{height:94dvh!important;max-height:94dvh!important;margin:0!important;inset:auto 0 0!important;width:100%!important;max-width:none!important;padding:8px 12px calc(8px + env(safe-area-inset-bottom))!important;border-radius:8px 8px 0 0;display:flex;flex-direction:column;gap:4px}
+ .vr-ds-v2 .mobile-queue.ui6-queue:not([open]){display:none}
+ .vr-ds-v2 .mobile-queue header{height:auto;min-height:44px;padding:0;border-color:var(--vr-border);flex:none}
+ .vr-ds-v2 .mobile-queue .ui6-now{padding:8px!important;margin:0!important;min-height:108px;max-height:124px;box-shadow:none;border-radius:8px;flex:none;background:var(--vr-surface-muted)}
+ .vr-ds-v2 .mobile-queue .ui6-now-main img{width:44px;height:44px}
+ .vr-ds-v2 .mobile-queue .ui6-up-next{margin:0;padding:4px 0;font-weight:var(--vr-weight-body);color:var(--vr-text-secondary);flex:none}
+ .vr-ds-v2 .mobile-queue .ui6-queue-footer{order:0;position:static;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0;margin:0;min-height:44px;flex:none;background:transparent;border:0}
+ .vr-ds-v2 .mobile-queue .ui6-queue-footer>span{display:none}
+ .vr-ds-v2 .mobile-queue .queue-sheet-tools{display:none}
+ .vr-ds-v2 .mobile-queue .mobile-queue-list{flex:1;min-height:0;overflow-y:auto;overflow-x:visible;margin:0;padding:0}
+ .vr-ds-v2 .mobile-queue .mobile-queue-list li{box-sizing:border-box;display:grid;grid-template-columns:16px minmax(0,1fr) 32px 44px;align-items:center;min-height:48px;height:52px;padding:0;gap:4px;border-bottom:1px solid var(--vr-border)}
+ .vr-ds-v2 .mobile-queue-list [data-play]{min-height:44px;height:48px;padding:0;border:0;background:transparent;min-width:0;width:100%;display:flex;align-items:center;gap:6px}
+ .vr-ds-v2 .mobile-queue-list [data-play]>span:last-child{min-width:0;text-align:left}
+ .vr-ds-v2 .mobile-queue-list :is(strong,small){display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+ .vr-ds-v2 .mobile-queue-list .ui6-queue-time{font-size:12px;color:var(--vr-text-secondary)}
+ .vr-ds-v2 .mobile-queue .sheet-handle{flex:none;margin:0 auto 4px}
+ .vr-ds-v2 .mobile-queue .queue-inline-form{order:0;flex:none}
+}
+
+/* Legacy mobile typography uses ID/high-specificity !important rules. */
+body.vr-ds-v2 .album-full-page.ui6-album .ui6-album-info .album-artist-line{font-family:var(--vr-font)!important;font-size:13px!important;font-weight:var(--vr-weight-body)!important;line-height:1.4!important}
+@media(max-width:599px){body.vr-ds-v2 .album-full-page.ui6-album .ui6-album-info .album-artist-line{font-size:12.5px!important}}
+.vr-ds-v2 .ui6-now input[type=range]{padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;min-height:0!important}
+
+.vr-ds-v2 :is(.random-track-info span,.album-info-row,#global-player #now-artist,.ui6-queue [data-queue-play] small){font-family:var(--vr-font)!important;font-size:13px!important;font-weight:var(--vr-weight-body)!important;line-height:var(--vr-card-line,1.4)!important;color:var(--vr-text-secondary)!important}
+@media(max-width:599px){.vr-ds-v2 :is(.random-track-info span,.album-info-row,#global-player #now-artist){font-size:12.5px!important}}
+/* Preserve the original hidden account label, but render its new visual face. */
+@layer vr-v2-controls{
+ .vr-ds-v2 #vinyl-header-actions #member-account>.vr-btn__face{display:inline-flex!important}
+}
+/* Existing three-zone player: shrink flexible information, never overflow into controls. */
+@media(min-width:741px){
+ body.vr-ds-v2 #global-player.ui6-player{grid-template-columns:minmax(0,1fr) minmax(236px,1.3fr) 220px;background:var(--vr-surface-muted);border-color:var(--vr-border);box-shadow:none}
+ body.vr-ds-v2 #global-player.ui6-player .player-info{min-width:0;max-width:none}
+ body.vr-ds-v2 #global-player.ui6-player .desktop-volume{display:flex;align-items:center;justify-self:end;width:210px;min-width:0;margin:0;gap:8px}
+ body.vr-ds-v2 #global-player.ui6-player .desktop-volume input{min-width:0;width:110px;flex:0 0 110px}
+ body.vr-ds-v2 #global-player.ui6-player #show-queue{position:static;inset:auto;transform:none;align-self:center;margin-left:8px}
+}
+
+/* Navigation/account have existing direct-child selectors: preserve those nodes. */
+.vr-ds-v2 .sidebar #nav button{letter-spacing:var(--vr-demo-tracking,-.025em);min-width:44px!important}
+.vr-ds-v2 .sidebar #nav button>span{font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important}
+.vr-ds-v2 .sidebar #nav .mobile-nav-label::after{font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important}
+.vr-ds-v2 #vinyl-header-actions #member-account{min-width:32px!important;min-height:32px!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.vr-ds-v2 #vinyl-header-actions #member-account svg{width:18px;height:18px;stroke-width:1.6;color:var(--vr-text-secondary)}
+@media(max-width:599px){.vr-ds-v2 #vinyl-header-actions #member-account{min-width:44px!important;min-height:44px!important}.vr-ds-v2 .sidebar #nav button{letter-spacing:var(--vr-demo-tracking,-.025em);font-size:12px!important}}
+@layer vr-v2-controls{@media(max-width:359px){.vr-ds-v2 #global-player .mini-controls [data-previous]{display:none!important}}}
+
+/* User-approved 2026-10-30 amendment: only the album-title weight changes. */
+body.vr-ds-v2 .album-full-page.ui6-album{--vr-weight-album-detail:350}
+
+/* User-approved catalog card rhythm. Shared Today/Album renderer, no cover sizing changes. */
+body.vr-ds-v2 #content .grid{row-gap:16px}
+body.vr-ds-v2 #content .grid .album{--vr-card-line:1.25;display:flex;flex-direction:column;gap:0;margin:0;min-width:0;align-self:start}
+body.vr-ds-v2 #content .grid .album .album-open{display:block;min-height:0;height:auto;margin:0;padding:0;text-align:left;min-width:0}
+body.vr-ds-v2 #content .grid .album .album-open h3{margin:6px 0 0;padding:0;height:1.25em;min-height:1.25em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.vr-ds-v2 #content .grid .album .album-artist-link{display:block;margin:3px 0 0;padding:0;height:1.25em;min-height:1.25em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;line-height:1.25}
+body.vr-ds-v2 #content .grid .album .album-info-row{margin:3px 0 0;padding:0;height:1.25em;min-height:1.25em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+body.vr-ds-v2 #content .grid .album .album-info-row>span+span::before{content:' · '}
+@media(max-width:740px){
+ body.vr-ds-v2 .album-full-page .mobile-track-title-play,html:not([data-vinyl-access="approved"]) body.vr-ds-v2 .album-full-page .guest-track-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal;overflow:hidden;overflow-wrap:anywhere;text-align:left;letter-spacing:normal}
+ body.vr-ds-v2 .album-full-page .mobile-track-meta{font-size:12px;line-height:16px;text-align:left}
+ body.vr-ds-v2 .album-full-page .mobile-track-more>summary{box-sizing:border-box;width:44px;height:44px;margin:0}
+}
+
+/* Album icon actions retain the existing 26px face and nonoverlapping hit area. */
+body.vr-ds-v2 .album-primary-actions button[data-vr-album-icon]{--vr-btn-hit-width:32px;--vr-button-padding-x:4px}
+body.vr-ds-v2 .album-primary-actions button[data-vr-album-icon]>.vr-btn__face{width:26px;min-width:26px;border:0;background:transparent;color:var(--vr-gold-strong)}
+body.vr-ds-v2 .album-primary-actions button[data-vr-album-icon] svg{width:18px;height:18px;flex:none}
+@media(max-width:599px){body.vr-ds-v2 .album-primary-actions button[data-vr-album-icon]{--vr-btn-hit-width:44px}}
+
+/* General Album and narrow-desktop grid; wide Today retains its 30-card layout. */
+@media(min-width:1024px){
+ body.vr-ds-v2 #content .grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))!important;column-gap:16px!important}
+ body.vr-ds-v2 #content .grid .cover{width:100%!important;max-width:none!important;aspect-ratio:1}
+}
+@media(min-width:1400px){
+ body.vr-ds-v2.home-view #content .grid{grid-template-columns:repeat(10,minmax(0,1fr))!important}
+ body.vr-ds-v2.home-view #content .grid .cover{width:min(100%,var(--today-cover-size,100%))!important}
+ body.vr-ds-v2.home-view #content .grid .cover img{object-fit:contain}
+}

@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "profiles": {
+    "10CM": {
+      "name": "10CM",
+      "thumb": "images/7379b2bf2e386d0d4b206e8c-thumb.webp",
+      "full": "images/7379b2bf2e386d0d4b206e8c-full.webp",
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Kwon_Jung-yeol%2C_10cm.jpg",
+        "author": "Trainholic",
+        "license": "cc by-sa 3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0"
+      }
+    }
+  }
+}

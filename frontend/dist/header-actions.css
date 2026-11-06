@@ -1,0 +1,56 @@
+/* Single shared action group. These scoped rules replace the old mobile/album placements. */
+body #vinyl-header-actions{
+ display:flex!important;align-items:center;justify-content:flex-end;flex-wrap:nowrap;
+ gap:8px;flex:0 0 auto;min-width:max-content;width:max-content;max-width:none;
+ position:static;float:none;margin:0 0 0 auto;grid-column:-2/-1;grid-row:1;
+ align-self:start;order:100;visibility:visible;opacity:1;
+}
+body #vinyl-header-actions > button{flex:0 0 auto;white-space:nowrap;box-shadow:none;font-weight:350;letter-spacing:var(--vr-demo-tracking,-.025em)}
+body #vinyl-header-actions #import{display:inline-flex;align-items:center;justify-content:center;height:34px;min-height:34px;min-width:82px;max-width:none;margin:0;padding:5px 11px;border:1px solid #ddd4c3;border-radius:5px;background:#faf7ef;color:#7f6841;font-size:11px;line-height:22px;order:1}
+body #vinyl-header-actions #member-account{display:inline-flex!important;position:relative;align-items:center;justify-content:center;flex:none;order:2;width:36px;min-width:36px;max-width:36px;height:34px;min-height:34px;padding:6px;margin:0;border:1px solid #e3dfd6;border-radius:5px;background:#fff;color:#65717b;visibility:visible!important;opacity:1!important}
+body #vinyl-header-actions #member-account svg{display:block;width:19px;height:19px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}
+body #vinyl-header-actions #member-account span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+body #vinyl-header-actions #member-account.has-pending-members::after{content:"";position:absolute;right:1px;top:1px;width:7px;height:7px;background:#ce4545;border:1px solid #fff;border-radius:50%}
+body #vinyl-header-actions #import[hidden],body #vinyl-header-actions #export[hidden],body #vinyl-header-actions[data-index-allowed="false"] #import,.sidebar #settings[hidden]{display:none!important}
+body main > header.vinyl-page-header{display:grid!important;grid-template-columns:auto minmax(0,1fr) max-content;align-items:start;gap:10px;height:auto;min-height:60px;padding-top:13px;padding-bottom:12px}
+body main > header.vinyl-page-header .header-search{grid-column:2;grid-row:1;min-width:0;width:auto;margin:0}
+body main > header.vinyl-page-header .breadcrumb{grid-column:1;grid-row:1;align-self:center}
+body .sidebar > .vinyl-brand-header{display:flex;align-items:center;justify-content:space-between;gap:8px;height:auto;min-height:0;padding:0;border:0}
+body .sidebar > .vinyl-brand-header .brand{min-width:0;white-space:nowrap}
+body .vinyl-page-header:is(.album-full-bar,.vr-admin-header,.modal-head,.vinyl-members-header,header){box-sizing:border-box}
+body .vinyl-page-header:is(.album-full-bar,.vr-admin-header,.modal-head,.vinyl-members-header):has(> #vinyl-header-actions){display:grid!important;grid-template-columns:minmax(0,1fr) auto max-content;align-items:start;gap:10px}
+body .vinyl-page-header:is(.album-full-bar,.vr-admin-header,.modal-head,.vinyl-members-header) > :not(#vinyl-header-actions){min-width:0;overflow-wrap:anywhere}
+body .vinyl-page-header > #vinyl-header-actions{grid-column:3;grid-row:1}
+body .album-full-page .album-full-bar{min-height:60px;align-items:start;padding-top:13px;padding-bottom:12px}
+body .album-full-page .album-full-bar > strong,body .vinyl-page-header > :is(h2,h3){align-self:center}
+body .vinyl-page-header > :is(.close,[data-close],#close-personal){grid-column:2;grid-row:1;order:0;white-space:nowrap;align-self:start}
+@media(max-width:1100px) and (min-width:741px){body main > header.vinyl-page-header{grid-template-columns:minmax(0,1fr) max-content}body main > header.vinyl-page-header .breadcrumb{display:none}body main > header.vinyl-page-header .header-search{grid-column:1}body main > header.vinyl-page-header > #vinyl-header-actions{grid-column:2}}
+@media(max-width:740px){
+ body .sidebar > .vinyl-brand-header{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;gap:8px;min-height:40px}
+ body .sidebar > .vinyl-brand-header > #vinyl-header-actions{grid-column:2;grid-row:1;align-self:center}
+ body .sidebar > .vinyl-brand-header .brand{font-size:17px;max-width:100%;padding:0;gap:6px}
+ body .sidebar > .vinyl-brand-header .brand-icon{flex:none}
+ body .sidebar > .vinyl-brand-header .brand > span{min-width:0}
+ body main > header,body main > header.vinyl-page-header{display:grid!important;grid-template-columns:minmax(0,1fr);height:auto;min-height:39px;padding:5px 0 4px}
+ body main > header .header-search,body main > header.vinyl-page-header .header-search{grid-column:1;grid-row:1;margin:0;min-width:0}
+ body #vinyl-header-actions{gap:6px}
+ body #vinyl-header-actions #import{height:40px;min-height:40px;min-width:78px;padding:6px 9px;font-size:11px}
+ body #vinyl-header-actions #member-account{height:40px;min-height:40px;width:40px;min-width:40px;max-width:40px}
+ body .vinyl-page-header:is(.vr-admin-header,.modal-head,.vinyl-members-header):has(> #vinyl-header-actions){gap:7px}
+ body .vinyl-page-header > :is(h2,h3){font-size:17px}
+ body .vinyl-page-header > :is(.close,[data-close],#close-personal){min-width:0;padding-left:6px;padding-right:6px}
+}
+@media(pointer:coarse){body #vinyl-header-actions #import,body #vinyl-header-actions #member-account{min-height:44px;height:44px}}
+
+/* Stable root-page edge; dialogs keep their own top-layer header geometry. */
+html{scrollbar-gutter:stable}
+body{--vinyl-header-inset:44px;--vinyl-header-top:13px}
+body.album-page-open>.album-full-page{padding-left:var(--vinyl-header-inset);padding-right:var(--vinyl-header-inset)}
+body .vinyl-admin-page{scrollbar-width:none}
+body #vinyl-admin-center>.vr-admin-header{margin:0 var(--vinyl-header-inset);padding-top:var(--vinyl-header-top);min-height:60px}
+body #vinyl-admin-center>.vr-admin-inner{padding-top:12px}
+@media(min-width:741px) and (max-width:1100px){body{--vinyl-header-inset:25px}}
+@media(max-width:740px){body{--vinyl-header-inset:13px;--vinyl-header-top:11px}body #vinyl-admin-center>.vr-admin-header{min-height:60px}}
+
+/* Album navigation is a separate normal-flow row, never a shared-header action. */
+body .album-full-page .album-page-navigation{display:flex;align-items:center;justify-content:flex-start;max-width:1100px;margin:0 auto;padding:0 0 12px;box-sizing:border-box}

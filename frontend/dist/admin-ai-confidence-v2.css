@@ -1,0 +1,19 @@
+/* v2 component styles: scoped to avoid changing Vinyl Room legacy UI */
+.vr-ai-root{font:14px/1.55 'Pretendard Variable',system-ui,sans-serif;color:#302c27;background:#faf9f5;padding:16px;border-radius:12px}
+.vr-ai-head h2{margin:0;font-size:21px}.vr-ai-note,.vr-ai-root small{color:#81796c;font-size:12px}.vr-ai-controls,.vr-ai-filters{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:12px 0}
+.vr-ai-root button,.vr-ai-root select{font:inherit;border:1px solid #d9cdb4;background:#fff;color:#654c2c;border-radius:8px;padding:8px 12px;cursor:pointer}
+.vr-ai-root button:disabled{opacity:.45;cursor:default}.vr-ai-root button[aria-pressed=true]{background:#8a6c38;color:#fff}
+.vr-ai-summary{background:#f2eee6;padding:14px;border-radius:9px;font-weight:600}.vr-ai-card{background:#fff;border:1px solid #e2d8c7;border-radius:12px;padding:16px;margin:13px 0}
+.vr-ai-card h3{font-size:13px;font-weight:500;color:#81796c;margin:0 0 10px}.vr-ai-tablewrap{overflow-x:auto}.vr-ai-root table{border-collapse:collapse;min-width:700px;width:100%}.vr-ai-root th,.vr-ai-root td{padding:10px;text-align:left;vertical-align:top;border-bottom:1px solid #eee9df}.vr-ai-root th{background:#f8f6f2;font-size:12px}.vr-ai-root td small{display:block}.vr-ai-root tr.vr-ai-auto{background:#f2f8f3}.vr-ai-root tr.vr-ai-manual{background:#fffaf3}.vr-ai-warning{color:#a05d28!important}.vr-ai-error,.vr-ai-fail{color:#b03d35}.vr-ai-empty{padding:30px;text-align:center;color:#81796c}
+
+/* Phase 4C: mobile field cards, no off-screen decisions. */
+.vr-ai-album-id{display:block;color:#807569;margin:-5px 0 12px;overflow-wrap:anywhere}
+@media(max-width:700px){
+  .vr-ai-root{padding:10px}.vr-ai-card{padding:12px}.vr-ai-card h3{font-size:16px;font-weight:650;color:#302c27}
+  .vr-ai-tablewrap{overflow:visible}.vr-ai-root table,.vr-ai-root tbody,.vr-ai-root tr,.vr-ai-root td{display:block;width:100%;min-width:0}
+  .vr-ai-root thead{display:none}.vr-ai-root tr{padding:12px;border:1px solid #e2d8c7;border-radius:10px;margin:10px 0}
+  .vr-ai-root td{display:grid;grid-template-columns:minmax(72px,28%) minmax(0,1fr);gap:10px;align-items:start;padding:8px 2px;border:0;overflow-wrap:anywhere}
+  .vr-ai-root td::before{content:attr(data-label);font-size:12px;color:#81796c;font-weight:650}
+  .vr-ai-root td select{width:100%;min-width:0;max-width:240px}.vr-ai-controls input[type=file]{max-width:100%}
+  .vr-ai-root td small{overflow-wrap:anywhere}
+}

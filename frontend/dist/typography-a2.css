@@ -1,0 +1,16 @@
+/* TYPOGRAPHY_AMENDMENT_A2 — user-approved 2026-10-31.
+   Immutable v2.0 tokens remain intact. Typography only; no size/spacing/color reset.
+   The first named layer owns important typography, including older ID selectors. */
+@layer vr-a2-typography, vr-v2-controls;
+body.vr-ds-v2{
+ --vr-font:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+ --vr-weight-body:350;--vr-weight-secondary:350;--vr-weight-nav:350;
+ --vr-weight-button:350;--vr-weight-page:300;--vr-weight-section:300;
+ --vr-weight-album-detail:200;
+}
+@layer vr-a2-typography{
+ body.vr-ds-v2{font-family:var(--vr-font)!important;font-weight:var(--vr-weight-body)!important;font-synthesis:none!important}
+ body.vr-ds-v2 :where(h1,h2,h3,h4,h5,h6),body.vr-ds-v2 :where(h1,h2,h3,h4,h5,h6) :where(*){font-weight:var(--vr-weight-page)!important}
+ body.vr-ds-v2 :is(.album h3,.album h3 *,.artist-name,.artist-card h3,.artist-card h3 *){font-weight:var(--vr-weight-body)!important}
+ body.vr-ds-v2 .album-full-page.ui6-album .ui6-album-info h2,body.vr-ds-v2 .album-full-page.ui6-album .ui6-album-info h2 :where(*){font-weight:var(--vr-weight-album-detail)!important}
+}

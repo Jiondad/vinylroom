@@ -1,0 +1,8 @@
+// Existing full-app synthetic renderer; diagnostics use the supplied read-only script.
+import './equalizer-qa.mjs';import {readFile,writeFile} from 'node:fs/promises';
+const diagnostic=(await readFile('dist/font-parity-diagnostics.js','utf8')).trim().replace(/;$/,'');
+let html=await readFile('out/equalizer-qa.html','utf8');
+html=html.replace('</body>',`<button id="noto-diagnose" style="position:fixed;right:0;top:80px;z-index:10000">서체 진단</button><pre id="noto-proof" hidden></pre><script>document.querySelector('#noto-diagnose').onclick=async()=>{let error=null;try{await document.fonts.load('350 12px "Noto Sans KR"','한글 Album');await document.fonts.ready;}catch(e){error=e.message;}const rows=${diagnostic};document.querySelector('#noto-proof').textContent=JSON.stringify({error,rows,fontFaces:[...document.fonts].filter(f=>/Noto Sans KR/i.test(f.family)).map(f=>({family:f.family,weight:f.weight,status:f.status})),ready:document.fonts.status});};</script></body>`);
+await writeFile('out/equalizer-qa.html',html);let frame=await readFile('out/equalizer-frame.html','utf8');frame=frame.replace('<option>1440</option>','<option>768</option><option>1440</option>');await writeFile('out/equalizer-frame.html',frame);
+
+let roles=await readFile('out/equalizer-frame.html','utf8');roles=roles.replace('<iframe id="screen"', '<label>합성 권한<select id="mode"><option>member</option><option>admin</option><option>guest</option></select></label><iframe id="screen"');roles=roles.replace('</script>',"mode.onchange=()=>document.querySelector('iframe').src='equalizer-qa.html?mode='+mode.value+'&album=23e3d52c-95ea-41b0-8cce-b434011eaf4f';</script>");await writeFile('out/equalizer-frame.html',roles);

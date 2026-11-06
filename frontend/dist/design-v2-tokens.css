@@ -1,0 +1,67 @@
+/* VINYL ROOM v2.0 FINAL LOCKED -- Reference ONLY, NOT deployed.
+   Scoped adoption after impact checks, never wildcard all button reset.
+   Visual face 26px; 44px mobile hit area in normal flow. */
+.vr-ds-v2 {
+ --vr-bg:#FFFDF9; --vr-surface:#FFFFFF; --vr-surface-muted:#F7F3EC;
+ --vr-text:#2A251F; --vr-text-secondary:#615B53; --vr-border:#E6DFD4;
+ --vr-gold:#A18045; --vr-gold-strong:#75582F; --vr-danger:#9C4543;
+ --vr-font:'Noto Sans KR','Pretendard Variable','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+ --vr-weight-body:200; --vr-weight-secondary:300; --vr-weight-nav:250;
+ --vr-weight-page:300; --vr-weight-section:300; --vr-weight-album-detail:500;
+ --vr-weight-button:320;
+ --vr-button-frame-h:26px; --vr-button-padding-y:2px; --vr-button-padding-x:6px;
+ --vr-button-radius:6px; --vr-button-border:1px; --vr-button-text:12px;
+ --vr-button-line:16px; --vr-icon:18px; --vr-icon-stroke:1.6px;
+ --vr-touch:44px;
+ --vr-space-1:2px; --vr-space-2:4px; --vr-space-3:6px;
+ --vr-space-4:8px; --vr-space-5:12px; --vr-space-6:16px;
+ --vr-space-7:20px; --vr-space-8:24px; --vr-space-9:32px;
+ color:var(--vr-text);
+ background:var(--vr-bg);
+ font-family:var(--vr-font);
+ font-weight:var(--vr-weight-body);
+ font-size:14px;
+ line-height:1.45;
+}
+/* A wrapper and inner face are essential: never use overlay pseudo hit areas. */
+.vr-ds-v2 .vr-btn {
+ box-sizing:border-box;
+ display:inline-flex; align-items:center; justify-content:center;
+ vertical-align:middle; position:relative;
+ min-height:32px; min-width:32px; flex:0 0 auto;
+ border:0; padding:0; background:transparent;
+ font:inherit; color:inherit; cursor:pointer;
+}
+.vr-ds-v2 .vr-btn__face {
+ box-sizing:border-box;
+ display:inline-flex; align-items:center; justify-content:center;
+ min-height:var(--vr-button-frame-h);
+ padding:var(--vr-button-padding-y) var(--vr-button-padding-x);
+ border:var(--vr-button-border) solid var(--vr-border);
+ border-radius:var(--vr-button-radius); background:var(--vr-surface);
+ color:var(--vr-text);
+ font-family:var(--vr-font); font-size:var(--vr-button-text);
+ font-weight:var(--vr-weight-button); line-height:var(--vr-button-line);
+ white-space:normal; text-align:center;
+ gap:4px; box-shadow:none;
+}
+.vr-ds-v2 .vr-btn[data-vr-role="primary"] .vr-btn__face {
+ background:var(--vr-gold-strong); color:#FFF; border-color:var(--vr-gold-strong);
+}
+.vr-ds-v2 .vr-btn[data-vr-role="tertiary"] .vr-btn__face,
+.vr-ds-v2 .vr-btn[data-vr-role="icon"] .vr-btn__face {
+ background:transparent; border-color:transparent;
+}
+.vr-ds-v2 .vr-btn[data-vr-role="danger"] .vr-btn__face {
+ color:var(--vr-danger); background:transparent; border-color:var(--vr-border);
+}
+.vr-ds-v2 .vr-btn:focus-visible { outline:2px solid var(--vr-gold-strong); outline-offset:2px; }
+.vr-ds-v2 .vr-btn:disabled { opacity:.55; cursor:default; }
+.vr-ds-v2 .vr-btn[hidden] { display:none !important; }
+.vr-ds-v2 .vr-transport .vr-btn__face { border:0; background:transparent; padding:0; }
+.vr-ds-v2 .vr-album-detail__title { font-size:40px; line-height:1.2; font-weight:var(--vr-weight-album-detail); }
+@media(max-width:599px){
+ .vr-ds-v2 .vr-btn { min-height:44px; min-width:44px; }
+ .vr-ds-v2 .vr-album-detail__title { font-size:29px; }
+}
+@media(prefers-reduced-motion:reduce){ .vr-ds-v2 .vr-btn{ transition:none; } }

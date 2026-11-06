@@ -1,0 +1,14 @@
+// Full production frontend with existing isolated auth/API fixture. No live requests.
+import '../tests/header-actions/build-qa.mjs';
+import {readFile,writeFile,cp} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
+let page=await readFile('out/header-qa.html','utf8');
+page=page.replace("tracks:[{rank:1,title:'Synthetic chart track',artist:'Fixture Artist',album:'Fixture album',duration:120,format:'FLAC'}]",`tracks:Array.from({length:20},(_,i)=>({rank:i+1,title:['긴 한글 곡 제목과 English 곡명이 길게 이어지는 합성 트랙','Come Together','매일의 노래'][i%3]+' '+(i+1),artist:i%2?'The Beatles':'아티스트 이름이 긴 합성 가수',album:i%2?'A Very Long Album Name (Deluxe Edition)':'긴 한글 앨범명과 영문 Album Title 합성 자료',duration:120+i,format:'FLAC',bit_depth:16}))`);
+page=page.replace("if(u.pathname.endsWith('/top100'))",`if(u.pathname.includes('top100-cover'))return new Response('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#d6cdbb"/><circle cx="50" cy="50" r="30" fill="#68716b"/></svg>',{headers:{'Content-Type':'image/svg+xml'}});\n if(u.pathname.endsWith('/top100'))`);
+const runner=await readFile('tests/header-actions/browser-checks.js','utf8');page=page.replace(runner,'');
+await writeFile('out/top100-mobile-qa.html',page);
+const release=(await readFile('out/index.html','utf8')).match(/releases\/([^/]+)\/entry.js/)[1];
+await cp('out/releases/'+release,'out/top100-before',{recursive:true});for(const n of ['theme.css','design-v2.css'])await writeFile('out/top100-before/'+n,execFileSync('git',['show','c7be865e7e5234870dfd940acb2fffc90b756e13:dist/'+n]));
+await writeFile('out/top100-mobile-before.html',page.replaceAll('releases/'+release,'top100-before').replace('href="theme.css?', 'href="top100-before/theme.css?'));
+await writeFile('out/top100-frame.html',`<!doctype html><meta charset="utf-8"><title>Top100 isolated mobile QA</title><style>body{margin:0;background:#ddd;font:12px sans-serif}nav{height:44px;display:flex;align-items:center;gap:5px}iframe{display:block;border:0}</style><nav>합성 20곡·실제 앱 <select id="ver" aria-label="비교 버전"><option value="after">후보</option><option value="before">Top100 수정 전(A2 동일)</option></select><select id="size" aria-label="검증 크기"><option>390x844</option><option>320x844</option><option>360x844</option><option>412x844</option><option>768x1024</option><option>1440x900</option></select><select id="role" aria-label="검증 권한"><option>member</option><option>guest</option></select></nav><iframe id="test" title="실제 Top100" width="390" height="844"></iframe><script>const f=document.querySelector('iframe');function load(){f.src='top100-mobile-'+(ver.value==='before'?'before':'qa')+'.html?mode='+role.value}ver.onchange=load;role.onchange=load;size.onchange=()=>{const[w,h]=size.value.split('x');f.width=w;f.height=h};load();</script>`);
+console.log('Top100 focused QA ready');

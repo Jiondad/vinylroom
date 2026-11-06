@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.sites-runtime/
+node_modules/
+__pycache__/
+*.pyc
+scan-output/
+*.zip
+.scanner-deps/
+scan-results/
+
+output/
+out/
