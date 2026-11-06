@@ -28,6 +28,12 @@
 - [ ] Sites v267 병행 유지 기간·복구 절차 확정 (GitHub 접속 장애 시 기존 Sites URL로 복귀)
 - [ ] 남은 쓰기 기능의 GitHub Origin 서버 권한 및 접근 통제를 필요한 범위에서만 확인
 
+## 정식 운영 및 복귀 매뉴얼
+- [x] GitHub Pages 현재 주소를 기본 접속 주소로 채택하고, 이전 Sites 주소를 병행·복원용으로 유지
+- [x] GitHub 배포 문제 발생 시 Sites 접속으로 즉시 우회, GitHub 코드 롤백과 NAS 장애를 구분한 `OPERATIONS_CUTOVER.md` 작성
+- [ ] NAS의 나머지 관리자 쓰기 API 접근 정책은 **현재 제한된 상태**이며, 요청별 필요성 확인 전 전체 허용 금지
+- [ ] 앨범 공유 링크 GitHub URL 직접 열기 1회 확인
+
 ## 보존 및 보안
 - 기존 Sites v267 운영 중단·재게시 금지
 - NAS Catalog/AI DB, 음원, Tag, 회원 권한, Gemini 실행 조건 임의 변경 금지
