@@ -32,4 +32,15 @@ export function polishAlbumHeader(root,album){
   const tools=root.ownerDocument.createElement('div');tools.className='album-cover-tools';tools.append(edit);top.append(tools);
   if(review?.parentElement?.children.length===1)review.parentElement.hidden=true;
  }
+ // Position by actual rendered edges, not a fixed top:-Npx guess.
+ // Only desktop uses side-by-side cover/metadata columns.
+ const eyebrow=hero.querySelector('.album-eyebrow');
+ if(eyebrow&&root.ownerDocument.defaultView?.matchMedia('(min-width:741px)').matches){
+  root.ownerDocument.defaultView.requestAnimationFrame(()=>{
+   if(!hero.isConnected||!cover.isConnected)return;
+   hero.style.marginTop='0px';
+   const delta=cover.getBoundingClientRect().top-eyebrow.getBoundingClientRect().top;
+   if(Number.isFinite(delta))hero.style.marginTop=Math.round(delta-2)+'px';
+  });
+ }
 }
