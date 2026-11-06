@@ -1,25 +1,33 @@
-// Read-only album AI state. Server must affirm exact album identity and audit-based application.
-// No inference from proposal, review, album metadata or draft selections.
+// Read-only album AI state: only display a state explicitly verified by the NAS.
+// A proposal/review is not evidence of a successful Catalog change.
 const labels={
- proposal_pending:['AI 분석 제안 · 검토 대기','AI 분석 결과가 있습니다. 운영 앨범 정보에는 반영되지 않았습니다.'],
- review_completed:['AI 제안 검토 완료','검토 기록이 저장되어 있습니다. 운영 앨범 정보 반영 여부와는 별개입니다.'],
- applied:['AI 정보 반영 완료','현재 Catalog에 반영된 AI 변경 내역이 확인됐습니다.']
+ proposal_pending:{short:'대기',title:'AI 분석 제안 · 검토 대기',color:'waiting'},
+ review_completed:{short:'검토',title:'AI 제안 검토 완료 · Catalog 반영은 별개',color:'reviewed'},
+ applied:{short:'완료',title:'AI 정보 반영 완료 · 감사 기록 확인',color:'applied'}
 };
 export function renderAlbumAiStatus(data,albumId){
  if(!data||data.version!==1||data.album_id!==albumId||!Object.hasOwn(labels,data.state))return '';
  if(data.state==='applied'&&(data.catalog_applied!==true||data.audit_verified!==true))return '';
  if(data.state!=='applied'&&data.catalog_applied===true)return '';
- const [title,description]=labels[data.state];
- return {title,description,state:data.state};
+ return {...labels[data.state],state:data.state};
 }
 export function mountAlbumAiStatus({container,albumId,api,canManage}){
  if(!container||!albumId||!canManage?.())return ()=>{};
  const abort=new AbortController();let disposed=false;
- const root=container.ownerDocument.createElement('section');root.className='vr-album-ai-status';
- root.setAttribute('aria-label','앨범 AI 분석 상태');root.hidden=true;container.append(root);
+ const root=container.ownerDocument.createElement('span');root.className='vr-album-ai-ribbon';
+ root.setAttribute('aria-label','앨범 AI 상태');root.hidden=true;container.append(root);
  if(!container.ownerDocument.querySelector('#vr-album-ai-status-style')){
   const style=container.ownerDocument.createElement('style');style.id='vr-album-ai-status-style';
-  style.textContent='.vr-album-ai-status{border:1px solid #e8e5df;border-left:2px solid #b59a73;border-radius:4px;padding:11px 15px;margin:12px 0 20px;background:#fdfcf9;font-family:"Noto Sans KR",system-ui,sans-serif;font-weight:320}.vr-album-ai-status strong{display:block;color:#394b58;font-size:12px;font-weight:400}.vr-album-ai-status p{margin:4px 0 0;color:#77848c;font-size:11px;line-height:1.6}@media(max-width:740px){.vr-album-ai-status{padding:10px 12px;margin:10px 0 14px}}';
+  style.textContent=`
+.album-full-page .detail-top .cover{position:relative}
+.vr-album-ai-ribbon{position:absolute;top:8px;right:0;z-index:3;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:21px;padding:0 9px 0 11px;border-radius:2px 0 0 2px;border:1px solid rgba(255,255,255,.35);border-right:0;box-shadow:0 1px 4px rgba(0,0,0,.12);font-family:"Noto Sans KR",system-ui,sans-serif;font-weight:400;font-size:10px;letter-spacing:.01em;white-space:nowrap;line-height:1;cursor:help}
+.vr-album-ai-ribbon[hidden]{display:none!important}
+.vr-album-ai-ribbon .vr-ai-word{font-size:10px;font-weight:500;letter-spacing:.055em}
+.vr-album-ai-ribbon[data-ai-color="waiting"]{background:#b78943;color:#fffaf1}
+.vr-album-ai-ribbon[data-ai-color="reviewed"]{background:#648ba5;color:#fff}
+.vr-album-ai-ribbon[data-ai-color="applied"]{background:#719479;color:#fff}
+@media(max-width:740px){.vr-album-ai-ribbon{height:20px;top:7px;font-size:10px;padding:0 8px 0 10px}}
+`;
   container.ownerDocument.head.append(style);
  }
  void (async()=>{
@@ -27,10 +35,10 @@ export function mountAlbumAiStatus({container,albumId,api,canManage}){
    const data=await api('/v2/ai-classification/album-status?album_id='+encodeURIComponent(albumId),{admin:true,signal:AbortSignal.any([abort.signal,AbortSignal.timeout(8000)])});
    if(disposed||!root.isConnected||!canManage())return;
    const status=renderAlbumAiStatus(data,albumId);if(!status)return;
-   const heading=container.ownerDocument.createElement('strong');heading.textContent='✧ '+status.title;
-   const note=container.ownerDocument.createElement('p');note.textContent=status.description;
-   root.replaceChildren(heading,note);root.dataset.aiState=status.state;root.hidden=false;
-  }catch{ /* Unsupported endpoint, lack of permission, or network failure: no misleading badge. */ }
+   const ai=container.ownerDocument.createElement('span');ai.className='vr-ai-word';ai.textContent='AI';
+   const word=container.ownerDocument.createElement('span');word.textContent=status.short;
+   root.replaceChildren(ai,word);root.dataset.aiColor=status.color;root.title=status.title;root.setAttribute('aria-label',status.title);root.hidden=false;
+  }catch{ /* No verified status, no badge. */ }
  })();
  return ()=>{disposed=true;abort.abort();root.remove();};
 }
