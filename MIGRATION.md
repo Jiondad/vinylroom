@@ -14,10 +14,11 @@
 - [x] GitHub Actions에 `frontend/` 존재 시 기존 v267 빌더 실행·`frontend/out` 게시, 미존재 시 기존 `dist/` 유지하는 전환 경로 구성
 
 ## 남은 정식 운영 전환 게이트 — 미확인을 완료로 표시하지 않음
-- [ ] 프런트엔드 개발 원본 `frontend/` GitHub 업로드 (155개 파일 경량 패키지 준비 완료; 업로드 전에는 기존 `dist/` 게시 유지)
+- [x] 프런트엔드 개발 원본 `frontend/` GitHub 업로드 (155개 파일 경량 패키지) 및 Actions #12 자동 빌드·게시 성공
 - [ ] GitHub 사이트에서 회원·관리자 **다른 쓰기 기능**의 필요 범위 확인 및 최소 권한 연결
 - [ ] 재생 대기열 자동 전환·개인 플레이리스트 등 변경 출처 관련 기능의 동등성 확인(필요할 때만; 대규모 회귀 금지)
-- [ ] 공유 링크의 운영 Sites 고정 주소 처리 및 새 정식 주소에 맞는 경로 조정
+- [x] GitHub Pages 시험판 공유 링크는 현재 `/vinylroom/` 주소로 생성하고 Sites 기존 링크는 보존하도록 개발 원본 수정 (GitHub Actions 게시 반영 확인 필요)
+- [ ] 사용자 소유 정식 도메인 결정 후 해당 도메인 공유 링크 연동
 - [ ] 사용자 소유 정식 도메인 선정, GitHub Pages DNS/HTTPS 및 NAS 허용 Origin 설정
 - [ ] 최종 운영 전환 시 Sites v267 및 NAS 복원점 보존; 컷오버/롤백 경로 확정
 
@@ -31,12 +32,12 @@
 ## 현재 구조와 주의사항
 - `dist/`: Sites v267 소스 커밋 `f332919160bd66bf97e284c0205c549f6371040e`의 기존 빌드로 생성한 게시 후보로, 운영 TAR 바이트 동일성은 **미확인**
 - 배포된 UI는 사용자 스크린샷으로 확인됨. 실제 NAS 데이터/음원은 원격 연동으로 유지
-- 빌드 원본의 운영용 스크립트는 `scripts/header-actions-release.mjs`, `scripts/copy-artist-profiles.mjs`이며 산출물은 `out/`. 현재 GitHub Actions는 기존 `dist/`를 그대로 게시
-- `album-share.js`는 아직 기존 Sites 주소를 공유 링크 기본값으로 사용
+- 빌드 원본의 운영용 스크립트는 `frontend/scripts/header-actions-release.mjs`, `frontend/scripts/copy-artist-profiles.mjs`이며 산출물은 `frontend/out/`. GitHub Actions #12 자동 빌드·게시 성공
+- `frontend/dist/album-share.js`: 사이트별 공유 링크 선택. GitHub 시험판의 공개 링크는 `/vinylroom/?album=...`, Sites 기존 주소는 계속 유지. 사용자 지정 도메인은 아직 미설정
 - AI 적용 배지는 과거 시험 코드에만 존재; 현행 프로덕션 빌드에는 **미통합**. NAS 적용 감사 자료와 실제 앨범 API 읽기 계약 연결 필요
 - 현재 사이트 URL은 GitHub Pages 시험 주소로, 정식 도메인/운영 전환 미완료
 
 ## 개발 원본 등록 준비 (2026-11-06)
 - 사용자 업로드 `VinylRoom_v267_Production_Frontend.zip`의 `source/`에서 과거 릴리스 1,687개를 제외한 현재 원본 155개를 `frontend/`로 분리한 업로드 ZIP 생성.
 - 원본과 동일한 `header-actions-a54085e3f7ac` 진입점 생성, 정적 결과 216개 확인. 저장된 개발 원본 자체는 GitHub에 **아직 미등록**.
-- 등록 후 GitHub Actions가 기존 `dist/` 대신 `frontend/out/`을 게시. 변경 시 GitHub Pages 시험판만 영향을 받으며 Sites 운영판과 NAS는 유지.
+- GitHub Actions가 기존 `dist/` 대신 `frontend/out/`을 게시 중. 변경 시 GitHub Pages 시험판만 영향을 받으며 Sites 운영판과 NAS는 유지.
