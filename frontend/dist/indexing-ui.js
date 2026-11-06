@@ -7,7 +7,7 @@ export function mountIndexing({dialog,api,canManage,letters,toast,setTimer=setTi
  const $=selector=>dialog.querySelector(selector),node=$('#folder-browser'),jobs=$('#index-jobs'),start=$('#start-index'),rootWarning=$('#index-root-warning'),rootConfirm=$('#confirm-root-index'),status=$('#index-start-status');
  let selected=null,requested='',browseGeneration=0,disposed=false,timer=null,browseController=null,polling=null,submitting=false,busy=false;
  const controller=new AbortController();
- const alive=()=>!disposed&&node.isConnected&&jobs.isConnected&&dialog.open;
+ const alive=()=>!disposed&&node.isConnected&&jobs.isConnected&&(dialog.tagName!=='DIALOG'||dialog.open);
  const signal=()=>AbortSignal.any([controller.signal,AbortSignal.timeout(20000)]);
  function dispose(){disposed=true;browseGeneration++;clearTimer(timer);controller.abort();browseController?.abort();dialog.removeEventListener('close',dispose);}
  dialog.addEventListener('close',dispose,{once:true});
