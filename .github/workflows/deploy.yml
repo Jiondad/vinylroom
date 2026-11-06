@@ -29,12 +29,30 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Build from developer source when available
+        shell: bash
+        run: |
+          if [ -f frontend/scripts/header-actions-release.mjs ]; then
+            (
+              cd frontend
+              node scripts/header-actions-release.mjs
+              node scripts/copy-artist-profiles.mjs
+            )
+            echo "PUBLISH_DIR=frontend/out" >> "$GITHUB_ENV"
+            echo "Vinyl Room production builder: frontend/out"
+          else
+            echo "PUBLISH_DIR=dist" >> "$GITHUB_ENV"
+            echo "Legacy publish-only mode: dist"
+          fi
+
       - name: Check production frontend entrypoint
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
-          page = Path('dist/index.html')
+          import os
+          directory = Path(os.environ['PUBLISH_DIR'])
+          page = directory / 'index.html'
           if not page.is_file():
               raise SystemExit('HOLD: dist/index.html is missing')
           html = page.read_text(encoding='utf-8')
@@ -42,7 +60,7 @@ jobs:
           if len(matches) != 1:
               raise SystemExit('HOLD: expected exactly one module entrypoint')
           entry = matches[0].split('?', 1)[0]
-          if 'dev-audio-owner' in entry or not entry.startswith('releases/header-actions-') or not (Path('dist') / entry).is_file():
+          if 'dev-audio-owner' in entry or not entry.startswith('releases/header-actions-') or not (directory / entry).is_file():
               raise SystemExit('HOLD: wrong or missing v267 production entrypoint: ' + entry)
           print('Production entrypoint OK:', entry)
           PY
@@ -50,7 +68,7 @@ jobs:
       - name: Upload Vinyl Room
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./dist
+          path: ${{ env.PUBLISH_DIR }}
 
       - name: Deploy GitHub Pages
         id: deployment
