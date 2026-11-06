@@ -35,6 +35,14 @@
 - 실제 앨범 메타데이터 쓰기·AI Worker 실행·일괄 색인·계정 권한 변경: 별도 명시적 운영 승인
 - 이미 성공한 UI·음원 재생·AI 검토 저장은 정례 재검증하지 않음
 
+## 후속 코드 확인 — 2026-11-06
+- **회원 승인/권한 수정:** `frontend/dist/member-management.js`는 Supabase `rpc/vinyl_review_member`, `functions/v1/vinyl-admin-create-member`를 사용한다. NAS Origin 예외 추가 대상이 아니다. 실제 수정/승인 동작은 GitHub 주소에서 별도 확인되지 않음.
+- **회원 이름·닉네임 수정:** `frontend/dist/admin-center.js`는 Supabase `rpc/vinyl_admin_update_member_profile`로 직접 요청한다. 실제 정보 수정은 수행하지 않음.
+- **개인 플레이리스트:** `frontend/dist/playlists.js`는 NAS `GET/POST /v2/playlists`에 Bearer 토큰을 전송한다. GitHub Origin의 OPTIONS/POST 허용 경로는 이전부터 존재하지만 플레이리스트 저장·재조회 성공까지 확인된 것은 아님.
+- **관리자 앨범 변경:** GitHub Origin의 `/v2/edit`, `/v2/artist`, `/v2/hide` OPTIONS 204 및 CORS 헤더 확인 완료(사용자 NAS 로그). 실제 POST는 미검증.
+- **공유 링크:** `frontend/dist/album-share.js`가 GitHub 주소에서는 `/vinylroom/?album=<UUID>` 형태를 생성하도록 수정됐으나 브라우저에서 생성/직접 열기는 아직 미확인.
+- 이번 소스 확인으로 NAS 전체 CORS 허용이나 계정/데이터 쓰기 시험은 필요하다고 판단되지 않음.
+
 ## 다음 정식 이관 게이트
 1. NAS POST 라우트에 대한 GitHub Origin 처리 위치를 **읽기 전용**으로 확인하고, 실제 필요한 관리자 기능 목록 확정.
 2. 공유 링크 `https://jiondad.github.io/vinylroom/?album=...` 1건의 생성/직접 열기만 확인.
