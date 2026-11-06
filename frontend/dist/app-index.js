@@ -437,7 +437,7 @@ async function openAdminCenter(){
  repo.requireAdmin();if(!isApprovedMember())throw Error('승인된 관리자만 사용할 수 있습니다.');
  mountAdminCenter({canManage:()=>repo.admin&&isApprovedMember(),getAccessToken:currentMemberToken,
   openMembers:async()=>openMemberManagement(await currentMemberToken()),
-  openIndexing:async()=>{closeAdminCenter();await indexing();},openPlaybackDiagnostics:()=>{closeAdminCenter();openPlaybackDiagnostics();},api:(path,options)=>api(path,options)});
+  openIndexing:async()=>{closeAdminCenter();await indexing();},openPlaybackDiagnostics:()=>{closeAdminCenter();openPlaybackDiagnostics();},api:(path,options)=>api(path,options),letters,toast});
 }
 adminNav.onclick=action(openAdminCenter);
 $('#settings').onclick=openAccount;$('#import').onclick=action(indexing);$('#export').onclick=action(indexing);$('#random-redraw').onclick=()=>{randomSeed=crypto.randomUUID();randomResults.clear();try{sessionStorage.setItem('vinyl-random-seed',randomSeed);}catch{}navigationGeneration++;navigation?.record(navigationState());render();};
