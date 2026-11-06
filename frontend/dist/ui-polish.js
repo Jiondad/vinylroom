@@ -43,16 +43,8 @@ export function polishAlbumHeader(root,album){
   heading.style.setProperty('line-height','1.28','important');
   heading.style.setProperty('letter-spacing','-.035em','important');
  }
- // Align the *rendered* label edge, without affecting the cover or the grid track size.
- // The transform is applied to the whole information column rather than the label alone.
- const eyebrow=hero.querySelector('.album-eyebrow');
- if(eyebrow&&view?.matchMedia('(min-width:741px)').matches){
-  view.requestAnimationFrame(()=>{
-   if(!hero.isConnected||!cover.isConnected)return;
-   hero.style.removeProperty('margin-top');
-   hero.style.removeProperty('transform');
-   const delta=cover.getBoundingClientRect().top-eyebrow.getBoundingClientRect().top;
-   if(Number.isFinite(delta))hero.style.setProperty('transform','translateY('+Math.round(delta)+'px)','important');
-  });
- }
+ // The actual ink top of ALBUM sits below the text line box; its box-edge
+ // measurement previously reported alignment while the label still looked low.
+ // Desktop optical offset is handled once in CSS; do not override it in JS.
+
 }
