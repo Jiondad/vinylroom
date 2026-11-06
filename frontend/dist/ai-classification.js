@@ -12,13 +12,14 @@ export function limitPayload(form,now=Date.now()){
  return {...values,research_mode:form.get('research_mode')||'basic',confirmed_at:now/1000,auto_retry:false,model:'gemini-3.5-flash-lite'};
 }
 
-export async function openAiClassification({api,canManage,root=document,operationsOnly=false}){
+export async function openAiClassification({api,canManage,root=document,operationsOnly=false,container=null}){
  if(!canManage())throw Error('승인된 관리자만 사용할 수 있습니다.');
- root.querySelector('#vinyl-ai-panel')?.close();
+ if(!container)root.querySelector('#vinyl-ai-panel')?.close?.();
  if(!root.querySelector('#vinyl-ai-style')){
   const link=root.createElement('link');link.id='vinyl-ai-style';link.rel='stylesheet';link.href=new URL('./ai-classification.css',import.meta.url).href;root.head.append(link);
  }
- const panel=root.createElement('dialog');panel.id='vinyl-ai-panel';panel.className='vinyl-ai-panel';
+ const embedded=!!container;
+ const panel=root.createElement(embedded?'section':'dialog');panel.id='vinyl-ai-panel';panel.className='vinyl-ai-panel'+(embedded?' ai-embedded':'');
  panel.innerHTML=`<div class="ai-head"><div><p class="ai-eyebrow">VINYL ROOM / ADMIN</p><h1>AI 앨범 분류</h1></div><button data-close aria-label="AI 분류 닫기">×</button></div>
  <p class="ai-note">A단계 · AI 제안과 검토 기록만 저장합니다. 운영 앨범 정보에는 반영하지 않습니다.</p>
  <div class="ai-message" role="status"></div><nav class="ai-tabs" aria-label="AI 관리 화면"><button data-tab="summary" aria-current="page">현황</button><button data-tab="queue">아티스트·작업</button><button data-tab="results">제안 검토</button><button data-tab="settings">사용 한도</button></nav>
@@ -32,7 +33,16 @@ export async function openAiClassification({api,canManage,root=document,operatio
   panel.querySelector('[data-tab="results"]').remove();panel.querySelector('[data-pane="results"]').remove();panel.querySelector('[data-sync]').remove();
   panel.querySelector('.ai-note').textContent='기존 분석 작업·사용 한도 관리입니다. 한도 재확인 후 선택한 작업만 명시적으로 시작하세요. 검토 저장은 관리자센터의 기존 필드 검토 화면을 사용합니다.';
  }
- root.body.append(panel);panel.showModal();
+ if(embedded){
+  panel.querySelector('[data-close]')?.remove();
+  panel.querySelector('.ai-tabs')?.remove();
+  panel.querySelector('[data-pane="summary"]').hidden=true;
+  panel.querySelector('[data-pane="queue"]').hidden=false;
+  panel.querySelector('[data-pane="settings"]').hidden=false;
+  panel.querySelector('.ai-head h1').textContent='분석 작업·사용 한도';
+  panel.querySelector('.ai-note').remove();
+  container.append(panel);
+ }else{root.body.append(panel);panel.showModal();}
  const researchDisposers=new Set();
  const $=s=>panel.querySelector(s);const abort=new AbortController();let timer,disposed=false,refreshing=false,artistOffset=0,resultOffset=0,query='',typeFilter='',lastSettings=false,operationsConnected=false;
  const message=(value,error=false)=>{const node=$('.ai-message');node.textContent=value;node.classList.toggle('ai-error',error);};
@@ -68,10 +78,10 @@ export async function openAiClassification({api,canManage,root=document,operatio
  async function results(){for(const dispose of researchDisposers)dispose();researchDisposers.clear();const d=await call('/results?offset='+resultOffset+'&album_type='+encodeURIComponent(typeFilter));if(disposed)return;$('[data-results]').innerHTML=d.items.map(p=>`<details class="ai-result"><summary>${esc(p.artist)} · ${esc(p.title)} <small>${esc(stateLabel(p.review_state))}${p.stale?' · 입력 변경됨':''}${p.taxonomy_review?' · 이전 유형 정책 검토':''}</small></summary><p class="ai-note">AI 제안 · 외부 검증 미완료 · 원본 DB 반영 불가</p>${p.stale?`<p class="ai-muted">재검토 필드: ${esc((p.changed_fields||[]).join(', '))}</p>`:''}<div class="ai-table-wrap"><table><thead><tr><th>항목</th><th>기존</th><th>AI 제안</th><th>판정</th></tr></thead><tbody>${p.comparison.map(c=>`<tr><td>${esc(c.field)}</td><td>${esc(c.before)}</td><td>${esc(c.after??'미확인')}</td><td>${esc(c.kind)}${c.manual_protected?' · 수동값 보호':''}</td></tr>`).join('')}</tbody></table></div><h3>작품 정보</h3><pre>${esc(JSON.stringify(p.result.work,null,2))}</pre><h3>소장 판본 제안</h3><pre>${esc(JSON.stringify(p.result.edition,null,2))}</pre><button data-research-album="${esc(p.album_id)}">앨범 연구 기록 보기</button><div data-research-host></div><h3>근거 구분·불확실성</h3><pre>${esc(JSON.stringify({basis:p.result.basis,uncertainties:p.result.uncertainties},null,2))}</pre><div class="ai-actions">${[['confirmed','검토 확정'],['rejected','거부'],['pending','검토 대기']].map(([state,label])=>`<button data-review="${esc(p.id)}" data-state="${state}" ${p.stale&&state==='confirmed'?'disabled':''}>${label}</button>`).join('')}</div></details>`).join('')||'<p class="ai-muted">저장된 AI 제안이 없습니다.</p>';$('[data-result-prev]').disabled=resultOffset===0;$('[data-result-next]').disabled=d.items.length<50;}
  function close(){for(const dispose of researchDisposers)dispose();researchDisposers.clear();disposed=true;clearInterval(timer);abort.abort();root.defaultView?.removeEventListener('vinyl-account-change',accountChanged);panel.remove();}
  function accountChanged(){if(!canManage())message('관리자 인증을 확인해 주세요. 화면은 유지되며 요청은 차단됩니다.');}
- panel.addEventListener('close',close,{once:true});root.defaultView?.addEventListener('vinyl-account-change',accountChanged);
+ if(!embedded)panel.addEventListener('close',close,{once:true});root.defaultView?.addEventListener('vinyl-account-change',accountChanged);
  panel.addEventListener('click',event=>void guarded(async()=>{
   const b=event.target.closest('button');if(!b)return;
-  if(b.hasAttribute('data-close')){panel.close();return;}
+  if(b.hasAttribute('data-close')){if(embedded)close();else panel.close();return;}
   if(b.dataset.tab){panel.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==b.dataset.tab);panel.querySelectorAll('[data-tab]').forEach(t=>t.setAttribute('aria-current',t===b?'page':'false'));if(b.dataset.tab==='queue')await artists();if(b.dataset.tab==='results')await results();return;}
   if(b.hasAttribute('data-sync')){await call('/sync',{body:{}});message('색인 정보를 읽는 중입니다. 음악 파일·운영 DB는 변경하지 않습니다.');}
   if(b.dataset.enqueue){await call('/queue',{body:{artist_keys:[b.dataset.enqueue]}});message('작업을 등록했습니다. 시작 버튼으로 실행하세요.');}
@@ -86,6 +96,8 @@ export async function openAiClassification({api,canManage,root=document,operatio
  if(!operationsOnly)$('[data-type-filter]').onchange=event=>{typeFilter=event.target.value;resultOffset=0;void guarded(results);};
  $('[data-search]').onsubmit=event=>{event.preventDefault();query=new FormData(event.currentTarget).get('search');artistOffset=0;void guarded(artists);};
  $('[data-limits]').onsubmit=event=>{event.preventDefault();const form=event.currentTarget;void guarded(async()=>{await call('/settings',{body:limitPayload(new FormData(form))});message('한도를 저장했습니다. 작업은 별도로 시작하세요.');await refresh();});};
- timer=setInterval(()=>void guarded(refresh),10000);await guarded(refresh);
- return {close:()=>panel.close()};
+ timer=setInterval(()=>{if(!embedded||!root.hidden&&!container?.closest('[hidden]'))void guarded(refresh);},10000);
+ await guarded(refresh);
+ if(embedded)await guarded(artists);
+ return {close:()=>{if(embedded){if(!disposed)close();}else if(panel.open)panel.close();}};
 }
