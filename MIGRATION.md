@@ -1,30 +1,36 @@
 # Vinyl Room — GitHub 운영 이관 체크포인트
 
-기준: 2026-11-06 · 운영 Sites v267 유지 / GitHub Pages `https://jiondad.github.io/vinylroom/`
+기준: 2026-11-06 · 운영 Sites v267 유지 / GitHub Pages https://jiondad.github.io/vinylroom/
 
-## 현재 확인됨
-- [x] `Jiondad/vinylroom` 공개 저장소에 v267 배포물 `dist/` 보관
-- [x] GitHub Actions가 `dist/`를 GitHub Pages에 배포
-- [x] GitHub 시험판에서 공개 음악 서재 화면 표시
-- [x] NAS `/health` 200, `Origin: https://jiondad.github.io`에 CORS 헤더 반환
-- [x] AI 분류 적용 표시 프런트엔드 구성 요소 추가 (적용 증거를 API가 제공하기 전에는 숨김)
+## 검증 완료 — 사용자 현장 확인 재사용
+- [x] v267 프로덕션 형식 `publish/`의 216개 정적 파일을 GitHub `dist/`로 교체
+- [x] 실행 진입점 `releases/header-actions-a54085e3f7ac/entry.js` 적용 및 최신 UI 표시 확인
+- [x] GitHub Actions Pages 자동 배포 및 NAS 공개 앨범·아티스트·사진 조회
+- [x] 관리자 로그인, 앨범 상세, 실제 음원 1곡 재생
+- [x] AI 제안 목록 및 검토 선택·confidence-v2 조회: GitHub 출처의 GET/OPTIONS 허용
+- [x] AI 검토 초안 저장 1건: NAS 저장 → 재조회 → 감사 기록 확인 완료. **확정 및 Catalog 반영 없음**
+- [x] `review-selections` POST 사전 요청 허용 및 AI API 내부 GitHub Origin 별도 허용(해당 POST만)
+- [x] 구형 `dev-audio-owner` 진입점을 게시하지 않도록 Actions 진입점 사전 검사 추가
 
-## 이관 게이트 — 확인 전 운영 주소 전환 금지
-- [ ] GitHub 도메인에서 기존 승인 회원 로그인·세션 복원 (실제 사용자가 확인)
-- [ ] 승인 회원의 앨범 조회·1곡 재생·다음 곡 전환 (변경된 교차 출처 경로만 확인)
-- [ ] 관리자센터 조회·AI 검토 목록 조회 (읽기 우선; 쓰기 검증은 실제 필요 시)
-- [ ] GitHub 사이트의 공유 링크·상대경로·페이지 새로고침 확인
-- [ ] NAS 허용 출처/요청 경로를 실제 운영 전환에 맞게 최소 보완 (인증·승인은 그대로 서버에서 강제)
-- [ ] 사용자 소유 운영 도메인 결정 및 DNS·HTTPS 설정
-- [ ] 운영 사이트로 전환하되 Sites v267 및 NAS 백업 복원점 보존
+## 남은 정식 운영 전환 게이트 — 미확인을 완료로 표시하지 않음
+- [ ] 프런트엔드 **개발 원본**과 빌드 절차의 GitHub 관리 (현재 기본 배포 기준은 게시 산출물 `dist/`)
+- [ ] GitHub 사이트에서 회원·관리자 **다른 쓰기 기능**의 필요 범위 확인 및 최소 권한 연결
+- [ ] 재생 대기열 자동 전환·개인 플레이리스트 등 변경 출처 관련 기능의 동등성 확인(필요할 때만; 대규모 회귀 금지)
+- [ ] 공유 링크의 운영 Sites 고정 주소 처리 및 새 정식 주소에 맞는 경로 조정
+- [ ] 사용자 소유 정식 도메인 선정, GitHub Pages DNS/HTTPS 및 NAS 허용 Origin 설정
+- [ ] 최종 운영 전환 시 Sites v267 및 NAS 복원점 보존; 컷오버/롤백 경로 확정
 
-## 변경 금지
-- Sites 운영 v267의 기능·주소·배포물
-- NAS Catalog/AI DB, 음원, Tag, 플레이리스트, 회원 권한
-- 공개 GitHub 저장소에 관리자 토큰, API 비밀 키, NAS 데이터·백업 등록
+## 보존 및 보안
+- 기존 Sites v267 운영 중단·재게시 금지
+- NAS Catalog/AI DB, 음원, Tag, 회원 권한, Gemini 실행 조건 임의 변경 금지
+- GitHub 공개 저장소에 관리자 토큰, 서버 비밀 키, DB, 백업, 로그 업로드 금지
+- NAS 인증·승인과 AI 검토의 검증/감사/확정 차단은 서버가 최종 판정
+- 이미 통과한 시험과 기능을 일괄 재검증하지 않음
 
-## 원칙
-GitHub를 프런트엔드의 단일 개발 기준으로 사용. GitHub Pages는 정적 파일만 제공하며 NAS/Supabase에서 인증·권한을 검증한다. 이미 통과한 검증은 반복하지 않고 교차 출처 기능만 확인한다.
-
-## 주요 기술 부채
-현재 `dist/`는 배포 결과물로, 후속 원본 소스가 완비되었는지 별도 확인 필요. `dist/config.js`의 NAS 주소는 독립 도메인. `dist/album-share.js`는 운영 주소에 공유 링크를 고정. `ai_application` 적용 이력은 현재 API 응답에 미연결.
+## 현재 구조와 주의사항
+- `dist/`: Sites v267 소스 커밋 `f332919160bd66bf97e284c0205c549f6371040e`의 기존 빌드로 생성한 게시 후보로, 운영 TAR 바이트 동일성은 **미확인**
+- 배포된 UI는 사용자 스크린샷으로 확인됨. 실제 NAS 데이터/음원은 원격 연동으로 유지
+- 빌드 원본의 운영용 스크립트는 `scripts/header-actions-release.mjs`, `scripts/copy-artist-profiles.mjs`이며 산출물은 `out/`. 현재 GitHub Actions는 기존 `dist/`를 그대로 게시
+- `album-share.js`는 아직 기존 Sites 주소를 공유 링크 기본값으로 사용
+- AI 적용 배지는 과거 시험 코드에만 존재; 현행 프로덕션 빌드에는 **미통합**. NAS 적용 감사 자료와 실제 앨범 API 읽기 계약 연결 필요
+- 현재 사이트 URL은 GitHub Pages 시험 주소로, 정식 도메인/운영 전환 미완료
