@@ -59,3 +59,5 @@
 - 사용자 업로드 `VinylRoom_v267_Production_Frontend.zip`의 `source/`에서 과거 릴리스 1,687개를 제외한 현재 원본 155개를 `frontend/`로 분리한 업로드 ZIP 생성.
 - 원본과 동일한 `header-actions-a54085e3f7ac` 진입점 생성, 정적 결과 216개 확인. 개발 원본 GitHub 등록 완료.
 - GitHub Actions가 기존 `dist/` 대신 `frontend/out/`을 게시 중. 변경 시 GitHub Pages 시험판만 영향을 받으며 Sites 운영판과 NAS는 유지.
+
+- 2026-11-06 Chrome 후속 진단 보정: 차량 이동 중 노래 중간 끊김은 사용자 현장 설명상 통신 신호 약화가 유력하며 NAS/프로그램 결함으로 판정하지 않는다. Chrome 잠금화면에서 다음 곡 자동 전환 지연만 미해결 대상으로 유지. 실제 `frontend/dist/player.js`의 사전 준비 유효시간 30/40초→300초 수정(커밋 `5eb044c`), 새 빌드/실기기 효과 미확인. 스트리밍 중간 복구 로직 추가 금지.
