@@ -153,5 +153,5 @@ main[data-artist-index] #content .artist-index{margin-top:0;margin-bottom:6px}
 /* Album detail: align the top of the ALBUM eyebrow with the cover edge (desktop). */
 @media(min-width:741px){
  body .album-full-page .album-header-info{padding-top:0;align-self:start}
- body .album-full-page .album-header-info>.album-eyebrow{margin-top:-2px;line-height:1.25}
+ body .album-full-page .album-header-info>.album-eyebrow{margin-top:-2px;line-height:1.25;position:relative;top:-12px}
 }
