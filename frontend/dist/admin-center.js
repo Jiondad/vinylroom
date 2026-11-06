@@ -36,7 +36,7 @@ export function summaryResponseState(data){
 }
 let dismissCurrent=null;
 export function closeAdminCenter(){dismissCurrent?.();}
-export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndexing,api}={}){
+export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndexing,openPlaybackDiagnostics,api}={}){
  if(!canManage?.())throw Error('승인된 관리자만 이용할 수 있습니다.');
  dismissCurrent?.();
  const page=document.createElement('section');page.id='vinyl-admin-center';page.className='vinyl-admin-page';
@@ -81,6 +81,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
     <article><small>QUALITY</small><h3>정합성 점검</h3><p>앨범명·날짜·판본·멀티 CD 오류 후보의 별도 검토 기능입니다.</p><button type="button" disabled>기능 준비 중</button></article>
    </div>
    <button type="button" data-action="catalog">기존 카탈로그 상태 조회</button>
+   <p><button type="button" data-action="playback-diagnostics">재생 진단 로그 · Chrome 잠금화면</button></p>
   </section>
  </section>
  <section data-pane="catalog" hidden>
@@ -287,7 +288,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  page.addEventListener('click',async e=>{
   const btn=e.target.closest('[data-action]');if(!btn||btn.disabled)return;
   btn.disabled=true;
-  try{check();if(btn.dataset.action==='members')await openMembers();else if(btn.dataset.action==='indexing')await openIndexing();else if(btn.dataset.action==='stats')await access();else if(btn.dataset.action==='ai')await readAiReview();else if(btn.dataset.action==='ai-operations'){const {openAiClassification}=await import('./ai-classification.js');check();operationsPanel?.close();operationsPanel=await openAiClassification({api:(path,opts={})=>{check();return api(path,{...opts,admin:true});},canManage:()=>!closed&&canManage(),operationsOnly:true});}else if(btn.dataset.action==='ai-summary')await readAiSummary();else if(btn.dataset.action==='ai-api')await checkAiApis();else if(btn.dataset.action==='catalog')await catalog();}
+  try{check();if(btn.dataset.action==='members')await openMembers();else if(btn.dataset.action==='indexing')await openIndexing();else if(btn.dataset.action==='stats')await access();else if(btn.dataset.action==='ai')await readAiReview();else if(btn.dataset.action==='ai-operations'){const {openAiClassification}=await import('./ai-classification.js');check();operationsPanel?.close();operationsPanel=await openAiClassification({api:(path,opts={})=>{check();return api(path,{...opts,admin:true});},canManage:()=>!closed&&canManage(),operationsOnly:true});}else if(btn.dataset.action==='ai-summary')await readAiSummary();else if(btn.dataset.action==='ai-api')await checkAiApis();else if(btn.dataset.action==='catalog')await catalog();else if(btn.dataset.action==='playback-diagnostics')openPlaybackDiagnostics?.();}
   catch(err){if(!closed)notice(err?.message||'요청을 완료하지 못했습니다.');}
   finally{if(btn.isConnected)btn.disabled=false;}
  });
