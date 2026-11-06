@@ -1,4 +1,5 @@
 import {QueueModel} from './queue.js';
+import {playbackDiagnostics} from '../playback-diagnostics.js';
 const owners=new WeakMap();
 // Access policy stays in access-state; this only cancels the owned media work.
 export function revokeOwnedAudio(audio){const engine=owners.get(audio);if(!engine)return false;engine.revoke();return true;}
@@ -69,8 +70,17 @@ export class NextQueuePlayer extends QueueModel {
    this.audio.onloadedmetadata=()=>{if(generation!==this.sourceGeneration||this.loadedItem!==item||this.disposed)return;if(offset>0){const limit=this.end??this.audio.duration;this.audio.currentTime=Number.isFinite(limit)?Math.min(offset,Math.max(this.start,limit-.1)):offset;}};
    this.audio.src=result.url;this.transitioning=false;this.message='';this.setState('loading');
    if(seq!==this.sequence||this.intent!=='playing'||this.disposed)return;
-   const promise=this.audio.play();
-   await promise;
+   // Record the actual background transition result; never retry a browser-denied play.
+   const playAttemptId=playbackDiagnostics.playPromiseRequested();
+   if(automatic)playbackDiagnostics.record('automatic-next-play-attempt',{reason:'queue-advance'},{immediate:true});
+   try{
+    await this.audio.play();
+    playbackDiagnostics.playPromiseResolved(playAttemptId);
+   }catch(error){
+    playbackDiagnostics.playPromiseRejected(playAttemptId,error);
+    if(automatic)playbackDiagnostics.record('automatic-next-play-failed',{errorName:error?.name||'Error',reason:'queue-advance'},{immediate:true});
+    throw error;
+   }
    // A resolved play promise is not evidence of continuing audible output.
    if(!this.disposed&&generation===this.sourceGeneration&&this.intent!=='playing'&&!this.audio.paused)this.audio.pause();
   }catch(error){if(seq!==this.sequence||controller.signal.aborted||this.disposed)return;this.transitioning=false;this.fail(error);}
