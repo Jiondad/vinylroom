@@ -1,0 +1,26 @@
+.vinyl-lyrics-dialog{box-sizing:border-box;width:min(580px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:80dvh;padding:24px;background:#fff;color:#373737;border:0;border-radius:16px;box-shadow:0 18px 65px #17171726;font-family:"Noto Sans KR",sans-serif!important;font-weight:320!important;letter-spacing:-.025em;font-synthesis:none;overflow:hidden}
+.vinyl-lyrics-dialog[open]{display:flex;flex-direction:column}
+.vinyl-lyrics-dialog::backdrop{background:rgba(24,24,24,.28);backdrop-filter:blur(2px)}
+.vinyl-lyrics-header{display:flex;flex:none;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 10px}
+.vinyl-lyrics-header>div{min-width:0}.vinyl-lyrics-header strong,.vinyl-lyrics-header small{display:block;overflow-wrap:anywhere;font-family:inherit;font-weight:320!important}
+.vinyl-lyrics-header strong{font-size:22px;line-height:1.4;color:#303030}.vinyl-lyrics-header small{margin-top:4px;font-size:13px;line-height:1.45;color:#838383}
+.vinyl-lyrics-header button{flex-shrink:0;display:grid;place-items:center;width:32px;height:32px;padding:0;background:transparent;border:0;border-radius:50%;color:#777;font:320 25px/1 "Noto Sans KR",sans-serif;cursor:pointer}
+.vinyl-lyrics-header button:hover{background:#f6f5f2}.vinyl-lyrics-header button:focus-visible,.vinyl-lyrics-content:focus-visible{outline:1px solid #b58c44;outline-offset:3px}
+.vinyl-lyrics-status{flex:none;font-size:11px;color:#939393;line-height:1.45;margin:0 0 8px}.vinyl-lyrics-status:empty{display:none}
+.vinyl-lyrics-content{position:relative;overflow:auto;overscroll-behavior:contain;min-height:100px;min-width:0;flex:1 1 auto;padding:8px 4px;text-align:center;scrollbar-width:thin;scrollbar-color:#ddd transparent;overflow-wrap:anywhere}
+.vinyl-lyrics-content::-webkit-scrollbar{width:3px}.vinyl-lyrics-content::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px}
+.vinyl-lyrics-content pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:17px;line-height:1.9;margin:0;padding:0;background:transparent;max-height:none;text-align:center}
+/* Reserve the largest type size for every cue; only the visible span changes. */
+.vinyl-lyrics-dialog .vinyl-lyrics-content .vinyl-lyrics-line{position:relative;z-index:1;display:grid;place-items:center;box-sizing:border-box;width:max-content;max-width:100%;margin:0 auto;padding:7px 14px;line-height:36.1px!important;font-size:17px!important;font-weight:320!important;color:#858585;overflow-wrap:anywhere}
+.vinyl-lyrics-line::before{content:attr(data-lyric);visibility:hidden;pointer-events:none;font-size:19px;grid-area:1/1;min-width:0;white-space:pre-wrap}
+.vinyl-lyrics-line>span{grid-area:1/1;min-width:0;max-width:100%;white-space:pre-wrap}
+.vinyl-lyrics-line.is-current{color:#876b38;font-weight:320!important;background:transparent}
+.vinyl-lyrics-line.is-current>span{font-size:19px}
+.vinyl-lyrics-highlight{position:absolute;top:0;left:0;box-sizing:border-box;border:1px solid #C8A86B;border-radius:11px;background:#c8a86b08;pointer-events:none;z-index:0}
+.vinyl-lyrics-highlight[hidden]{display:none}
+.vinyl-lyrics-highlight.is-moving{transition:transform 220ms cubic-bezier(.22,1,.36,1),width 220ms cubic-bezier(.22,1,.36,1),height 220ms cubic-bezier(.22,1,.36,1)}
+@media(max-width:600px){.vinyl-lyrics-dialog{padding:18px 16px;max-height:80dvh}.vinyl-lyrics-header strong{font-size:19px}.vinyl-lyrics-header small{font-size:12px}.vinyl-lyrics-dialog .vinyl-lyrics-content .vinyl-lyrics-line,.vinyl-lyrics-content pre{font-size:15px!important}.vinyl-lyrics-dialog .vinyl-lyrics-content .vinyl-lyrics-line{line-height:31.45px!important}.vinyl-lyrics-line::before,.vinyl-lyrics-line.is-current>span{font-size:17px}.vinyl-lyrics-content pre{line-height:1.85}.vinyl-lyrics-header{margin-bottom:8px}}
+@media(prefers-reduced-motion:reduce){.vinyl-lyrics-highlight.is-moving{transition:none}}
+
+/* Keep this popup at the requested 320 even when the site preference is 350. */
+@layer vr-user-font-weight{body.vr-ds-v2 .vinyl-lyrics-dialog,body.vr-ds-v2 .vinyl-lyrics-dialog :is(strong,small,p,span,pre,button){font-weight:320!important}}

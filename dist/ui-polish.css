@@ -1,0 +1,151 @@
+/* Scoped control system. No universal button reset, card or playback geometry changes. */
+:root{--vr-btn-height:30px;--vr-btn-small:27px;--vr-btn-radius:999px;--vr-btn-line:#d9d3c7;--vr-btn-fill:#fffdf8;--vr-btn-ink:#655945;--vr-btn-primary:#273744;--vr-btn-danger:#96554c}
+body :is(main header .header-actions,main .toolbar,main .results-line,.pagination,.category-filter,.random-actions,.album-share-buttons,.vinyl-auth-actions,main .artist-index,.vinyl-quick-actions,.album-primary-actions,.album-cover-tools,.modal-body,.vinyl-members-dialog,.vinyl-admin-page :is(.vr-admin-section-head,.vr-admin-toolbar,.vr-admin-table,.vr-admin-actions),.top100-actions,.album-page-body>.actions) button:not(:is(.album-card,.artist-card,.random-song-card,.mobile-track-title-play,.album-artist-detail-link,[data-queue-handle],[data-drag-handle],[data-image],[data-mobile-track-action],[data-top100-more],[data-queue-play],[data-track-action="play"],[data-top100-action="play"],[data-search-play],[data-mobile-track-play])){
+ box-sizing:border-box;max-width:100%;min-height:var(--vr-btn-instance-height,var(--vr-btn-height));height:auto;padding:var(--vr-btn-instance-padding,4px 13px);border:1px solid var(--vr-control-border,var(--vr-btn-line));border-radius:var(--vr-btn-radius);background:var(--vr-control-bg,var(--vr-btn-fill));color:var(--vr-control-ink,var(--vr-btn-ink));box-shadow:none;font-family:inherit;font-size:var(--vr-btn-instance-size,12px);font-weight:350;line-height:var(--vr-btn-instance-line,20px);white-space:normal;vertical-align:middle;letter-spacing:var(--vr-demo-tracking,-.025em);transition:background-color .12s,border-color .12s
+}
+body :is(.album-primary-actions,[data-top100-all],.vinyl-quick-actions,.modal-body,.vinyl-admin-page :is(.vr-admin-section-head,.vr-admin-toolbar,.vr-admin-table,.vr-admin-actions)) :is(button.primary,button[type="submit"],[data-album-action="play"]),body :is(button[data-top100-all="play"],#random-play){--vr-control-bg:var(--vr-btn-primary);--vr-control-border:var(--vr-btn-primary);--vr-control-ink:#fff;background:var(--vr-btn-primary);border-color:var(--vr-btn-primary);color:#fff}
+body :is(.modal-body,.vinyl-members-dialog,.vinyl-admin-page :is(.vr-admin-section-head,.vr-admin-toolbar,.vr-admin-table,.vr-admin-actions),.album-page-body) button:is(.danger,[data-delete],#confirm-hide,#hide-index){--vr-control-bg:#fffaf7;--vr-control-border:#dfc8c1;--vr-control-ink:var(--vr-btn-danger);background:#fffaf7;border-color:#dfc8c1;color:var(--vr-btn-danger)}
+body :is(.album-primary-actions,.vinyl-quick-actions,.top100-actions,.modal-body .actions){gap:7px;flex-wrap:wrap}
+body :is(.table-wrap,.top100-table,.search-actions,.vinyl-members-overflow) button:not(:is([data-mobile-track-action],[data-top100-more],[data-track-action="play"],[data-top100-action="play"],[data-search-play],[data-mobile-track-play])){--vr-btn-instance-height:var(--vr-btn-small);--vr-btn-instance-padding:3px 9px;--vr-btn-instance-size:11px;--vr-btn-instance-line:19px;min-height:var(--vr-btn-small);padding:3px 9px;border:1px solid var(--vr-btn-line);border-radius:5px;background:var(--vr-btn-fill);color:var(--vr-btn-ink);box-shadow:none;font-size:11px;font-weight:350;line-height:19px}
+body :is(.vinyl-lyrics-header,.album-share-head,.vinyl-members-header,.modal-head) button,body :is(.album-cover-close,.artwork-close){box-sizing:border-box;min-width:32px;min-height:32px;padding:3px 8px;border:1px solid var(--vr-btn-line);border-radius:5px;background:var(--vr-btn-fill);color:var(--vr-btn-ink);box-shadow:none;font-size:18px;font-weight:350;line-height:24px}
+body :is(#queue-panel,.mobile-player-sheet) button:not(:is([data-queue-play],[data-queue-handle],[data-drag-handle],[data-toggle],[data-next],[data-previous])){border-radius:5px;box-shadow:none;font-weight:350}
+body #nav>button{border-radius:5px;box-shadow:none;font-weight:350}
+body :is(.album-primary-actions,.modal-body,.vinyl-admin-page :is(.vr-admin-section-head,.vr-admin-toolbar,.vr-admin-table,.vr-admin-actions),.vinyl-members-dialog,.pagination,.table-wrap) button:focus-visible{outline:2px solid #b7955f;outline-offset:2px}
+body :is(.album-primary-actions,.modal-body,.vinyl-admin-page :is(.vr-admin-section-head,.vr-admin-toolbar,.vr-admin-table,.vr-admin-actions),.pagination) button:hover:not(:disabled){border-color:#b7955f;filter:brightness(.98)}
+body :is(.album-primary-actions,.modal-body,.vinyl-admin-page :is(.vr-admin-section-head,.vr-admin-toolbar,.vr-admin-table,.vr-admin-actions)) button:disabled{opacity:.5;cursor:not-allowed}
+/* Album-only geometry: Today's Albums, cards and thumbnail sizing are untouched. */
+body .album-full-page .detail-top{grid-template-columns:minmax(190px,300px) minmax(0,1fr);gap:30px}
+body .album-full-page .detail-top .cover{width:100%;max-width:300px;aspect-ratio:1;height:auto;box-shadow:none}
+.album-cover-column{min-width:0;max-width:300px}.album-cover-tools{display:flex;justify-content:flex-start;margin-top:9px}
+body .album-full-page .album-cover-tools #edit-index{flex:none;width:auto;min-height:26px;height:26px;padding:2px 9px;font-size:11px;line-height:20px;border:1px solid #d9d3c7;border-radius:5px;background:#fffdf8;color:#7b694d;font-weight:350;box-shadow:none}
+body .album-full-page .album-artist-line{display:block;margin:0 0 8px;color:#7f8992;font-size:13px}
+body .album-full-page .album-artist-detail-link{display:inline;border:0;border-radius:0;background:transparent;padding:0;min-height:0;height:auto;color:inherit;font:inherit;line-height:inherit;text-align:left;text-decoration:none;cursor:pointer}
+body .album-full-page .album-artist-detail-link:hover{color:#816538;text-decoration:none}
+body .album-full-page .album-artist-detail-link:focus-visible{outline:2px solid #b7955f;outline-offset:3px}
+body .album-full-page .album-release-date{display:block;margin:0 0 14px;font-size:12px;font-weight:350;color:#88775c;line-height:1.5}
+body .album-full-page #review-index,body .album-full-page .album-facts[hidden]{display:none!important}
+body .album-full-page .detail-top .actions[hidden]{display:none!important}
+@media(max-width:1000px) and (min-width:741px){body .album-full-page .detail-top{grid-template-columns:minmax(170px,250px) minmax(0,1fr);gap:22px}}
+@media(max-width:740px){body .album-full-page .detail-top{grid-template-columns:minmax(0,1fr);gap:18px}body .album-full-page .detail-top .cover,.album-cover-column{max-width:min(290px,100%)}body .album-full-page .album-primary-actions{max-width:100%;gap:6px}body .album-full-page .album-primary-actions button{font-size:11px;padding:5px 10px}}
+@media(pointer:coarse){body :is(.album-primary-actions,.album-cover-tools,.pagination,.modal-head,.vinyl-lyrics-header) button{position:relative}body :is(.album-primary-actions,.album-cover-tools,.pagination,.modal-head,.vinyl-lyrics-header) button::after{content:"";position:absolute;inset:-5px 0;min-height:36px}body :is(.album-primary-actions,.pagination){row-gap:12px}body .album-cover-tools{margin-top:13px}}
+@media(prefers-reduced-motion:reduce){body :is(.album-primary-actions,.modal-body,.pagination) button{transition:none}}
+
+/* Album grid separates cover height from the administration and action row. */
+body .album-full-page .detail-top{row-gap:9px;align-items:start}
+body .album-full-page .detail-top .cover{grid-column:1;grid-row:1}
+body .album-full-page .album-header-info{grid-column:2;grid-row:1;display:flex;flex-direction:column;min-height:0;min-width:0;align-self:stretch;box-sizing:border-box;padding-bottom:6px}
+body .album-full-page .album-header-info>.album-facts:not([hidden]){margin-top:auto;margin-bottom:0}
+body .album-full-page .album-cover-tools{grid-column:1;grid-row:2;margin-top:0;align-self:start}
+body .album-full-page .album-cover-tools #edit-index{display:inline-flex;align-items:center;min-height:26px;height:26px;border-radius:5px}
+body .album-full-page .album-header-actions{grid-column:2;grid-row:2;display:flex;align-items:center;flex-wrap:wrap;margin:0;gap:7px}
+body .album-full-page .album-header-actions .album-actions{display:contents}
+body .album-full-page .album-header-actions button{min-height:30px;padding:4px 13px;font-size:12px;line-height:20px;border-radius:999px;box-shadow:none;font-weight:350}
+body .album-full-page .album-header-actions [data-album-action="download"]{--vr-control-bg:#f5f0e5;--vr-control-border:#e4dac8;background:#f5f0e5;border-color:#e4dac8}
+body .album-full-page .album-header-actions [data-album-share]{--vr-control-bg:#fff;--vr-control-border:#d9d5cd;background:#fff;border-color:#d9d5cd}
+@media(min-width:1001px){body .album-full-page .detail-top{grid-template-columns:300px minmax(0,1fr)}}
+@media(min-width:741px) and (max-width:1000px){body .album-full-page .detail-top{grid-template-columns:250px minmax(0,1fr)}body .album-full-page .album-header-info{min-height:0}}
+@media(max-width:740px){body .album-full-page .detail-top .cover{grid-column:1;grid-row:1}body .album-full-page .album-cover-tools{grid-column:1;grid-row:2}body .album-full-page .album-header-info{grid-column:1;grid-row:3;min-height:0}body .album-full-page .album-header-actions{grid-column:1;grid-row:4}body .album-full-page .album-header-info>.album-facts:not([hidden]){margin-top:14px}}
+
+/* Direct grid children avoid the former display:contents administration wrapper. */
+body .album-full-page .album-chips{display:none!important;margin:0;padding:0}
+body .album-full-page .album-cover-tools{width:100%;max-width:300px;justify-content:center}
+@media(max-width:740px){body .album-full-page .album-header-info{padding-bottom:0;align-self:start}}
+
+@media(max-width:740px){body .album-full-page .album-cover-tools{max-width:min(290px,100%)}}
+
+/* Initial filters only: PC slim outline; mobile geometry restored from published v46. */
+@media(min-width:741px){
+ body #content .artist-index,body #dialog .folder-letter-index{display:flex;flex-wrap:nowrap;gap:2px;overflow-x:auto}
+ body #content .artist-index>button[data-letter],body #dialog .folder-letter-index>button[data-folder-letter]{box-sizing:border-box;flex:0 0 auto;min-width:18px;width:auto;min-height:27px;height:27px;max-height:27px;padding:0 3px;font-size:11px;font-weight:350;line-height:25px;white-space:nowrap;border:1px solid #d9d3c7;border-radius:4px;background:#fffdf8;color:#756c5c;box-shadow:none}
+ body #content .artist-index>button[data-letter][aria-pressed=true],body #dialog .folder-letter-index>button[data-folder-letter][aria-pressed=true]{background:#f2eadb;border-color:#bda477;color:#80653d}
+}
+@media(max-width:740px){
+ body #content .artist-index,body #dialog .folder-letter-index{display:flex;flex-wrap:nowrap;gap:3px;max-width:100%;width:100%;min-width:0;box-sizing:border-box;contain:inline-size;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;-webkit-overflow-scrolling:touch;margin:0 0 14px;padding:3px 0 5px}
+ body #content .artist-index>button[data-letter],body #dialog .folder-letter-index>button[data-folder-letter]{box-sizing:border-box;flex:0 0 auto;min-width:18px;width:auto;min-height:27px;height:27px;max-height:27px;padding:0 3px;font-size:11px;font-weight:350!important;line-height:25px;white-space:nowrap;border:1px solid #d9d3c7;border-radius:4px;background:#fffdf8;color:#756c5c;box-shadow:none;letter-spacing:normal}
+ body #content .artist-index>button[data-letter][aria-pressed=true],body #dialog .folder-letter-index>button[data-folder-letter][aria-pressed=true]{background:#f2eadb;border-color:#bda477;color:#80653d}
+}
+
+/* UI-1: keep the category strip inside the mobile content width. */
+@media(max-width:740px){main .category-filter{flex-wrap:nowrap;overflow-x:auto;max-width:100%;min-width:0;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}main .category-filter button{flex:0 0 auto;white-space:nowrap}}
+
+/* UI-2 compact mobile strip; desktop and focus styles unchanged. */
+@media(max-width:740px){body main .category-filter{margin:6px 0 9px;gap:5px;scrollbar-width:none;-ms-overflow-style:none}body main .category-filter::-webkit-scrollbar{display:none}body main #content .category-filter button{min-height:28px;height:28px;padding:2px 9px;line-height:22px;font-size:11px}}
+
+/* P2 navigation: separate controls, no playback hit-area overlay. */
+body button.catalog-link[data-catalog-kind][data-catalog-value]{font:inherit;color:inherit;text-decoration:none;border:0;background:transparent;box-shadow:none;min-height:36px;padding:4px 2px;text-align:inherit;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+@media(pointer:coarse){body button.catalog-link[data-catalog-kind][data-catalog-value]{min-height:40px}}
+
+/* Random100 secondary metadata is plain text, with no button hit-area boxes. */
+body .random-track-info{display:grid;gap:2px;width:min(100%,156px);max-width:100%;min-width:0;margin:2px auto 0;padding:0}
+body .random-track-info>span{display:block;min-width:0;min-height:0;height:auto;margin:0;padding:0;font-size:11px;line-height:16px;text-align:left;font-weight:350;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+@media(min-width:1400px) and (min-height:900px){body.random-view .random-track-info{width:min(100%,140px)}}
+body button.catalog-link:hover{color:#a38652}
+
+/* Original queue rows remain single-line PC / title+artist mobile; no extra metadata row. */
+body #queue-panel li,body .mobile-queue-list li{flex-wrap:nowrap;min-width:0}
+body #queue-panel,body #queue-panel ol,body .mobile-queue-list{overflow-x:hidden}
+body .mobile-queue-list [data-play]>span:last-child{min-width:0;flex:1}
+
+/* UI-5: metadata is a compact visual group; original covers and grid are untouched. */
+body .random-track .random-song-card>strong{line-height:16px;font-weight:500;margin-top:2px;margin-bottom:0}
+/* UI-5 album tracks: preserve every action node/handler, only consolidate presentation. */
+body .album-full-page .album-page-body .table-wrap{max-width:100%;overflow:visible}
+body .album-full-page .album-page-body .table-wrap th,
+body .album-full-page .album-page-body .table-wrap td{vertical-align:middle}
+body .album-full-page .album-page-body .table-wrap .mobile-track-more>summary{display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer;color:#9a7a46;border-radius:4px}
+body .album-full-page .album-page-body .table-wrap .mobile-track-more>summary::-webkit-details-marker{display:none}
+body .album-full-page .album-page-body .table-wrap .mobile-track-more[open]{z-index:4}
+body .album-full-page .album-page-body .table-wrap tr:has(.mobile-track-more[open]){position:relative;z-index:3}
+body .album-full-page .album-page-body .table-wrap .mobile-track-menu{position:absolute;right:0;top:calc(100% + 3px);width:170px;max-width:calc(100vw - 36px);z-index:80;display:grid;gap:0;padding:4px;background:#fffdf8;border:1px solid #e5e0d5;border-radius:5px;box-shadow:none}
+body .album-full-page .album-page-body .table-wrap .mobile-track-menu button{display:block;width:100%;min-height:36px;text-align:left;padding:6px 9px;border:0;background:transparent;font-size:11px;line-height:20px;white-space:nowrap}
+body .album-full-page .album-page-body .table-wrap tr:has([data-track-action="play"].is-playing) .desktop-track-title{color:#97763c}
+/* UI-5B: PC uses the original native table and all original action cells. */
+@media(min-width:741px){
+ body .album-full-page .album-page-body .table-wrap{overflow-x:auto}
+ body .album-full-page .album-page-body .table-wrap th,
+ body .album-full-page .album-page-body .table-wrap td{padding:5px 8px;font-size:12px}
+ body .album-full-page .album-page-body .table-wrap :is(.mobile-track-line,.mobile-track-more,.mobile-track-meta){display:none!important}
+}
+@media(max-width:740px){
+ body .album-full-page .album-page-body .table-wrap tbody tr:not(.album-disc-heading){min-height:56px!important;grid-template-columns:34px minmax(0,1fr)!important}
+ body .album-full-page .album-page-body .table-wrap tbody tr>td{padding:4px 6px!important}
+ body .album-full-page .album-page-body .table-wrap tbody tr>td.album-track-title{padding:4px 50px 4px 4px!important}
+ body .album-full-page .album-page-body .table-wrap .mobile-track-title-play{padding:2px 0!important;line-height:19px!important;min-width:0;white-space:normal;overflow:hidden;text-overflow:ellipsis}
+ body .album-full-page .album-page-body .table-wrap .guest-track-title{font-size:14px;line-height:19px;white-space:normal;overflow:hidden;text-overflow:ellipsis}
+ body .album-full-page .album-page-body .table-wrap .mobile-track-meta{font-size:12px;line-height:16px;margin-top:2px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ body .album-full-page .album-page-body .table-wrap .mobile-track-more{right:5px}
+ body .album-full-page .album-page-body .table-wrap .mobile-track-more>summary{width:44px;height:44px;font-size:22px}
+ body .album-full-page .album-page-body .table-wrap .mobile-track-menu{top:calc(100% + 3px)}
+}
+
+/* User-approved Artist initial strip exception; folder index and other controls unchanged. */
+body #content .artist-index{--vr-btn-hit-width:26px;--vr-button-padding-x:4px;display:flex;justify-content:flex-start;gap:2px}
+body #content .artist-index>button[data-letter]{margin:0;flex-grow:0}
+@media(max-width:740px){
+ body #content .artist-index{--vr-btn-hit-width:0px;--vr-button-padding-x:7px;display:flex;justify-content:flex-start;flex-wrap:nowrap;gap:4px;max-width:100%;min-width:0;overflow-x:auto}
+ body #content .artist-index>button[data-letter]{flex:0 0 auto!important;min-width:0!important;min-height:32px!important;height:32px!important;max-height:32px;margin:0;padding:0 7px;white-space:nowrap}
+ body #content .artist-index>button[data-letter].vr-btn{padding:0!important}
+ body #content .artist-index>button[data-letter]>.vr-btn__face{height:32px;min-height:32px;padding:0 7px;white-space:nowrap}
+}
+/* Match the deployed control layer so its important 44px default cannot win. */
+@layer vr-v2-controls{
+ @media(max-width:740px){
+  body #content .artist-index>button[data-letter].vr-btn{min-width:0!important;min-height:32px!important;height:32px!important;padding:0!important;flex:0 0 auto!important}
+ }
+}
+
+/* Artist Index only: compact heading, existing view switch, then initial strip. */
+main[data-artist-index]>.toolbar,main[data-artist-index]>.results-line{display:none!important}
+main[data-artist-index] #content{margin-top:14px;min-width:0}
+main[data-artist-index] .artist-index-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px;min-width:0}
+main[data-artist-index] .artist-index-summary{min-width:0}
+main[data-artist-index] .artist-index-heading h1{font-size:18px!important;line-height:1.4!important;font-weight:var(--vr-weight-body,320)!important;margin:0}
+main[data-artist-index] .artist-index-heading p{font-size:12px;line-height:1.5;margin:2px 0 0;color:var(--muted)}
+main[data-artist-index] [data-artist-gallery-tools]{flex:none;margin:0;align-self:center}
+main[data-artist-index] #content .artist-index{margin-top:0;margin-bottom:6px}
+@media(max-width:740px){
+ main[data-artist-index] #content{margin-top:10px}
+ main[data-artist-index] .artist-index-heading{gap:6px;margin-bottom:6px}
+ main[data-artist-index] .artist-index-heading h1{font-size:16px!important}
+ main[data-artist-index] .artist-index-heading p{font-size:11px}
+}

@@ -1,0 +1,6 @@
+/* User-approved operational integration 2026-11-02. Prior A1/A2 retained as history. */
+@layer vr-operational-typography, vr-a2-typography, vr-v2-controls;
+@layer vr-operational-typography{
+ body.vr-ds-v2{--vr-font:'Noto Sans KR','Noto Sans CJK KR',sans-serif!important;--vr-weight-album-detail:350!important;--vr-weight-page:350!important;--vr-weight-section:350!important}
+ body.vr-ds-v2{font-family:var(--vr-font)!important;font-weight:350!important;font-synthesis:none!important}
+}

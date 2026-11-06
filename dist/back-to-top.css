@@ -1,0 +1,5 @@
+body #vinyl-back-to-top{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));z-index:790;display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:10px;border:1px solid #d9d1c1;border-radius:50%;background:#fffdf8;color:#977a43;box-shadow:none;touch-action:manipulation}
+body #vinyl-back-to-top[hidden]{display:none!important}
+body #vinyl-back-to-top svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+body #vinyl-back-to-top:hover{border-color:#b49b6a;background:#faf6ed}
+@media(max-width:740px){body #vinyl-back-to-top{right:14px}}

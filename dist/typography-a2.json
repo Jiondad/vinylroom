@@ -1,0 +1,20 @@
+{
+  "id": "TYPOGRAPHY_AMENDMENT_A2",
+  "base": "VINYL_ROOM_V2_0_20261030",
+  "preserves": "A1",
+  "weights": {
+    "body": 350,
+    "song_title": 350,
+    "album_card": 350,
+    "artist": 350,
+    "secondary": 350,
+    "button": 350,
+    "page": 300,
+    "section": 300,
+    "album_detail_title": 200
+  },
+  "forbid_serif": true,
+  "font_synthesis": "none",
+  "sizes_spacing_colors": "UNCHANGED",
+  "approval_required_for_further_amendment": true
+}

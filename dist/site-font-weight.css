@@ -1,0 +1,17 @@
+/* User-approved account preference: weight only, no font/size/layout reset. */
+@layer vr-user-font-weight, vr-album-text-unify, vr-operational-typography, vr-a2-typography, vr-v2-controls;
+@layer vr-user-font-weight{
+ body.vr-ds-v2{
+  --vr-demo-weight:var(--vr-user-font-weight,320)!important;
+  --vr-weight-body:var(--vr-user-font-weight,320)!important;
+  --vr-weight-secondary:var(--vr-user-font-weight,320)!important;
+  --vr-weight-nav:var(--vr-user-font-weight,320)!important;
+  --vr-weight-button:var(--vr-user-font-weight,320)!important;
+  --vr-weight-page:var(--vr-user-font-weight,320)!important;
+  --vr-weight-section:var(--vr-user-font-weight,320)!important;
+  --vr-weight-album-detail:var(--vr-user-font-weight,320)!important;
+ }
+ body.vr-ds-v2,body.vr-ds-v2 :where(h1,h2,h3,h4,h5,h6,p,div,span,section,article,header,footer,main,aside,nav,button,input,select,option,textarea,label,a,li,ul,ol,dl,dt,dd,td,th,table,thead,tbody,tr,small,strong,b,em,i,summary,details,dialog,pre,code,legend,fieldset,output){font-weight:var(--vr-user-font-weight,320)!important}
+ /* Preserve existing icon glyph weight. SVG stroke and all icon dimensions are untouched. */
+ body.vr-ds-v2 :is([aria-hidden=true],[data-vr-role=icon],.vr-transport),body.vr-ds-v2 :is([data-vr-role=icon],.vr-transport)>.vr-btn__face{font-weight:350!important}
+}
