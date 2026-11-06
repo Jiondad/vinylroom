@@ -150,23 +150,23 @@ main[data-artist-index] #content .artist-index{margin-top:0;margin-bottom:6px}
  main[data-artist-index] .artist-index-heading p{font-size:11px}
 }
 
-/* Album detail — shared starting edge, no pixel-position hacks. */
+/* Album detail: align heading against cover; JS measures exact desktop edges. */
 body .album-full-page .detail-top{align-items:start}
 body .album-full-page .detail-top .album-header-info{
- align-self:start;box-sizing:border-box;padding-top:0;margin-top:0;
+ align-self:start;box-sizing:border-box;padding-top:0;
 }
 body .album-full-page .detail-top .album-header-info > .album-eyebrow{
  display:block;position:static;top:auto;transform:none;
  padding:0;margin:0 0 10px;line-height:1.2;
 }
-/* Preserve Noto Sans KR and lightweight hierarchy without oversized titles. */
+/* Restrained album title hierarchy — other pages are not affected. */
 body .album-full-page .detail-top h2{
- font-family:"Noto Sans KR",sans-serif;font-size:30px;font-weight:320;
- line-height:1.22;letter-spacing:-.035em;overflow-wrap:anywhere;
+ font-family:"Noto Sans KR",sans-serif;font-size:26px;font-weight:320;
+ line-height:1.25;letter-spacing:-.035em;overflow-wrap:anywhere;
 }
 @media(min-width:741px) and (max-width:1199px){
- body .album-full-page .detail-top h2{font-size:27px;line-height:1.25}
+ body .album-full-page .detail-top h2{font-size:24px;line-height:1.28}
 }
 @media(max-width:740px){
- body .album-full-page .detail-top h2{font-size:23px;line-height:1.3}
+ body .album-full-page .detail-top h2{font-size:21px;line-height:1.32}
 }
