@@ -1,5 +1,5 @@
 
-name: Deploy Vinyl Room Preview
+name: Deploy Vinyl Room — GitHub Primary
 
 on:
   push:
