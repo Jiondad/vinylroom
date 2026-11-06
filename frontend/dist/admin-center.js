@@ -90,6 +90,32 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
   <p class="vr-admin-caution">장르별·연대별 집계는 조회 API가 확인된 이후에 제공합니다. 추정 통계는 표시하지 않습니다.</p>
  </section></div>`;
 
+ // AI_VIEW_COMPACT_20261106: simplify presentation only; existing API actions stay intact.
+ const analysisPane=page.querySelector('[data-pane="analysis"]');
+ analysisPane.querySelector('.vr-ai-section-nav')?.remove();
+ const analysisHead=analysisPane.querySelector(':scope > .vr-admin-section-head');
+ analysisHead.querySelector('h2').textContent='AI 앨범 분석';
+ analysisHead.querySelector('p').textContent='분석 현황과 검토할 항목을 확인합니다.';
+ const overviewHead=analysisPane.querySelector('#vr-ai-overview .vr-admin-section-head');
+ overviewHead.querySelector('h3').textContent='분석 현황';
+ overviewHead.querySelector('p').remove();
+ overviewHead.querySelector('[data-action="ai-summary"]').textContent='새로고침';
+ const reviewHead=analysisPane.querySelector('#vr-ai-review .vr-admin-section-head');
+ reviewHead.querySelector('h3').textContent='AI 제안 검토';
+ reviewHead.querySelector('p').textContent='분석 결과를 비교하고 검토 이력을 확인합니다.';
+ reviewHead.querySelector('[data-action="ai"]').textContent='검토 화면 열기';
+ const operationButton=analysisPane.querySelector('#vr-ai-overview [data-action="ai-operations"]');
+ operationButton.closest('p').remove();
+ const advanced=document.createElement('details');advanced.className='vr-ai-advanced';
+ advanced.innerHTML='<summary>고급 관리 <span>작업 · 사용 한도 · API · 색인</span></summary><div class="vr-ai-advanced-body"></div>';
+ const advancedBody=advanced.querySelector('.vr-ai-advanced-body');
+ advancedBody.append(operationButton);
+ advancedBody.append(analysisPane.querySelector('#vr-ai-connection'));
+ advancedBody.append(analysisPane.querySelector('#vr-ai-index'));
+ analysisPane.append(advanced);
+ const report=analysisPane.querySelector('#vr-ai-review details');
+ if(report){report.querySelector('summary').textContent='이전 분석 보고서';report.classList.add('vr-ai-archive');}
+
  // VINYLROOM_ADMIN_UX_V2: compact page, actual read-only member snapshot, no writes.
  const mode='<div class="vr-preview-mode"><strong>회원 관리</strong><span>관리자와 일반 회원을 구분하여 조회합니다. 승인·권한 관리는 기존 회원관리 화면을 사용합니다.</span></div>';
  page.querySelector('.vr-admin-header').insertAdjacentHTML('afterend',mode);
