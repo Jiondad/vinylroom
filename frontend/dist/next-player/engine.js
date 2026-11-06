@@ -21,8 +21,8 @@ export class NextQueuePlayer extends QueueModel {
   if(owners.has(audio))throw Error('Audio already has an engine owner');
   owners.set(audio,this);
   audio.volume=.5;
-  Object.assign(this,{audio,resolve,onChange,clock:options.clock||Date.now,state:'idle',intent:'paused',loading:false,message:'',failure:null,start:0,end:null,sequence:0,sourceGeneration:0,request:null,prepared:null,loadedItem:null,transitioning:false,endConsumed:true,disposed:false,listeners:new Set(),bindings:[]});
-  this.onQueueChange=()=>this.invalidatePrepared();
+  Object.assign(this,{audio,resolve,onChange,clock:options.clock||Date.now,state:'idle',intent:'paused',loading:false,message:'',failure:null,start:0,end:null,sequence:0,sourceGeneration:0,request:null,prepared:null,prefetchFailure:null,loadedItem:null,transitioning:false,endConsumed:true,disposed:false,listeners:new Set(),bindings:[]});
+  this.onQueueChange=()=>{this.invalidatePrepared();this.prefetchFailure=null;};
   this.listen('playing',()=>{if(this.disposed||this.transitioning||!this.loadedItem||this.loadedItem!==this.items[this.index]||this.audio.paused||this.audio.readyState<3)return;if(this.intent!=='playing'){this.audio.pause();return;}this.endConsumed=false;this.setState('playing');});
   this.listen('pause',()=>{if(this.disposed||this.transitioning||this.endConsumed||this.audio.ended||!this.audio.paused||['idle','ended','error','blocked'].includes(this.state))return;if(this.intent==='playing'){this.intent='paused';this.setState('interrupted');}else this.setState('paused');});
   this.listen('ended',()=>{if(this.audio.ended)this.finishCurrent();});
@@ -43,10 +43,11 @@ export class NextQueuePlayer extends QueueModel {
  invalidatePrepared(){this.prepared?.controller.abort();this.prepared=null;this.nextChoice=undefined;}
  prepareNext(){
   const index=this.peekNextIndex(),item=this.items[index];if(this.disposed||!Number.isInteger(index)||!item)return;
+  if(this.prefetchFailure?.item===item)return;
   if(this.prepared?.item===item&&this.clock()-this.prepared.created<30000)return this.prepared.promise;
   this.invalidatePrepared();this.nextChoice=index;
   const slot={item,index,created:this.clock(),controller:new AbortController(),result:null};this.prepared=slot;
-  slot.promise=Promise.resolve().then(()=>this.resolve(item,{signal:slot.controller.signal,queueIndex:index,reason:'prefetch'})).then(result=>{if(!slot.controller.signal.aborted)slot.result=result;return result;}).catch(error=>{if(this.prepared===slot)this.prepared=null;throw error;});
+  slot.promise=Promise.resolve().then(()=>this.resolve(item,{signal:slot.controller.signal,queueIndex:index,reason:'prefetch'})).then(result=>{if(!slot.controller.signal.aborted)slot.result=result;return result;}).catch(error=>{if(this.prepared===slot){this.prepared=null;if(!slot.controller.signal.aborted)this.prefetchFailure={item,index};}throw error;});
   slot.promise.catch(()=>{});return slot.promise;
  }
  async play(index,resume=0,remember=true,automatic=false){
@@ -62,7 +63,12 @@ export class NextQueuePlayer extends QueueModel {
   this.setState('resolving');
   try{
    // A ready ticket reaches src+play in the current event task, without a pause.
-   const result=slot?.result||(await (slot?.promise||this.resolve(item,{signal:controller.signal,queueIndex:index,reason:automatic?'automatic':'play'})));
+   // A failed prefetch must not prevent one direct request at the real track boundary.
+   const resolveCurrent=()=>this.resolve(item,{signal:controller.signal,queueIndex:index,reason:automatic?'automatic':'play'});
+   const result=slot?.result||(await (slot?.promise?slot.promise.catch(error=>{
+    if(controller.signal.aborted||this.disposed)throw error;
+    return resolveCurrent();
+   }):resolveCurrent()));
    if(seq!==this.sequence||controller.signal.aborted||this.disposed)return;
    if(!result||typeof result.url!=='string'||!result.url)throw Error('Invalid media source');
    this.loadedItem=item;this.start=Math.max(0,Number(result.start)||0);this.end=result.cue&&Number(result.duration)>0?this.start+Number(result.duration):null;
