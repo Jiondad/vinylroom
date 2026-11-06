@@ -55,7 +55,7 @@ export function mountProposalReview({container,api,canManage}){
  const doc=container.ownerDocument,abort=new AbortController();let disposed=false,loading=false,offset=0,items=[],selected=null,seq=0,detailSeq=0,detailKey='',exportRows=[];
  const selectionCache=new Map(),readCache=new Map(),confidencePages=new Map();let disposeSelection=null;
  const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('./ai-proposal-review.css',import.meta.url).href;doc.head.append(style);
- container.innerHTML=`<div class="nas-proposals"><div class="proposal-tools"><input type="search" data-find aria-label="앨범·아티스트 검색" placeholder="앨범·아티스트 검색"><select data-filter aria-label="제안 검토 상태"><option value="">모든 상태</option><option value="pending">신규·보류</option><option value="confirmed">제안 승인</option><option value="rejected">반려</option></select><button type="button" data-refresh>새로고침</button></div><p data-message role="status" aria-live="polite"></p><div class="proposal-layout"><div><div data-list role="list" aria-label="AI 제안 목록"></div><div class="proposal-pager"><button type="button" data-prev>이전</button><small data-page></small><button type="button" data-next>다음</button></div></div><article data-detail aria-label="선택한 AI 앨범 분류 관리"></article></div></div>`;
+ container.innerHTML=`<div class="nas-proposals"><div class="proposal-tools"><input type="search" data-find aria-label="앨범·아티스트 검색" placeholder="앨범·아티스트 검색"><select data-filter aria-label="제안 검토 상태"><option value="active">검토할 항목</option><option value="confirmed">승인 완료</option><option value="rejected">반려 완료</option><option value="">전체 이력</option></select><button type="button" data-refresh>새로고침</button></div><p data-message role="status" aria-live="polite"></p><div class="proposal-layout"><div><div data-list role="list" aria-label="AI 제안 목록"></div><div class="proposal-pager"><button type="button" data-prev>이전</button><small data-page></small><button type="button" data-next>다음</button></div></div><article data-detail aria-label="선택한 AI 앨범 분류 관리"></article></div></div>`;
  const q=s=>container.querySelector(s),message=s=>{if(!disposed)q('[data-message]').textContent=s;};
  function check(){if(disposed||!canManage())throw Error('관리자 권한을 다시 확인하세요.');}
  const get=(path,opts={})=>{check();if(opts.body!==undefined||opts.method&&opts.method!=='GET')throw Error('운영 저장·확정은 차단되어 있습니다.');return api(path,{admin:true,signal:AbortSignal.any([abort.signal,AbortSignal.timeout(20000)])});};
@@ -85,19 +85,19 @@ export function mountProposalReview({container,api,canManage}){
  function paint(){
   if(disposed)return;
   const term=q('[data-find]').value.trim().toLocaleLowerCase(),filter=q('[data-filter]').value;
-  const shown=items.filter(p=>(!filter||p.review_state===filter)&&[p.artist,p.title,p.current?.artist,p.current?.title].some(v=>String(v??'').toLocaleLowerCase().includes(term)));
+  const shown=items.filter(p=>(filter==='active'?!(['confirmed','rejected'].includes(p.review_state)&&p.stale!==true):(!filter||p.review_state===filter))&&[p.artist,p.title,p.current?.artist,p.current?.title].some(v=>String(v??'').toLocaleLowerCase().includes(term)));
   if(!shown.some(p=>p.id===selected))selected=shown[0]?.id??null;
   q('[data-list]').innerHTML=shown.map(p=>`<button role="listitem" type="button" data-proposal="${esc(p.id)}" aria-pressed="${p.id===selected}"><strong>${esc(p.artist||p.current?.artist||'아티스트 미상')}</strong><span>${esc(p.title||p.current?.title||'앨범명 미상')}</span><small>${esc(reviewLabels[p.review_state]||p.review_state)}${p.stale?' · 입력 변경됨':''}</small></button>`).join('')||'<p>조건에 맞는 제안이 없습니다.</p>';
   const p=items.find(p=>p.id===selected),key=p?JSON.stringify([p.id,p.input_fingerprint,p.current,p.result,p.protected,p.review_state]):'';
-  if(key!==detailKey){detailKey=key;const n=++detailSeq;disposeSelection?.();disposeSelection=null;exportRows=[];q('[data-detail]').innerHTML=p?detail(p):'제안을 선택하세요.';
+  if(key!==detailKey){detailKey=key;const n=++detailSeq;disposeSelection?.();disposeSelection=null;exportRows=[];q('[data-detail]').innerHTML=p?detail(p):(shown.length?'제안을 선택하세요.':'현재 조회 페이지에 해당 상태의 제안이 없습니다. 다른 페이지 또는 전체 이력을 확인하세요.');
    if(p){const rows=proposalRows(p);const mounted=mountFieldSelection({host:q('[data-field-selection]'),proposal:p,rows,api:selectionApi,canManage,signal:abort.signal,cache:selectionCache,confidencePending:true});disposeSelection=mounted;void attachConfidence(p,rows,mounted,n,offset);}
   }
   q('[data-prev]').disabled=loading||offset===0;q('[data-next]').disabled=loading||items.length<50;q('[data-refresh]').disabled=loading;
-  q('[data-page]').textContent=`${Math.floor(offset/50)+1}페이지 · ${shown.length}건`;
+  q('[data-page]').textContent=`${Math.floor(offset/50)+1}페이지 · 표시 ${shown.length}건 / 조회 ${items.length}건`;
  }
  async function load(){
   if(loading||disposed)return;loading=true;const n=++seq;message('NAS 제안 조회 중…');paint();
-  try{const d=await get('/v2/ai-classification/results?offset='+offset);check();if(n!==seq)return;if(!Array.isArray(d?.items))throw Error('제안 목록 응답 형식 오류');for(const p of d.items)proposalRows(p);items=d.items;detailSeq++;readCache.clear();confidencePages.clear();message(items.length?'앨범을 선택해 검토하세요. 초안 저장은 NAS 연결 확인 후 사용할 수 있습니다. 확정·Catalog 반영은 차단됩니다.':'저장된 AI 제안이 없습니다.');}
+  try{const d=await get('/v2/ai-classification/results?offset='+offset);check();if(n!==seq)return;if(!Array.isArray(d?.items))throw Error('제안 목록 응답 형식 오류');for(const p of d.items)proposalRows(p);items=d.items;detailSeq++;readCache.clear();confidencePages.clear();message(items.length?'검토할 항목을 우선 표시합니다. 승인·반려된 제안은 상태 필터에서 다시 조회할 수 있으며 NAS 기록은 보존됩니다.':'저장된 AI 제안이 없습니다.');}
   catch(e){if(!disposed){message('조회 실패: '+e.message+' · 이전 화면과 선택을 유지합니다.');}}
   finally{loading=false;if(!disposed)paint();}
  }
