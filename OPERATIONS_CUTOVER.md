@@ -20,7 +20,7 @@
 - `/v2/edit`, `/v2/hide`, `/v2/artist` 등 앨범·아티스트 관리자 변경 기능은 GitHub Origin에서 동작 확인 없음.
 - AI Worker 설정/큐/제어 POST는 별도 승인·검증 없이 GitHub Origin 예외 추가 금지.
 - 개인 플레이리스트 저장/갱신, 회원관리 수정, 재생 대기열 자동 전환은 GitHub 정식 주소에서 전체 동등성 미확인.
-- 공유 링크의 새 사이트 주소 생성 코드 반영, 실제 생성 후 URL 직접 방문 결과는 아직 미확인.
+- 공유 링크는 GitHub 정식 URL로 생성되며 새 탭 직접 진입 정상 (2026-11-06 사용자 현장 확인).
 
 ## 장애 시 접근 복귀 (서비스 데이터 변경 없이)
 1. GitHub Pages 접속·UI·NAS API 연결 장애가 발생하면 사용자는 기존 Sites URL `https://vinylroom.shinekjh.chatgpt.site` 로 접속한다.
@@ -40,11 +40,11 @@
 - **회원 이름·닉네임 수정:** `frontend/dist/admin-center.js`는 Supabase `rpc/vinyl_admin_update_member_profile`로 직접 요청한다. 실제 정보 수정은 수행하지 않음.
 - **개인 플레이리스트:** `frontend/dist/playlists.js`는 NAS `GET/POST /v2/playlists`에 Bearer 토큰을 전송한다. GitHub Origin의 OPTIONS/POST 허용 경로는 이전부터 존재하지만 플레이리스트 저장·재조회 성공까지 확인된 것은 아님.
 - **관리자 앨범 변경:** GitHub Origin의 `/v2/edit`, `/v2/artist`, `/v2/hide` OPTIONS 204 및 CORS 헤더 확인 완료(사용자 NAS 로그). 실제 POST는 미검증.
-- **공유 링크:** `frontend/dist/album-share.js`가 GitHub 주소에서는 `/vinylroom/?album=<UUID>` 형태를 생성하도록 수정됐으나 브라우저에서 생성/직접 열기는 아직 미확인.
+- **공유 링크:** `frontend/dist/album-share.js`가 GitHub 주소에서 `/vinylroom/?album=<UUID>` 형태로 생성하며 브라우저 새 탭 직접 진입 정상 (2026-11-06 사용자 현장 확인).
 - 이번 소스 확인으로 NAS 전체 CORS 허용이나 계정/데이터 쓰기 시험은 필요하다고 판단되지 않음.
 
 ## 다음 정식 이관 게이트
 1. NAS POST 라우트에 대한 GitHub Origin 처리 위치를 **읽기 전용**으로 확인하고, 실제 필요한 관리자 기능 목록 확정.
-2. 공유 링크 `https://jiondad.github.io/vinylroom/?album=...` 1건의 생성/직접 열기만 확인.
+2. ~~공유 링크 생성 및 직접 열기~~ — 사용자 현장 확인 완료.
 3. 미확인 쓰기 기능은 대상 API별로 제한적으로 연결하고 한 번씩 확인.
 4. 1~3을 마치고 운영과 복원 경로를 최종 확정.
