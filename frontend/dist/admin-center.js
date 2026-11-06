@@ -41,7 +41,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  dismissCurrent?.();
  const page=document.createElement('section');page.id='vinyl-admin-center';page.className='vinyl-admin-page';
  page.setAttribute('aria-label','Vinyl Room Admin');
- page.innerHTML=`<div class="vr-admin-inner"><header class="vr-admin-header"><div><p>VINYL ROOM / ADMIN</p><h1>Admin</h1></div><button type="button" data-close>← 앨범으로</button></header>
+ page.innerHTML=`<div class="vr-admin-inner"><header class="vr-admin-header"><div><p>VINYL ROOM / ADMIN</p><h1>Admin</h1></div><button type="button" data-close aria-label="관리자센터 닫기">← 돌아가기</button></header>
  <nav class="vr-admin-tabs" aria-label="관리자 메뉴">
   <button type="button" data-tab="members" aria-current="page"><strong>회원 관리</strong><small>승인 · 권한 · 접속 통계</small></button>
   <button type="button" data-tab="analysis" aria-current="false"><strong>앨범 분석</strong><small>현황 · AI 제안 검토</small></button>
