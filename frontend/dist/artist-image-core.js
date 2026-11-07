@@ -57,6 +57,20 @@ export async function loadArtistProfiles(manifestUrl) {
   }
   return cache.get(url.href);
 }
+// Begin the manifest and a small portrait request as soon as an artist is chosen.
+// Never fetch the full image for a small Artist Home slot; full remains viewer-only.
+const artistThumbPreloads=new Map();
+export function prefetchArtistHomePortrait(manifestUrl,artistKey){
+ if(typeof artistKey!=='string'||!artistKey.trim())return;
+ void loadArtistProfiles(manifestUrl).then(profiles=>{
+  const entry=profileFor(profiles,artistKey);if(!entry)return;
+  const url=new URL(entry.thumb,sameOriginAssetBase(entry.assetBaseUrl||STATIC_ASSETS)).href;
+  if(artistThumbPreloads.has(url))return;
+  const img=new Image();img.decoding='async';img.src=url;
+  artistThumbPreloads.set(url,img);
+  if(artistThumbPreloads.size>24)artistThumbPreloads.delete(artistThumbPreloads.keys().next().value);
+ }).catch(()=>{});
+}
 export async function previousArtistProfile(key){
  try{return profileFor(await loadArtistProfiles(STATIC_MANIFEST),key);}catch{return null;}
 }
@@ -163,16 +177,19 @@ export async function mountArtistHomeImage({target,artistKey,artistName,manifest
   if(!current())return dispose;
   if(!entry){fallback(manifestErrors.has(new URL(manifestUrl,window.location.href).href)?'error':'unavailable');return dispose;}
   async function prepare(selected){
-    const url=new URL(selected.full,sameOriginAssetBase(selected.assetBaseUrl||assetBaseUrl)).href;
+    const url=new URL(selected.thumb,sameOriginAssetBase(selected.assetBaseUrl||assetBaseUrl)).href;
     const cached=decodedPhotos.get(url);
     if(cached&&cached.until>Date.now()&&!cached.img.isConnected)return cached.img;
-    const img=document.createElement('img');img.className='vr-ae-home-photo';img.alt=`${artistName||selected.name||'아티스트'} 프로필`;img.loading='eager';img.decoding='async';
+    const img=artistThumbPreloads.get(url)||document.createElement('img');
+    artistThumbPreloads.delete(url);
+    img.className='vr-ae-home-photo';img.alt=`${artistName||selected.name||'아티스트'} 프로필`;img.loading='eager';img.decoding='async';
     await new Promise((resolve,reject)=>{
       let finished=false;
       const finish=error=>{if(finished)return;finished=true;clearTimeout(timer);img.onload=img.onerror=null;error?reject(error):resolve();};
       const timer=setTimeout(()=>finish(Error('artist_photo_timeout')),10000);
       img.onload=()=>{if(typeof img.decode==='function')img.decode().then(()=>finish(),finish);else finish();};
       img.onerror=()=>finish(Error('artist_photo_failed'));
+      if(img.complete&&img.naturalWidth){img.onload();return;}
       img.src=url;
     });
     imageGeometry.set(url,[img.naturalWidth,img.naturalHeight]);
