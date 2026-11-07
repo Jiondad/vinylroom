@@ -150,21 +150,27 @@ main[data-artist-index] #content .artist-index{margin-top:0;margin-bottom:6px}
  main[data-artist-index] .artist-index-heading p{font-size:11px}
 }
 
-/* Album detail: align heading against cover; JS measures exact desktop edges. */
+/* Album detail: ALBUM label and cover share the exact grid-row start.
+   The label is moved by polishAlbumHeader into the outer detail grid.
+   Reserve space in metadata for its height; no negative offsets or transforms. */
 body .album-full-page .detail-top{align-items:start}
 body .album-full-page .detail-top .album-header-info{
- align-self:start;box-sizing:border-box;padding-top:0;
+ align-self:start;position:static;top:auto;transform:none;
+ box-sizing:border-box;margin-top:0;padding-top:24px;
 }
-/* Optical alignment: the visible ALBUM glyph starts below its line box.
-   Shift the metadata column, not the cover or the ribbon. */
-@media(min-width:741px){
- body .album-full-page .detail-top .album-header-info{
-  position:relative;top:-16px;margin-top:0;
+body .album-full-page .detail-top > .album-aligned-label{
+ grid-column:2;grid-row:1;align-self:start;justify-self:start;
+ position:relative;top:0;transform:none;
+ display:block;box-sizing:border-box;margin:0;padding:0;
+ line-height:1.2;z-index:1;
+}
+@media(max-width:740px){
+ body .album-full-page .detail-top > .album-aligned-label{
+  grid-column:1;grid-row:3;
  }
-}
-body .album-full-page .detail-top .album-header-info > .album-eyebrow{
- display:block;position:static;top:auto;transform:none;
- padding:0;margin:0 0 10px;line-height:1.2;
+ body .album-full-page .detail-top .album-header-info{
+  padding-top:24px;
+ }
 }
 /* Restrained album title hierarchy — other pages are not affected. */
 body .album-full-page .detail-top h2{
