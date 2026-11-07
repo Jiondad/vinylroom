@@ -21,14 +21,18 @@ export function mountAlbumAiStatus({container,albumId,api,canManage}){
   style.textContent=`
 .album-full-page .detail-top .cover{position:relative;overflow:visible}\n.album-full-page .detail-top .cover > img{border-radius:inherit}
 .album-full-page .detail-top .cover .vr-album-ai-ribbon{
- position:absolute;z-index:3;top:-6px;right:12px;
+ position:absolute;z-index:3;top:-5px;right:12px;
  display:flex;align-items:flex-start;justify-content:center;
  width:23px;height:34px;box-sizing:border-box;
- padding:6px 0 0;margin:0;
+ padding:9px 0 0;margin:0;
  border:0;border-radius:0;box-shadow:none;
  clip-path:polygon(0 0,100% 0,100% 100%,50% calc(100% - 6px),0 100%);
  color:#fff;font-family:"Noto Sans KR",sans-serif;font-size:10px;font-weight:500;
- letter-spacing:.01em;line-height:1.2;cursor:help;
+ letter-spacing:.01em;line-height:10px;cursor:help;
+}
+.album-full-page .detail-top .cover .vr-album-ai-ribbon .vr-ai-word{
+ font-family:"Noto Sans KR",sans-serif;
+ font-size:10px;font-weight:500;line-height:10px;
 }
 .album-full-page .detail-top .cover .vr-album-ai-ribbon[hidden]{display:none!important}
 .album-full-page .detail-top .cover .vr-album-ai-ribbon[data-ai-color="waiting"]{background:#ED9500}
