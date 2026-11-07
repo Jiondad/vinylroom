@@ -5,7 +5,7 @@ import {catalogLink,bindCatalogLinks,activeCatalogMenu} from './catalog-links.js
 import {bindAlbumTrackTaps} from './album-track-taps.js';
 import {createArtistIndex} from './artist-index-policy.js';
 import {mountArtistHome} from './artist-home.js';
-import {mountArtistGallery,disposeArtistGallery} from './artist-gallery-integration.js';
+import {mountArtistGallery,disposeArtistGallery,prefetchArtistPortrait} from './artist-gallery-integration.js';
 import {createArtistProfileManager} from './artist-profile-editor.js';
 import {configureHeaderActions,refreshHeaderActions} from './header-actions.js';
 import {installCompactUI,polishAlbumHeader} from './ui-polish.js';
@@ -179,6 +179,7 @@ function browseArtist(catalogArtist){
  const transition=pendingArtistTransition||{origin:navigationState()};
  pendingArtistTransition=transition;
  clearTimeout(searchTimer);catalogRequests.cancel();
+ prefetchArtistPortrait(catalogArtist);
  artist=catalogArtist;letter=category='';view='library';page=1;
  for(const id of ['search','genre','format'])$('#'+id).value='';
  $('#sort').value='artist';
@@ -294,7 +295,8 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
   disposeArtistGallery();
   const resultStamp=String(Date.now())+':'+String(Boolean(result.partial));
   $('#content').dataset.artistResult=resultStamp;$('#content').innerHTML=html;bindCovers($('#content'));
-  const galleryManagement=repo.admin&&isApprovedMember()&&(view==='artists'?artistProfileManager.enabled():(artist&&view==='library')&&await artistProfileManager.verify())?artistProfileManager:null;
+  // Capabilities check is administrative; it must not block a visitor's photo or albums.
+  const galleryManagement=repo.admin&&isApprovedMember()&&artistProfileManager.enabled()?artistProfileManager:null;
   if(view==='artists'){
    mountArtistGallery($('#content'),result.items,browseArtist,galleryManagement);
    if(repo.admin&&isApprovedMember()&&!galleryManagement)void (artistPermissionCheck ||= artistProfileManager.verify()).then(ok=>{
@@ -304,7 +306,19 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
     }
    });
   }
-  if(artist&&view==='library'){const profileArtist=artist;void mountArtistHome($('#artist-home-host'),{name:artist,albums:result.items,total:result.total,canManage:()=>repo.admin&&isApprovedMember(),onArtist:browseArtist,photoManagement:galleryManagement,loadArtistInfo:async()=>{const r=await api('/v2/albums?'+new URLSearchParams({view:'artists',artist:profileArtist,page:'1'}));return r.items?.find(row=>row.name===profileArtist);}});}
+  if(artist&&view==='library'){
+   const profileArtist=artist,homeHost=$('#artist-home-host');
+   void mountArtistHome(homeHost,{name:profileArtist,albums:result.items,total:result.total,canManage:()=>repo.admin&&isApprovedMember(),onArtist:browseArtist,photoManagement:repo.admin&&isApprovedMember()?artistProfileManager:null,loadArtistInfo:async()=>{const r=await api('/v2/albums?'+new URLSearchParams({view:'artists',artist:profileArtist,page:'1'}));return r.items?.find(row=>row.name===profileArtist);}});
+   if(repo.admin&&isApprovedMember()&&!artistProfileManager.enabled())void artistProfileManager.verify().then(ok=>{
+    if(!ok||token!==generation||view!=='library'||artist!==profileArtist||!homeHost.isConnected)return;
+    const column=homeHost.querySelector('.artist-portrait-column');
+    if(!column||column.querySelector('.vr-ae-manage'))return;
+    const edit=homeHost.ownerDocument.createElement('button');edit.type='button';edit.className='vr-ae-manage';
+    edit.textContent='Edit';edit.setAttribute('aria-label',profileArtist+' 사진 관리');
+    edit.onclick=()=>{if(artistProfileManager.enabled())void artistProfileManager.open({artistKey:profileArtist,artistName:profileArtist});};
+    column.append(edit);
+   }).catch(()=>{});
+  }
   listToolbar.update(view==='home'?'home':view==='random'?'random':view==='library'&&!artist&&effectiveView==='library'?'library':'',view==='random'?$('#content .random-actions'):null);
   if(view==='home')fitTodayCovers();
   if(view==='random'){
