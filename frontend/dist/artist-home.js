@@ -15,9 +15,8 @@ export async function mountArtistHome(host,{name,albums=[],total,canManage=()=>f
  // Keep the same cascade on direct entry and navigation via Artist Gallery.
  if(host.ownerDocument.defaultView?.matchMedia('(max-width:600px)').matches)ensureArtistGalleryStyle(host.ownerDocument);
  const styleId='artist-home-style';if(!host.ownerDocument.getElementById(styleId)){const link=host.ownerDocument.createElement('link');link.id=styleId;link.rel='stylesheet';link.href=new URL('./artist-home.css',import.meta.url).href;host.ownerDocument.head.append(link);}
- if(host.ownerDocument.defaultView?.matchMedia('(max-width:600px)').matches){
-  await Promise.all(['artist-experience-style',styleId].map(id=>{const link=host.ownerDocument.getElementById(id);return link.sheet?Promise.resolve():new Promise(resolve=>{link.addEventListener('load',resolve,{once:true});link.addEventListener('error',resolve,{once:true});});}));
- }
+ // CSS can load independently: waiting for a stylesheet delayed photo requests,
+ // especially on mobile. The portrait slot already reserves its layout space.
  if(!isHomeCurrent())return;
  let portraitStarted=false,disposePortrait=null;owner.dispose=()=>disposePortrait?.();
  function render(message=''){
