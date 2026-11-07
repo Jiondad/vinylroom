@@ -21,8 +21,10 @@ const MAX_PAGES=50;
 const MAX_AGE=24*60*60*1000; // A matching revision is also mandatory.
 const STORAGE_PREFIX='vinyl-room:artist-index:v2:';
 
+// Only artists with active Catalog albums belong in the public artist index.
+// This is a display rule: do not delete artist profiles, folders or history.
 function prepare(rows){
- return rows.map(row=>({row:{...row,initial:artistInitial(row)},sortKey:artistSortKey(row.name)}))
+ return rows.filter(row=>row.count>0).map(row=>({row:{...row,initial:artistInitial(row)},sortKey:artistSortKey(row.name)}))
   .sort((a,b)=>( (GROUP_RANK.get(a.row.initial)??-1)-(GROUP_RANK.get(b.row.initial)??-1) )||a.sortKey.localeCompare(b.sortKey,'en')||a.row.name.localeCompare(b.row.name));
 }
 function pageFromPrepared(prepared,params){
@@ -69,7 +71,8 @@ export function createArtistIndex(readPage,{now=()=>Date.now()}={}){
    const first=await load(1);const pages=first?.pages;
    if(first?.page!==1||!Number.isInteger(pages)||pages<1||pages>MAX_PAGES||first.total>MAX_ROWS||first.total<0||!Number.isSafeInteger(first.total)||!Array.isArray(first.items))throw Error('아티스트 목록 범위를 확인할 수 없습니다.');
    if(!validRows(first.items))throw Error('아티스트 목록이 불완전합니다.');
-   onFirst({...first,items:prepare(first.items).map(x=>x.row),partial:true});
+   // Do not briefly expose zero-album artists while loading the remaining pages.
+   if(first.items.every(row=>row.count>0))onFirst({...first,items:prepare(first.items).map(x=>x.row),partial:true});
    const parts=[first];
    for(let start=2;start<=pages;start+=6){
     const batch=await Promise.all(Array.from({length:Math.min(6,pages-start+1)},(_,i)=>load(start+i)));
