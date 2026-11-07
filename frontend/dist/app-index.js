@@ -435,7 +435,15 @@ async function indexing(){
 $('#genre').innerHTML='<option value="">모든 장르</option>'+GENRES.map(g=>`<option>${esc(g)}</option>`).join('');
 $('#search').oninput=()=>{catalogRequests.cancel();generation++;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{if(view!=='artists'){view='library';artist=letter=category='';}else{letter='';}page=1;render(true);},250);};
 for(const id of ['genre','format','sort'])$('#'+id).onchange=()=>{page=1;render(true);};
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{closeAlbumPage();clearTimeout(searchTimer);view=b.dataset.view;artist=letter=category='';$('#search').value='';page=1;render(true);});
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{
+ // Keep album detail visible while the Album list is prepared; otherwise the
+ // previously rendered Artist Home flashes beneath it on the way to Album.
+ // Reuse the destination-ready transition already used by artist navigation.
+ const transition=albumPage&&b.dataset.view==='library'?{origin:navigationState()}:null;
+ if(transition)pendingArtistTransition=transition;else closeAlbumPage();
+ clearTimeout(searchTimer);view=b.dataset.view;artist=letter=category='';$('#search').value='';page=1;
+ void render(true,false,transition);
+});
 $('.brand').onclick=e=>{e.preventDefault();closeAlbumPage();clearTimeout(searchTimer);view='home';artist=letter=category='';page=1;for(const id of ['search','genre','format'])$('#'+id).value='';$('#sort').value='artist';$('#dialog').close();render(true);};
 async function openAdminCenter(){
  repo.requireAdmin();if(!isApprovedMember())throw Error('승인된 관리자만 사용할 수 있습니다.');
