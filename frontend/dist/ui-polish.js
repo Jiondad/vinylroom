@@ -17,6 +17,13 @@ export function polishAlbumHeader(root,album){
  const top=root.querySelector('.detail-top'),hero=top?.querySelector('.album-header-info')||top?.querySelector(':scope > div:last-child'),cover=top?.querySelector('.cover');
  if(!hero||!cover)return;
  hero.classList.add('album-header-info');
+ // Place the ALBUM label as a direct grid item alongside the cover.
+ // This gives both elements the same grid-row top edge, regardless of typography.
+ const alignedLabel=hero.querySelector(':scope > .album-eyebrow');
+ if(alignedLabel){
+  alignedLabel.classList.add('album-aligned-label');
+  top.append(alignedLabel);
+ }
  const artist=hero.querySelector(':scope > p:not(.album-eyebrow)');artist?.classList.add('album-artist-line');
  // Keep the canonical release-date value in the metadata table; never duplicate it.
  const chips=hero.querySelector('.album-chips'),dateLabel=hero.querySelector('.album-facts dt');
@@ -43,8 +50,4 @@ export function polishAlbumHeader(root,album){
   heading.style.setProperty('line-height','1.28','important');
   heading.style.setProperty('letter-spacing','-.035em','important');
  }
- // The actual ink top of ALBUM sits below the text line box; its box-edge
- // measurement previously reported alignment while the label still looked low.
- // Desktop optical offset is handled once in CSS; do not override it in JS.
-
 }
