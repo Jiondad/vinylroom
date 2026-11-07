@@ -17,12 +17,24 @@ export function polishAlbumHeader(root,album){
  const top=root.querySelector('.detail-top'),hero=top?.querySelector('.album-header-info')||top?.querySelector(':scope > div:last-child'),cover=top?.querySelector('.cover');
  if(!hero||!cover)return;
  hero.classList.add('album-header-info');
- // Place the ALBUM label as a direct grid item alongside the cover.
- // This gives both elements the same grid-row top edge, regardless of typography.
- const alignedLabel=hero.querySelector(':scope > .album-eyebrow');
+ // Keep the label first inside the information column. Earlier attempts
+ // moved it to the grid but a later 24px metadata padding still pushed it down.
+ // Explicit, element-scoped layout values win over legacy CSS without changing
+ // the cover or using a translation on the entire information column.
+ const alignedLabel=hero.querySelector(':scope > .album-eyebrow')||top.querySelector(':scope > .album-aligned-label');
  if(alignedLabel){
-  alignedLabel.classList.add('album-aligned-label');
-  top.append(alignedLabel);
+  alignedLabel.classList.remove('album-aligned-label');
+  hero.prepend(alignedLabel);
+  hero.style.setProperty('padding-top','0px','important');
+  hero.style.setProperty('margin-top','0px','important');
+  hero.style.setProperty('top','auto','important');
+  hero.style.setProperty('transform','none','important');
+  alignedLabel.style.setProperty('margin','-4px 0 10px','important');
+  alignedLabel.style.setProperty('padding','0','important');
+  alignedLabel.style.setProperty('position','static','important');
+  alignedLabel.style.setProperty('top','auto','important');
+  alignedLabel.style.setProperty('transform','none','important');
+  alignedLabel.style.setProperty('line-height','1.2','important');
  }
  const artist=hero.querySelector(':scope > p:not(.album-eyebrow)');artist?.classList.add('album-artist-line');
  // Keep the canonical release-date value in the metadata table; never duplicate it.
