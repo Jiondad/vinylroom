@@ -115,7 +115,7 @@
  .artist-home .vr-ae-home-fallback>span{width:88px;height:88px}
 }
 
-/* Artist Home desktop: image fills the user's highlighted 320 x 174 lane.
+/* Artist Home desktop: photo fills a responsive 3:2 frame (320 x 213px at full width).
    Preserve the photo click-to-enlarge behavior and align photo with artist title. */
 @media (min-width: 601px) {
  .artist-home .artist-profile {
@@ -133,7 +133,8 @@
  .artist-home .artist-profile .artist-portrait.vr-ae-home-slot:not(.vr-ae-home-known-empty) {
   display: block;
   width: 100%;
-  height: 174px;
+  height: auto;
+  aspect-ratio: 3 / 2;
   min-height: 0;
   max-width: 100%;
   margin: 0;
