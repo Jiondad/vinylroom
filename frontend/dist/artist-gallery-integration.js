@@ -1,5 +1,5 @@
 import {mountArtistIndexGallery} from './artist-gallery.js';
-import {mountArtistHomeImage,closeArtistImageViewer} from './artist-image-core.js';
+import {mountArtistHomeImage,closeArtistImageViewer,prefetchArtistHomePortrait} from './artist-image-core.js';
 import {NAS_URL} from './config.js';
 
 // Same-origin read-only public assets exported from the approved v1.4 library.
@@ -29,6 +29,7 @@ export function mountArtistGallery(content,rows,openArtist,management=null){
  });
  return indexController;
 }
+export function prefetchArtistPortrait(name){prefetchArtistHomePortrait(ARTIST_MANIFEST,name);}
 export function mountArtistPortrait(target,name,isCurrent,management=null){
  ensureArtistGalleryStyle(target.ownerDocument);
  return mountArtistHomeImage({target,artistKey:name,artistName:name,
