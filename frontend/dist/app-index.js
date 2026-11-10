@@ -197,9 +197,13 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
  if(!isApprovedMember()&&!publicBrowseEnabled())return;
  if(resetScroll&&!fromHistory){navigationGeneration++;activePanel='';if(!artistTransition)navigation?.record(navigationState());}
  savePage();
- $('#result-count').classList.toggle('artist-home-title',Boolean(artist&&view==='library'));
- document.querySelector('main .toolbar').toggleAttribute('data-artist-home',Boolean(artist&&view==='library'));
- document.querySelector('main').toggleAttribute('data-artist-index',view==='artists');
+ // Preserve the Artist Index layout until the selected Artist Home has data.
+ // Changing these classes before the fetch causes a visible mobile layout jump.
+ if(!artistTransition){
+  $('#result-count').classList.toggle('artist-home-title',Boolean(artist&&view==='library'));
+  document.querySelector('main .toolbar').toggleAttribute('data-artist-home',Boolean(artist&&view==='library'));
+  document.querySelector('main').toggleAttribute('data-artist-index',view==='artists');
+ }
  if(view==='top100'){
   catalogRequests.cancel();
   const topToken=++generation;
@@ -246,6 +250,11 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
   }).catch(()=>{});
   let artistPermissionCheck=null;
   const applyResult=async result=>{if(token!==generation)return;
+  if(artistTransition){
+   $('#result-count').classList.toggle('artist-home-title',Boolean(artist&&view==='library'));
+   document.querySelector('main .toolbar').toggleAttribute('data-artist-home',Boolean(artist&&view==='library'));
+   document.querySelector('main').toggleAttribute('data-artist-index',view==='artists');
+  }
   const state=lastCatalogState||{};
   revision=state.revision??revision;page=result.page;
   const needsSearchUpdate=effectiveView==='tracks'&&result.view!=='tracks';
