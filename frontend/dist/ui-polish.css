@@ -190,5 +190,5 @@ body.random-view .random-track-info>.random-catalog-label>button.catalog-link{di
 @media(min-width:741px){
  body.random-view .random-track-info>.random-catalog-label>.random-mobile-label{display:none}
  body.random-view .random-track-info>.random-catalog-label>button.catalog-link{display:block;width:100%;min-width:0;min-height:0;margin:0;padding:0;border:0;background:transparent;box-shadow:none;font:inherit;font-size:inherit!important;line-height:inherit!important;color:inherit;text-align:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
- body.random-view .random-track-info>.random-catalog-label>button.catalog-link:is(:hover,:focus-visible){text-decoration:underline;text-underline-offset:2px}
+ body.random-view .random-track-info>.random-catalog-label>button.catalog-link:is(:hover,:focus-visible){text-decoration:none}
 }
