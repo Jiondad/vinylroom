@@ -1,7 +1,7 @@
 import {installButtonSystem} from './button-system.js';
 import {mountAlbumReference} from './reference-ui.js';
 import {installBackToTop} from './back-to-top.js';
-import {catalogLink,bindCatalogLinks,activeCatalogMenu} from './catalog-links.js';
+import {catalogLink,validCatalogTarget,bindCatalogLinks,activeCatalogMenu} from './catalog-links.js';
 import {bindAlbumTrackTaps} from './album-track-taps.js';
 import {createArtistIndex} from './artist-index-policy.js';
 import {mountArtistHome} from './artist-home.js';
@@ -172,6 +172,13 @@ async function applyNavigation(value){
  if(state.panel==='playlist'&&isApprovedMember()&&request===navigationGeneration){activePanel='playlist';await originalPlaylistClick?.();}
 }
 function savePage(){try{sessionStorage.setItem('vinyl-page-v1',JSON.stringify({view,page,artist,letter,category,search:$('#search').value,genre:$('#genre').value,format:$('#format').value,sort:$('#sort').value}));}catch{}}
+// Keep Random100 mobile labels passive; desktop reuses the shared Catalog router.
+function randomCatalogLabel(kind,value,label){
+ if(!label)return '';
+ const text=esc(label);
+ if(!validCatalogTarget(kind,value))return `<span title="${text}">${text}</span>`;
+ return `<span class="random-catalog-label" title="${text}">${catalogLink(kind,value,label,{trusted:true})}<span class="random-mobile-label">${text}</span></span>`;
+}
 function browseArtist(catalogArtist){
  // The catalog's exact artist value is the existing /v2/albums artist filter key.
  if(typeof catalogArtist!=='string'||!catalogArtist.trim()){toast('아티스트 연결 정보를 확인할 수 없습니다.');return;}
@@ -278,7 +285,7 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
   if(artist&&effectiveView==='library')html+=`<nav class="category-filter" aria-label="앨범 분류"><button data-category="" aria-pressed="${!category}">전체</button>${categories.map(c=>`<button data-category="${esc(c)}" aria-pressed="${c===category}">${esc(c)}</button>`).join('')}</nav>`;
   if(artist&&state.categories_ready===false)html+='<p class="hint">NAS 폴더 기준으로 분류를 갱신 중입니다. 기존 목록은 계속 이용할 수 있습니다.</p>';
   if(view==='random'){
-   html+=`<div class="random-grid">${result.items.map(t=>`<article class="random-track"><button class="random-song-card" ${isApprovedMember()?`data-random-track="${esc(t.album_id)}:${t.track_index}" data-search-play="${esc(t.album_id)}" data-song-index="${t.track_index}" aria-label="${esc(t.title)} 재생. 빠르게 두 번 터치하면 대기열에 추가"`:`data-open="${esc(t.album_id)}" aria-label="${esc(t.title)} · 앨범 상세"`}>${cover({id:t.album_id,title:t.album_title,artist:t.artist})}<strong title="${esc(t.title)}">${esc(t.title)}</strong></button><div class="random-track-info">${t.artist?`<span title="${esc(t.artist)}">${esc(t.artist)}</span>`:''}${t.album_title?`<span title="${esc(t.album_title)}">${esc(t.album_title)}</span>`:''}</div></article>`).join('')}</div>`;
+   html+=`<div class="random-grid">${result.items.map(t=>`<article class="random-track"><button class="random-song-card" ${isApprovedMember()?`data-random-track="${esc(t.album_id)}:${t.track_index}" data-search-play="${esc(t.album_id)}" data-song-index="${t.track_index}" aria-label="${esc(t.title)} 재생. 빠르게 두 번 터치하면 대기열에 추가"`:`data-open="${esc(t.album_id)}" aria-label="${esc(t.title)} · 앨범 상세"`}>${cover({id:t.album_id,title:t.album_title,artist:t.artist})}<strong title="${esc(t.title)}">${esc(t.title)}</strong></button><div class="random-track-info">${randomCatalogLabel('artist',t.artist,t.artist)}${randomCatalogLabel('album',t.album_id,t.album_title)}</div></article>`).join('')}</div>`;
   }else if(effectiveView==='tracks'){
    html+=`<div class="song-search-results"><div class="search-heading"><span></span><span>곡명</span><span>앨범</span><span>아티스트</span><span></span></div>${result.items.map(t=>`<article class="search-song"><button class="search-cover" data-open="${esc(t.album_id)}" aria-label="${esc(t.album_title)} 상세">${cover({id:t.album_id,title:t.album_title,artist:t.artist})}</button><span class="search-title">${searchField(t.title,$('#search').value)}</span><button class="search-text" data-open="${esc(t.album_id)}">${searchField(t.album_title,$('#search').value)}</button><button class="search-text" data-index-artist="${esc(t.artist)}">${searchField(t.artist,$('#search').value)}</button><div class="search-actions"><button data-search-play="${esc(t.album_id)}" data-song-index="${t.track_index}">▶ 재생</button><button data-search-queue="${esc(t.album_id)}" data-song-index="${t.track_index}">＋ 대기열</button><button data-search-list="${esc(t.album_id)}" data-song-index="${t.track_index}">＋ 목록</button><button data-search-download="${esc(t.album_id)}" data-song-index="${t.track_index}">↓ 받기</button></div></article>`).join('')}</div>`;
   }else if(view==='artists'){
