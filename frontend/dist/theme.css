@@ -454,3 +454,8 @@ html[data-vinyl-access="guest"] #vinyl-auth-gate{display:none!important}
  body #content .top100-actions [data-top100-all]>.vr-btn__face{padding:0;border:0;background:transparent;color:var(--vr-gold,#b58c44)}
  body #content .top100-actions .top100-action-icon svg{display:block;width:21px;height:21px;stroke-width:1.6}
 }
+
+/* PC TOP100 date selector: preserve Korean glyph descenders within the compact control. */
+@media (min-width:741px){
+  #content .top100-head select#top100-date{box-sizing:border-box;height:36px;min-height:36px;line-height:22px;padding:6px 8px}
+}
