@@ -22,12 +22,18 @@ export function indexedTagAlbum(a,id){
  return {id,artist:a.artist,title:a.title,date:a.original_year||a.release_year||'',path:a.relative_path||'',count:entries.length,entries,source:'NAS_INDEX_READ_ONLY'};
 }
 export function createTagReader({api,canManage,signal}){
- const coverFiles=new Map();
+ const coverFiles=new Map(),detailCache=new Map(),inflight=new Map();
+ const ttl=30000;
+ const remember=(key,value)=>{detailCache.delete(key);detailCache.set(key,{at:Date.now(),value});if(detailCache.size>64)detailCache.delete(detailCache.keys().next().value);return value;};
  const albums=new Set(),folders=new Set(['']),artists=new Set();
  const check=()=>{if(signal?.aborted||!canManage())throw Error('관리자 인증이 필요합니다.');};
- async function get(path){check();const r=await api(path,{admin:true,signal});check();return r;}
- return async (url,body)=>{
-  check();const u=new URL(url,'https://tag.invalid');
+ return async (url,body,request={})=>{
+  const alive=()=>{check();if(request.signal?.aborted)throw Error('selection_superseded');};
+  async function get(path){alive();const started=performance.now();let task=inflight.get(path);if(!task){request.metrics&&(request.metrics.nas_requests++);task=api(path,{admin:true,signal});inflight.set(path,task);task.finally(()=>{if(inflight.get(path)===task)inflight.delete(path);}).catch(()=>{});}
+   try{const result=await task;alive();return result;}finally{if(request.metrics)request.metrics.nas_wait_ms+=performance.now()-started;}
+  }
+  async function detail(id){const found=detailCache.get(id);if(found&&Date.now()-found.at<ttl)return found.value;return remember(id,await get('/v2/admin-album?'+new URLSearchParams({id})));}
+  alive();const u=new URL(url,'https://tag.invalid');
   if(u.origin!=='https://tag.invalid')throw Error('허용되지 않은 조회');
   if(u.pathname.startsWith('/api/cover/')){
    if(!['/api/cover/inspect','/api/cover/plan'].includes(u.pathname))throw Error('실제 커버 저장은 비활성화되어 있습니다.');
@@ -59,7 +65,7 @@ export function createTagReader({api,canManage,signal}){
    do{
     const r=await get('/v2/albums?'+new URLSearchParams({...params,page:String(page)}));pages=Number(r.pages)||1;
     for(const a of r.items||[]){if(!UUID.test(a.id||''))continue;
-     if(folder){const full=await get('/v2/admin-album?'+new URLSearchParams({id:a.id}));if(!(full.relative_path===folder||full.relative_path?.startsWith(folder+'/')))continue;}
+     if(folder){const full=await detail(a.id);if(!(full.relative_path===folder||full.relative_path?.startsWith(folder+'/')))continue;Object.assign(a,{relative_path:full.relative_path});const parts=String(full.relative_path||'').split('/');for(let k=1;k<=parts.length;k++)folders.add(parts.slice(0,k).join('/')); }
      albums.add(a.id);items.push({...a,date:a.original_year||a.release_year||'',count:null});
     }
     page++;
@@ -68,38 +74,42 @@ export function createTagReader({api,canManage,signal}){
   }
   if(u.pathname==='/api/tracks'){
    const id=u.searchParams.get('album');if(!UUID.test(id||'')||!albums.has(id))throw Error('먼저 조회한 앨범을 선택하세요.');
-   const album=indexedTagAlbum(await get('/v2/admin-album?'+new URLSearchParams({id})),id);
-   coverFiles.clear();coverFiles.set(id,new Map(album.entries.filter(e=>e.relative_file).map(e=>[e.file,e.relative_file])));return {album};
+   const album=indexedTagAlbum(await detail(id),id);
+   coverFiles.set(id,new Map(album.entries.filter(e=>e.relative_file).map(e=>[e.file,e.relative_file])));return {album};
   }
   throw Error('Tag Editor는 지정된 읽기 조회만 허용합니다.');
  };
 }
-export function mountTagEditor({container,api,canManage}){
+export function mountTagEditor({container,api,canManage,loadCover=coverMemberImage,preview=false}){
  if(!canManage?.())throw Error('승인된 관리자만 이용할 수 있습니다.');
  const controller=new AbortController(),channel=crypto.randomUUID(),frame=document.createElement('iframe');
  frame.title='Tag Editor · NAS 색인 태그 읽기 전용';frame.style.cssText='width:100%;height:78vh;min-height:650px;border:0;border-radius:8px;background:#f5f7f8';frame.referrerPolicy='no-referrer';
- frame.src=new URL('tag-editor-ui.html?v=20261121-h2',document.baseURI).href;
+ frame.src=new URL('tag-editor-ui.html?v=20261121-ui-rebuild',document.baseURI).href;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal});
- // Requests are read-only: serialize them instead of rejecting a valid selection.
- let readQueue=Promise.resolve();
+ // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
+ const queue=[],jobs=new Map();let active=0;
+ function pump(){while(active<2&&queue.length){const job=queue.shift();if(job.controller.signal.aborted){jobs.delete(job.id);continue;}active++;
+  const metrics={nas_requests:0,nas_wait_ms:0},started=performance.now();
+  Promise.resolve().then(()=>read(job.url,job.body,{signal:job.controller.signal,metrics})).then(result=>{
+   if(!controller.signal.aborted&&!job.controller.signal.aborted&&canManage())frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:job.id,result,metrics:{...metrics,bridge_ms:performance.now()-started}},origin);
+  },e=>{if(!controller.signal.aborted&&!job.controller.signal.aborted&&canManage())frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:job.id,error:e.message},origin);
+  }).finally(()=>{jobs.delete(job.id);active--;pump();});
+ }}
  const origin=location.origin;
  async function message(event){
   if(event.origin!==origin||event.source!==frame.contentWindow)return;
-  const m=event.data;if(m?.type==='vr-tag-ready'){if(canManage())frame.contentWindow.postMessage({type:'vr-tag-init',channel},origin);return;}
-  if(m?.type==='vr-tag-covers'&&m.channel===channel){if(canManage())for(const img of frame.contentDocument.querySelectorAll('img[data-tag-cover]')){if(UUID.test(img.dataset.tagCover)&&!img.dataset.loading){img.dataset.loading='true';void coverMemberImage(img,img.dataset.tagCover).catch(()=>{img.hidden=true;});}}return;}
+  const m=event.data;if(m?.type==='vr-tag-ready'){if(canManage())frame.contentWindow.postMessage({type:'vr-tag-init',channel,preview},origin);return;}
+  if(m?.type==='vr-tag-covers'&&m.channel===channel){if(canManage())for(const img of frame.contentDocument.querySelectorAll('img[data-tag-cover]')){if(UUID.test(img.dataset.tagCover)&&!img.dataset.loading){img.dataset.loading='true';void loadCover(img,img.dataset.tagCover).catch(()=>{img.hidden=true;});}}return;}
+  if(m?.type==='vr-tag-measured'&&m.channel===channel){const v=m.measurement;if(v&&UUID.test(v.album_id||'')&&Number.isFinite(v.display_ms))frame.dataset.lastReadMetrics=JSON.stringify(v);return;}
+  if(m?.type==='vr-tag-cancel'&&m.channel===channel){jobs.get(m.id)?.controller.abort();return;}
   if(m?.type!=='vr-tag-read'||m.channel!==channel||!Number.isSafeInteger(m.id)||typeof m.url!=='string')return;
   if(!canManage()){dispose();return;}
-  const request={id:m.id,url:m.url,body:m.body};
-  readQueue=readQueue.then(async()=>{
-   if(controller.signal.aborted||!canManage())return;
-   try{
-    const result=await read(request.url,request.body);
-    if(!controller.signal.aborted&&canManage())frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:request.id,result},origin);
-   }catch(e){
-    if(!controller.signal.aborted&&canManage())frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:request.id,error:e.message},origin);
-   }
-  }).catch(()=>{});
+  if(jobs.has(m.id))return;
+  if(jobs.size>=32){frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:m.id,error:'조회가 많습니다. 잠시 후 다시 선택하세요.'},origin);return;}
+  const job={id:m.id,url:m.url,body:m.body,controller:new AbortController()};jobs.set(m.id,job);
+  if(m.url.startsWith('/api/tracks?'))queue.unshift(job);else queue.push(job);pump();
  }
- function dispose(){if(controller.signal.aborted)return;controller.abort();for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])clearMemberImage(img);window.removeEventListener('message',message);frame.contentWindow?.postMessage({type:'vr-tag-revoke'},origin);frame.remove();}
+ function dispose(){if(controller.signal.aborted)return;controller.abort();for(const job of jobs.values())job.controller.abort();queue.length=0;for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])clearMemberImage(img);window.removeEventListener('message',message);frame.contentWindow?.postMessage({type:'vr-tag-revoke'},origin);frame.remove();}
  window.addEventListener('message',message);container.replaceChildren(frame);return {dispose};
 }
+
