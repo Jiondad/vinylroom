@@ -149,7 +149,19 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  let closed=false,version=0,accountRevision=0,disposeProposals=null,disposePilotReport=null,summaryRequest=null,summaryTimer=null,summarySeen=false,summaryLive=false,operationsPanel=null,indexingPanelInstance=null,indexingRequest=null;const controller=new AbortController(),q=s=>page.querySelector(s);
  function notice(msg){if(!closed)q('.vr-admin-status').textContent=String(msg??'');}
  function close(){if(closed)return;tagEditor?.dispose();tagEditor=null;closed=true;indexingPanelInstance?.dispose();indexingPanelInstance=null;operationsPanel?.close();clearTimeout(summaryTimer);document.removeEventListener('visibilitychange',onSummaryVisibility);disposePilotReport?.();disposePilotReport=null;version++;controller.abort();disposeProposals?.();editor?.close();editor?.remove();editor=null;page.remove();document.body.classList.remove('vinyl-admin-page-open');window.removeEventListener('vinyl-account-change',onAccount);window.removeEventListener('vinyl-approval-change',onAccount);window.removeEventListener('keydown',onKey);document.removeEventListener('click',onSidebar,true);if(dismissCurrent===close)dismissCurrent=null;}
- function onAccount(){accountRevision++;tagEditor?.dispose();tagEditor=null;if(!canManage())notice('관리자 인증을 확인해 주세요. 검토 화면은 유지되며 권한 확인 전 저장은 차단됩니다.');}
+ function onAccount(){
+  accountRevision++;
+  if(!canManage()){
+   tagEditor?.dispose();tagEditor=null;
+   notice('관리자 인증을 확인해 주세요. 검토 화면은 유지되며 권한 확인 전 저장은 차단됩니다.');
+   return;
+  }
+  // Token refresh or a routine account notification must not remove an active editor.
+  if(!tagEditor&&q('[data-tab="tag-editor"]')?.getAttribute('aria-current')==='page'){
+   tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage()});
+   notice('');
+  }
+ }
  function onKey(e){if(e.key==='Escape'&&page.isConnected){e.preventDefault();close();}}
  function onSidebar(e){if(e.target.closest('.sidebar #nav button, .sidebar .brand'))close();}
  function check(){if(!canManage()){notice('관리자 인증을 확인해 주세요. 검토 화면은 유지됩니다.');throw Error('관리자 인증 확인 전 요청할 수 없습니다.');}}
