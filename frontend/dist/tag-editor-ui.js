@@ -8,8 +8,8 @@ const padded=e=>number(e)>0&&number(e)<=99?String(number(e)).padStart(2,'0'):'';
 const changed=e=>JSON.stringify(e.tags)!==JSON.stringify(S.original.find(x=>x.file===e.file)?.tags)||!!S.renames[e.file];
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(timer);timer=setTimeout(()=>$('#toast').classList.remove('show'),2600)}
 const pending=new Map();let rpcSeq=0,channel=null;
-function read(url){return new Promise((resolve,reject)=>{const id=++rpcSeq,t=setTimeout(()=>{pending.delete(id);reject(Error('NAS 조회 시간이 초과되었습니다.'));},25000);pending.set(id,{resolve,reject,t});parent.postMessage({type:'vr-tag-read',id,channel,url},location.origin);});}
-async function api(url,body){if(!channel)throw Error('관리자 인증 연결이 필요합니다.');if(url==='/api/preview')return previewPlan(body);return read(url);}
+function read(url,body){return new Promise((resolve,reject)=>{const id=++rpcSeq,t=setTimeout(()=>{pending.delete(id);reject(Error('NAS 조회 시간이 초과되었습니다.'));},25000);pending.set(id,{resolve,reject,t});parent.postMessage({type:'vr-tag-read',id,channel,url,body},location.origin);});}
+async function api(url,body){if(!channel)throw Error('관리자 인증 연결이 필요합니다.');if(url==='/api/preview')return previewPlan(body);return read(url,body);}
 window.addEventListener('message',event=>{if(event.source!==parent||event.origin!==location.origin)return;const m=event.data;if(m?.type==='vr-tag-init'&&!channel&&typeof m.channel==='string'){channel=m.channel;document.body.hidden=false;start();}if(m?.type==='vr-tag-revoke'){channel=null;S.cache.clear();S.original=[];S.draft=[];document.body.className='locked';document.querySelector('.shell').remove();}if(m?.type==='vr-tag-result'&&m.channel===channel){const p=pending.get(m.id);if(p){clearTimeout(p.t);pending.delete(m.id);m.error?p.reject(Error(m.error)):p.resolve(m.result);}}});
 if(parent===window){document.body.hidden=false;document.body.classList.add('locked');}
 parent.postMessage({type:'vr-tag-ready'},location.origin);
@@ -48,4 +48,4 @@ function start(){S.sourceMode='NAS_INDEX_READ_ONLY';$('.header-right .demo-pill'
 $('#browseToggle').onclick=()=>{const folded=$('.browser').classList.toggle('collapsed');$('#browseToggle').textContent=folded?'펼치기':'접기';$('#browseToggle').setAttribute('aria-expanded',String(!folded))};
 
 import {installTagCoverDraft} from './tag-editor-cover-draft.js';
-installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected]});
+installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected],api});
