@@ -98,8 +98,12 @@ export function createTagReader({api,canManage,signal}){
 export function mountTagEditor({container,api,canManage,loadCover=coverMemberImage,preview=false}){
  if(!canManage?.())throw Error('승인된 관리자만 이용할 수 있습니다.');
  const controller=new AbortController(),channel=crypto.randomUUID(),frame=document.createElement('iframe');
- frame.title='Tag Editor · NAS 색인 태그 읽기 전용';frame.style.cssText='width:100%;height:78vh;min-height:650px;border:0;border-radius:8px;background:#f5f7f8';frame.referrerPolicy='no-referrer';
- frame.src=new URL('tag-editor-ui.html?v=20261121-init-hotfix',document.baseURI).href;
+ frame.title='Tag Editor · NAS 색인 태그 읽기 전용';frame.style.cssText='width:100%;height:320px;min-height:320px;display:block;border:0;border-radius:8px;background:#f5f7f8';frame.referrerPolicy='no-referrer';frame.scrolling='no';
+ const adminPage=container.closest('.vinyl-admin-page');adminPage?.classList.add('vr-tag-editor-active');if(adminPage)document.body.classList.add('vinyl-tag-editor-open');let sizeObserver=null,viewportTick=0;
+ function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,Math.min(innerHeight,r.bottom)-Math.max(0,r.top))},location.origin);}
+ function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
+ window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
+ frame.src=new URL('tag-editor-ui.html?v=20261121-tools-cover-ux',document.baseURI).href;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
  const queue=[],jobs=new Map();let active=0;
@@ -113,7 +117,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  const origin=location.origin;
  async function message(event){
   if(event.origin!==origin||event.source!==frame.contentWindow)return;
-  const m=event.data;if(m?.type==='vr-tag-ready'){if(canManage())frame.contentWindow.postMessage({type:'vr-tag-init',channel,preview},origin);return;}
+  const m=event.data;if(m?.type==='vr-tag-ready'){scheduleViewport();if(canManage())frame.contentWindow.postMessage({type:'vr-tag-init',channel,preview},origin);return;}
   if(m?.type==='vr-tag-covers'&&m.channel===channel){if(canManage())for(const img of frame.contentDocument.querySelectorAll('img[data-tag-cover]')){if(UUID.test(img.dataset.tagCover)&&!img.dataset.loading){img.dataset.loading='true';void loadCover(img,img.dataset.tagCover).catch(()=>{img.hidden=true;});}}return;}
   if(m?.type==='vr-tag-measured'&&m.channel===channel){const v=m.measurement;if(v&&UUID.test(v.album_id||'')&&Number.isFinite(v.display_ms))frame.dataset.lastReadMetrics=JSON.stringify(v);return;}
   if(m?.type==='vr-tag-cancel'&&m.channel===channel){jobs.get(m.id)?.controller.abort();return;}
@@ -124,12 +128,13 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
   const job={id:m.id,url:m.url,body:m.body,controller:new AbortController()};jobs.set(m.id,job);
   if(m.url.startsWith('/api/tracks?'))queue.unshift(job);else queue.push(job);pump();
  }
- function dispose(){if(controller.signal.aborted)return;controller.abort();for(const job of jobs.values())job.controller.abort();queue.length=0;for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])clearMemberImage(img);window.removeEventListener('message',message);frame.contentWindow?.postMessage({type:'vr-tag-revoke'},origin);frame.remove();}
+ function dispose(){if(controller.signal.aborted)return;sizeObserver?.disconnect();cancelAnimationFrame(viewportTick);window.removeEventListener('scroll',scheduleViewport);window.removeEventListener('resize',scheduleViewport);adminPage?.classList.remove('vr-tag-editor-active');if(adminPage)document.body.classList.remove('vinyl-tag-editor-open');controller.abort();for(const job of jobs.values())job.controller.abort();queue.length=0;for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])clearMemberImage(img);window.removeEventListener('message',message);frame.contentWindow?.postMessage({type:'vr-tag-revoke'},origin);frame.remove();}
  frame.addEventListener('load',()=>{
   if(!controller.signal.aborted&&canManage()){
    const doc=frame.contentDocument;
    if(!doc?.getElementById('accessLock')){container.textContent='Tag Editor 화면 파일을 불러오지 못했습니다. 다시 접속해 주세요.';return;}
    frame.contentWindow?.postMessage({type:'vr-tag-init',channel,preview},origin);
+   sizeObserver?.disconnect();const shell=doc.querySelector('.shell');if(shell){const fit=()=>{if(controller.signal.aborted)return;const height=Math.max(320,Math.ceil(shell.getBoundingClientRect().height)+2);if(Math.abs(parseFloat(frame.style.height)-height)>1)frame.style.height=height+'px';scheduleViewport();};sizeObserver=new ResizeObserver(fit);sizeObserver.observe(shell);fit();}
   }
  });
  window.addEventListener('message',message);container.replaceChildren(frame);return {dispose};
