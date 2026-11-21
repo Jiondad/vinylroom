@@ -50,3 +50,14 @@ python3 nas_phaseh_release.py restore --backup-dir '설치_출력의_backup_dir'
 - POST `/v2/admin/tag-cover/plan`: 관리자·Origin·선택된 파일·현재 SHA·Catalog digest·이미지 검사. 업로드 이미지는 보호된 임시 디렉터리에서 계획 계산 후 즉시 삭제.
 - `/v2/admin/tag-cover/apply`, `/restore`: 환경변수와 무관하게 HTTP 405. 이번 프론트엔드에는 apply 호출이 없음.
 - 향후 쓰기 승인 시에만 기존 Phase H 단일 파일 Writer를 별도로 연결. 이 단계에서 활성화하지 않음.
+
+## 6. NAS 단건 읽기 결과 전달
+
+설치 후 이미 확인된 Chet Baker의 소장 앨범 UUID로 실제 파일 하나만 읽습니다. 지정 UUID가 없거나 파일 구성이 바뀌었으면 HOLD하고 다른 앨범으로 자동 확대하지 않습니다. 이 명령은 인증된 HTTP 성공을 사칭하지 않으며, 실제 파일의 읽기 결과와 해당 HTTP 경로의 무인증 403 차단을 확인합니다.
+
+```bash
+docker exec -i music-gateway-music-gateway-1 python3 - fda876f3-b821-40ed-b8ed-26881c4f256c --first-supported-track < probe_embedded_readonly.py > PHASE_H_READONLY_PROBE.json
+cat PHASE_H_READONLY_PROBE.json
+```
+
+`PHASE_H_READONLY_PREPARED`와 `EMBEDDED_COVER_INSPECTED` 결과를 전달하면 실제 관리자 세션의 UI 연결·게시로 이어갑니다. 이 사전 조회 자체를 운영 프론트엔드 게시 성공으로 보고하지 않습니다.
