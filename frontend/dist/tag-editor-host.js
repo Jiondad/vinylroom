@@ -79,7 +79,9 @@ export function mountTagEditor({container,api,canManage}){
  const controller=new AbortController(),channel=crypto.randomUUID(),frame=document.createElement('iframe');
  frame.title='Tag Editor · NAS 색인 태그 읽기 전용';frame.style.cssText='width:100%;height:78vh;min-height:650px;border:0;border-radius:8px;background:#f5f7f8';frame.referrerPolicy='no-referrer';
  frame.src=new URL('tag-editor-ui.html?v=20261121-h2',document.baseURI).href;
- const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal});let busy=false;
+ const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal});
+ // Requests are read-only: serialize them instead of rejecting a valid selection.
+ let readQueue=Promise.resolve();
  const origin=location.origin;
  async function message(event){
   if(event.origin!==origin||event.source!==frame.contentWindow)return;
@@ -87,11 +89,16 @@ export function mountTagEditor({container,api,canManage}){
   if(m?.type==='vr-tag-covers'&&m.channel===channel){if(canManage())for(const img of frame.contentDocument.querySelectorAll('img[data-tag-cover]')){if(UUID.test(img.dataset.tagCover)&&!img.dataset.loading){img.dataset.loading='true';void coverMemberImage(img,img.dataset.tagCover).catch(()=>{img.hidden=true;});}}return;}
   if(m?.type!=='vr-tag-read'||m.channel!==channel||!Number.isSafeInteger(m.id)||typeof m.url!=='string')return;
   if(!canManage()){dispose();return;}
-  if(busy){frame.contentWindow.postMessage({type:'vr-tag-result',channel,id:m.id,error:'이전 조회가 완료된 뒤 다시 시도하세요.'},origin);return;}
-  busy=true;
-  try{const result=await read(m.url,m.body);if(!controller.signal.aborted&&canManage())frame.contentWindow.postMessage({type:'vr-tag-result',channel,id:m.id,result},origin);}
-  catch(e){if(!controller.signal.aborted)frame.contentWindow.postMessage({type:'vr-tag-result',channel,id:m.id,error:e.message},origin);}
-  finally{busy=false;}
+  const request={id:m.id,url:m.url,body:m.body};
+  readQueue=readQueue.then(async()=>{
+   if(controller.signal.aborted||!canManage())return;
+   try{
+    const result=await read(request.url,request.body);
+    if(!controller.signal.aborted&&canManage())frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:request.id,result},origin);
+   }catch(e){
+    if(!controller.signal.aborted&&canManage())frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:request.id,error:e.message},origin);
+   }
+  }).catch(()=>{});
  }
  function dispose(){if(controller.signal.aborted)return;controller.abort();for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])clearMemberImage(img);window.removeEventListener('message',message);frame.contentWindow?.postMessage({type:'vr-tag-revoke'},origin);frame.remove();}
  window.addEventListener('message',message);container.replaceChildren(frame);return {dispose};
