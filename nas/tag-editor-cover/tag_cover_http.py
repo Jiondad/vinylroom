@@ -1,5 +1,5 @@
-"""Phase H authenticated embedded-cover inspection/plans; HTTP apply is always disabled.
-Uses existing Phase H/2C policy. No media/DB writes, no durable image uploads.
+"""Phase H authenticated inspection/plans plus default-OFF qualified save adapter.
+Uses existing Phase H/2C Writer policy. Saves require server-owned maintenance lease, NAS qualification and existing feature flags; no DB writes.
 """
 import base64
 import binascii
@@ -132,3 +132,97 @@ def handle(h,index,music_root,origin,post=False):
     except (ValueError,TypeError,KeyError,OSError,cover.base.sqlite3.Error):
         # Do not disclose arbitrary local exception paths or credentials.
         return h.reply(400,{'state':'HOLD','reason':'cover_input_or_file_verification_failed'})
+
+# TAG_EDITOR_SAVE_EXTENSION_V1 -- no engine or DB; server integration defaults OFF.
+_SAVE_CONTEXT = {'guard': None, 'backup_root': None, 'qualified': False}
+_READONLY_HANDLE = handle
+_SAVE_ROUTES = frozenset((PREFIX+'/save-capabilities', PREFIX+'/tag-plan', PREFIX+'/tag-apply', PREFIX+'/apply'))
+
+def configure_save_context(runtime_guard, backup_root, qualification_passed=False):
+    """Server-owned context only. Guard must HOLD the existing index/AI maintenance lease.
+    Qualification is set by deployment code after NAS fixture apply/restore succeeds;
+    neither this function nor environment flags are exposed through HTTP.
+    """
+    if not callable(runtime_guard):raise ValueError('runtime_lease_guard_required')
+    _SAVE_CONTEXT.update(guard=runtime_guard, backup_root=backup_root, qualified=qualification_passed if isinstance(qualification_passed,dict) else qualification_passed is True)
+
+def save_capabilities():
+    import os
+    qualified=_SAVE_CONTEXT['qualified'];ready=bool(callable(_SAVE_CONTEXT['guard']) and _SAVE_CONTEXT['backup_root']);tag_ok=qualified is True or (isinstance(qualified,dict) and qualified.get('tags') is True);cover_ok=qualified is True or (isinstance(qualified,dict) and qualified.get('cover') is True)
+    return {'state':'TAG_EDITOR_SAVE_CAPABILITIES','version':'tag-editor-save-v1',
+        'tags':ready and tag_ok and os.getenv(cover.base.TRACK_WRITE_ENV)=='true',
+        'cover':ready and cover_ok and os.getenv(cover.COVER_ENV)=='true', 'rename':False, 'mp3_tags':False,
+        'tag_formats':['flac'],'tag_fields':sorted(cover.base.FLAC_WRITE_FIELDS),
+        'reason':None if ready and tag_ok and cover_ok else 'nas_qualification_and_runtime_lease_not_connected'}
+
+def _writer_edits(raw):
+    if not isinstance(raw,dict):raise ValueError('invalid_edits')
+    result={}
+    for key,value in raw.items():
+        if key not in ('genre','featuring') and isinstance(value,list):
+            if len(value)!=1:raise ValueError('writer_requires_single_value')
+            value=value[0]
+        result[key]=value
+    return result
+
+def tag_plan(catalog,music_root,body):
+    if not isinstance(body,dict) or set(body)-{'album_id','file','edits','before_tags','expected_plan_id','confirm_write'}:
+        raise ValueError('unsupported_tag_fields')
+    album_id,file=_identity(body.get('album_id'),body.get('file'))
+    album,entries,issues=cover.base.inventory(catalog,music_root,album_id)
+    entry=cover.base._safe_track_choice(entries,album,file)
+    if entry['format']!='.flac':return cover.hold('phase2c_write_flac_only')
+    raw=_writer_edits(body.get('edits'));edits=cover.base.validate_track_edits(raw)
+    before=body.get('before_tags')
+    if not isinstance(before,dict) or set(before)!=set(edits):return cover.hold('original_field_snapshot_required')
+    if any(entry['tags'].get(k,[])!=before[k] for k in edits):return cover.hold('tags_changed_since_browser_read')
+    return cover.base.track_write_plan(album,entries,issues,file,raw)
+
+def save_request(catalog,music_root,route,body):
+    """Single-file adapter, called under verified admin auth AND existing runtime lease."""
+    caps=save_capabilities();kind='tags' if route.endswith('/tag-apply') else 'cover'
+    if route.endswith('/tag-plan'):return tag_plan(catalog,music_root,body)
+    if not isinstance(body,dict) or body.get('confirm_write') is not True:return cover.hold('explicit_save_confirmation_required')
+    if not caps[kind]:return cover.hold('save_feature_not_qualified_or_off')
+    expected=body.get('expected_plan_id')
+    if not isinstance(expected,str) or not re.fullmatch('[a-f0-9]{64}',expected):return cover.hold('expected_plan_id_required')
+    with _SAVE_CONTEXT['guard']():
+        if kind=='tags':
+            result=tag_plan(catalog,music_root,body)
+            if result.get('state')!='READ_ONLY_TRACK_WRITE_PLAN' or result.get('plan_id')!=expected:return cover.hold('plan_changed_since_confirmation')
+            result=cover.base.track_write_apply(catalog,music_root,_SAVE_CONTEXT['backup_root'],body['album_id'],body['file'],_writer_edits(body['edits']),expected,True,True,True)
+        else:
+            plan_body={k:v for k,v in body.items() if k not in ('expected_plan_id','confirm_write')}
+            result=plan(catalog,music_root,plan_body)
+            if result.get('state')!='READ_ONLY_COVER_PLAN' or result.get('plan_id')!=expected:return cover.hold('plan_changed_since_confirmation')
+            with tempfile.TemporaryDirectory(prefix='vinyl-cover-apply-') as td:
+                image=None
+                if body['action']!='remove':
+                    blob=base64.b64decode(body['image_base64'],validate=True);_image(blob)
+                    image=Path(td)/'image';image.write_bytes(blob);image.chmod(0o600)
+                result=cover.cover_apply(catalog,music_root,_SAVE_CONTEXT['backup_root'],body['album_id'],body['file'],body['action'],image,expected,True,True,True)
+        # Existing Writer verifies audio/tags/backup and records operation.json; reread result.
+        if result.get('state') in ('TAG_TRACK_WRITE_COMPLETED','COVER_WRITE_COMPLETED'):
+            result['verification']=inspect(catalog,music_root,body['album_id'],body['file'])
+            if result['verification'].get('state')!='EMBEDDED_COVER_INSPECTED':result['state']='HOLD_POSTWRITE_INSPECTION'
+            elif kind=='tags':result['saved_tags']=cover.base.read_tags(Path(music_root)/body['file'])
+        return result
+
+def handle(h,index,music_root,origin,post=False):
+    route=urlsplit(h.path).path
+    if route not in _SAVE_ROUTES:return _READONLY_HANDLE(h,index,music_root,origin,post)
+    h._public_read=False
+    try:
+        h.index_admin()
+        if h.member_gate() is False:return
+        if h.headers.get('Origin') not in (None,origin) or (post and h.headers.get('Origin')!=origin):return h.reply(403,cover.hold('origin_not_allowed'))
+        if route.endswith('/save-capabilities') and not post:return h.reply(200,save_capabilities())
+        if not post:return h.reply(405,cover.hold('post_required'))
+        if index is None:return h.reply(503,cover.hold('catalog_unavailable'))
+        length=int(h.headers.get('Content-Length','0'))
+        if h.headers.get_content_type()!='application/json' or not 0<length<=MAX_JSON:raise ValueError('invalid_save_request')
+        if not SLOTS.acquire(blocking=False):return h.reply(409,cover.hold('tag_editor_busy'))
+        try:return h.reply(200,save_request(index.dbpath,music_root,route,json.loads(h.rfile.read(length))))
+        finally:SLOTS.release()
+    except PermissionError:return h.reply(403,cover.hold('administrator_required_or_runtime_not_idle'))
+    except (ValueError,TypeError,KeyError,OSError,cover.base.sqlite3.Error):return h.reply(400,cover.hold('save_validation_or_file_conflict'))

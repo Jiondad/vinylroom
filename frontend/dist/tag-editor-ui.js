@@ -1,8 +1,8 @@
-import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?v=20261121-tools-cover-ux';
-import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261121-tools-cover-ux';
+import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?v=20261122-save-ui';
+import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261122-save-ui';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),clone=v=>structuredClone(v),base=f=>f.split('/').pop();
 const S={album:null,original:[],draft:[],selected:new Set(),renames:{},warnings:{},drafts:new Map(),nodes:new Map(),active:'',search:[],metrics:[]};
-let activeTool='tags';const toolInputs={};
+let saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};let activeTool='tags';const toolInputs={};
 const pending=new Map(),inflight=new Map(),gate=selectionGate();let channel=null,rpcSeq=0,toastTimer,searchVersion=0,currentTrackRequest=null;
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2600);}
 function read(url,body){const key=body===undefined?url:null;if(key&&inflight.has(key))return inflight.get(key);
@@ -12,7 +12,7 @@ function read(url,body){const key=body===undefined?url:null;if(key&&inflight.has
 }
 async function api(url,body){if(!channel)throw Error('관리자 인증이 필요합니다.');return (await read(url,body)).result;}
 window.addEventListener('message',event=>{if(event.source!==parent||event.origin!==location.origin)return;const m=event.data;
- if(m?.type==='vr-tag-init'&&!channel&&typeof m.channel==='string'){channel=m.channel;document.body.hidden=false;document.body.classList.remove('locked');if(m.preview)$('#sourceBadge').textContent='DEMO · NAS 미연결';void expand('');}
+ if(m?.type==='vr-tag-init'&&!channel&&typeof m.channel==='string'){channel=m.channel;document.body.hidden=false;document.body.classList.remove('locked');if(m.preview)$('#sourceBadge').textContent='DEMO · NAS 미연결';void expand('');void readSaveCaps();}
  if(m?.type==='vr-tag-viewport'&&m.channel===channel&&Number.isFinite(m.top)&&Number.isFinite(m.height)&&m.top>=0&&m.height>=240){document.documentElement.style.setProperty('--tag-visible-top',m.top+'px');document.documentElement.style.setProperty('--tag-visible-height',m.height+'px');}
  if(m?.type==='vr-tag-revoke'){channel=null;for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('관리자 인증이 필요합니다.'));}pending.clear();inflight.clear();S.drafts.clear();S.original=[];S.draft=[];coverEditor.close();document.body.classList.add('locked');}
  if(m?.type==='vr-tag-result'&&m.channel===channel){const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error)):p.resolve({result:m.result,metrics:m.metrics});}}
@@ -63,7 +63,7 @@ $('#tracks').onclick=e=>{const path=e.target.closest('[data-path]');if(path){$('
 $('#selectAll').onchange=e=>{S.selected=new Set(e.target.checked?S.draft.map(e=>e.file):[]);renderTracks();};$('#missingOnly').onchange=()=>renderTracks();$('#resetBtn').onclick=()=>{if(!S.album)return;S.draft=clone(S.original);S.renames={};S.warnings={};saveDraft();renderTracks();$('#bulkStatus').textContent='초안을 초기화했습니다.';};
 $('#browseToggle').onclick=()=>{const collapsed=$('.browser').classList.toggle('collapsed');$('#browseToggle').textContent=collapsed?'펼치기':'접기';$('#browseToggle').setAttribute('aria-expanded',String(!collapsed));};
 const pathDialog=$('#pathDialog');$('#closePath').onclick=()=>pathDialog.close();pathDialog.addEventListener('click',e=>{if(e.target===pathDialog)pathDialog.close();});
-const coverEditor=installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected],api});$('#albumHeader').onclick=e=>{if(e.target.closest('#coverOpen')){if(S.album)coverEditor.open();else toast('트랙 조회 후 커버를 선택하세요.');}};
+const coverEditor=installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected],api,getSaveCapabilities:()=>saveCaps});$('#albumHeader').onclick=e=>{if(e.target.closest('#coverOpen')){if(S.album)coverEditor.open();else toast('트랙 조회 후 커버를 선택하세요.');}};
 renderTree();parent.postMessage({type:'vr-tag-ready'},location.origin);
 
 const toolGroups={tags:['artist','album_artist','album','date','genre','featuring','discnumber','title'],from:['from'],to:['to'],number:['number','normalize']};
@@ -81,3 +81,17 @@ function activateTool(tool){
  $('.bulk-toolbar').setAttribute('data-mode',tool);const caption=$('#formatCaption');if(caption)caption.textContent=tool==='to'?'파일명 생성 패턴':'파일명 추출 패턴';toolbar();renderTracks();
 }
 document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[data-tool]');if(b)activateTool(b.dataset.tool);};activateTool('tags');
+
+async function readSaveCaps(){try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:false};}catch{saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};}$('#saveTags').disabled=!saveCaps.tags;$('#saveTags').textContent=saveCaps.tags?'태그 변경 저장':'파일 저장 OFF';$('#saveStatus').textContent=saveCaps.tags?'FLAC 지원 필드만 저장':'NAS 저장 경로·시험 파일 검증 확인 필요';}
+$('#saveTags').onclick=async()=>{
+ if(!saveCaps.tags||!S.album)return;if(Object.keys(S.renames).length){toast('파일명 변경 Writer는 아직 지원되지 않습니다. 저장하지 않았습니다.');return;}
+ const rows=S.draft.filter(e=>S.selected.has(e.file)&&changedFields(e).length);if(!rows.length){toast('선택 트랙의 변경 초안이 없습니다.');return;}
+ if(rows.some(e=>!e.file.toLowerCase().endsWith('.flac')||changedFields(e).some(f=>!saveCaps.tag_fields.includes(f)))){toast('현재 Writer는 FLAC 지원 필드만 저장합니다. MP3·공통 앨범 태그는 OFF입니다.');return;}
+ if(!window.confirm(`선택한 ${rows.length}곡의 태그 변경 초안을 저장할까요? 백업과 파일 충돌 검사를 적용합니다.`))return;
+ $('#saveTags').disabled=true;$('#editor').inert=true;let completed=0;try{
+  const id=S.album.id,plans=[];for(const e of rows){const old=S.original.find(x=>x.file===e.file),fs=changedFields(e),body={album_id:id,file:e.file,edits:Object.fromEntries(fs.map(f=>[f,e.tags[f]])),before_tags:Object.fromEntries(fs.map(f=>[f,old.tags[f]||[]]))};const p=await api('/api/tag/plan',body);if(p.state!=='READ_ONLY_TRACK_WRITE_PLAN')throw Error(p.reason||p.state);plans.push({e,body,p});}
+  if(!window.confirm(`선택 ${plans.length}곡의 표시된 태그 변경을 저장합니다. 백업·충돌 검사를 적용합니다. 계속할까요?`))return;
+  for(const {e,body,p} of plans){if(S.album?.id!==id)throw Error('앨범 선택이 변경됐습니다.');const r=await api('/api/tag/apply',{...body,expected_plan_id:p.plan_id,confirm_write:true});if(r.state!=='TAG_TRACK_WRITE_COMPLETED')throw Error(r.reason||r.state);S.original.find(x=>x.file===e.file).tags=clone(r.saved_tags||e.tags);e.tags=clone(r.saved_tags||e.tags);completed++;$('#saveStatus').textContent=`저장 ${completed}곡 · operation ${r.operation_id}`;}
+  S.drafts.delete(id+'|'+activeTool);renderTracks();
+ }catch(e){$('#saveStatus').textContent=`저장 ${completed}곡 · 중단: ${e.message}`;}finally{$('#editor').inert=false;$('#saveTags').disabled=!saveCaps.tags;}
+};

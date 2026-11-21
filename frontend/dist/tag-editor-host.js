@@ -35,14 +35,22 @@ export function createTagReader({api,canManage,signal}){
   async function detail(id){const found=detailCache.get(id);if(found&&Date.now()-found.at<ttl)return found.value;return remember(id,await get('/v2/admin-album?'+new URLSearchParams({id})));}
   alive();const u=new URL(url,'https://tag.invalid');
   if(u.origin!=='https://tag.invalid')throw Error('허용되지 않은 조회');
+  if(u.pathname==='/api/save-capabilities')return get('/v2/admin/tag-cover/save-capabilities');
+  if(['/api/tag/plan','/api/tag/apply'].includes(u.pathname)){
+   const id=body?.album_id,file=body?.file,relative=coverFiles.get(id)?.get(file);if(!relative||!albums.has(id))throw Error('현재 앨범 파일만 저장할 수 있습니다.');
+   if(!body.edits||!body.before_tags)throw Error('원본 태그와 변경 계획이 필요합니다.');
+   if(u.pathname.endsWith('/apply')){const caps=await get('/v2/admin/tag-cover/save-capabilities');if(caps.tags!==true||body.confirm_write!==true)throw Error('NAS 태그 저장 OFF');}
+   const result=await api('/v2/admin/tag-cover/'+(u.pathname.endsWith('/apply')?'tag-apply':'tag-plan'),{admin:true,signal,body:{...body,file:relative}});check();if(result.state==='TAG_TRACK_WRITE_COMPLETED')detailCache.delete(id);return result;
+  }
   if(u.pathname.startsWith('/api/cover/')){
-   if(!['/api/cover/inspect','/api/cover/plan'].includes(u.pathname))throw Error('실제 커버 저장은 비활성화되어 있습니다.');
+   if(!['/api/cover/inspect','/api/cover/plan','/api/cover/apply'].includes(u.pathname))throw Error('실제 커버 저장은 비활성화되어 있습니다.');
    const id=body?.album_id,file=body?.file,relative=coverFiles.get(id)?.get(file);
    if(!relative||!albums.has(id)||relative.startsWith('/')||relative.includes('\\')||relative.split('/').some(p=>p==='..'||p==='.')||!relative.includes('/'))throw Error('현재 앨범에서 확인한 파일만 선택하세요.');
    if(u.pathname==='/api/cover/inspect')return get('/v2/admin/tag-cover/inspect?'+new URLSearchParams({album_id:id,file:relative}));
    if(!['add','replace','remove'].includes(body.action)||!/^([a-f0-9]{64})$/.test(body.expected_file_sha256||'')||!/^([a-f0-9]{64})$/.test(body.expected_catalog_digest||''))throw Error('실제 파일 상태를 먼저 조회하세요.');
    if(body.action!=='remove'&&(typeof body.image_base64!=='string'||body.image_base64.length>14*1024*1024))throw Error('이미지 크기 제한을 확인하세요.');
-   check();const result=await api('/v2/admin/tag-cover/plan',{admin:true,signal,body:{album_id:id,file:relative,action:body.action,expected_file_sha256:body.expected_file_sha256,expected_catalog_digest:body.expected_catalog_digest,...(body.action==='remove'?{}:{image_base64:body.image_base64})}});check();return result;
+   const applying=u.pathname==='/api/cover/apply';if(applying){const caps=await get('/v2/admin/tag-cover/save-capabilities');if(caps.cover!==true||body.confirm_write!==true)throw Error('NAS 커버 저장 OFF');}
+   check();const result=await api('/v2/admin/tag-cover/'+(applying?'apply':'plan'),{admin:true,signal,body:{album_id:id,file:relative,action:body.action,...(applying?{expected_plan_id:body.expected_plan_id,confirm_write:true}:{}),expected_file_sha256:body.expected_file_sha256,expected_catalog_digest:body.expected_catalog_digest,...(body.action==='remove'?{}:{image_base64:body.image_base64})}});check();if(result.state==='COVER_WRITE_COMPLETED')detailCache.delete(id);return result;
   }
   if(body!==undefined)throw Error('읽기 조회에 본문을 전달할 수 없습니다.');
   if(u.pathname==='/api/folders'){
@@ -103,7 +111,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,Math.min(innerHeight,r.bottom)-Math.max(0,r.top))},location.origin);}
  function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
  window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
- frame.src=new URL('tag-editor-ui.html?v=20261121-tools-cover-ux',document.baseURI).href;
+ frame.src=new URL('tag-editor-ui.html?v=20261122-save-ui',document.baseURI).href;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
  const queue=[],jobs=new Map();let active=0;
