@@ -1,3 +1,4 @@
+import {mountTagEditor} from './tag-editor-host.js';
 import {aiOperationStatus,renderAiOperationStatus} from './ai-operation-status.js';
 import {attachReviewToAdminPanel} from './admin-ai-review-panel.js';
 import {REVIEW_ENDPOINT} from './admin-ai-review-report.js';
@@ -48,8 +49,10 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
   <button type="button" data-tab="operations" aria-current="false"><strong>AI 운영</strong><small>작업 · 한도</small></button>
   <button type="button" data-tab="indexing" aria-current="false"><strong>색인 관리</strong><small>수동 색인 · 실행 이력</small></button>
   <button type="button" data-tab="catalog" aria-current="false"><strong>앨범 통계 관리</strong><small>소장 현황 · 변화 추이</small></button>
+  <button type="button" data-tab="tag-editor" aria-current="false"><strong>Tag Editor</strong><small>NAS 태그 조회 · 변환 미리보기</small></button>
  </nav>
  <p class="vr-admin-status" role="status" aria-live="polite"></p>
+ <section data-pane="tag-editor" hidden><div data-tag-editor></div></section>
  <section data-pane="members">
   <div class="vr-admin-section-head"><div><h2>회원 관리</h2><p>가입 승인, 계정 상태 및 권한과 접속 활동을 관리합니다.</p></div><button data-action="members">회원 승인·권한 관리 ↗</button></div>
   <div class="vr-admin-section-head"><h3>회원 접속 기록</h3><button data-action="stats">기록 연결 확인</button></div>
@@ -142,14 +145,15 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  const oldManage=page.querySelector('[data-action="members"]');
  if(oldManage){oldManage.textContent='회원 승인·권한 관리 ↗';}
   document.body.append(page);document.body.classList.add('vinyl-admin-page-open');
+ let tagEditor=null;
  let closed=false,version=0,accountRevision=0,disposeProposals=null,disposePilotReport=null,summaryRequest=null,summaryTimer=null,summarySeen=false,summaryLive=false,operationsPanel=null,indexingPanelInstance=null,indexingRequest=null;const controller=new AbortController(),q=s=>page.querySelector(s);
  function notice(msg){if(!closed)q('.vr-admin-status').textContent=String(msg??'');}
- function close(){if(closed)return;closed=true;indexingPanelInstance?.dispose();indexingPanelInstance=null;operationsPanel?.close();clearTimeout(summaryTimer);document.removeEventListener('visibilitychange',onSummaryVisibility);disposePilotReport?.();disposePilotReport=null;version++;controller.abort();disposeProposals?.();editor?.close();editor?.remove();editor=null;page.remove();document.body.classList.remove('vinyl-admin-page-open');window.removeEventListener('vinyl-account-change',onAccount);window.removeEventListener('vinyl-approval-change',onAccount);window.removeEventListener('keydown',onKey);document.removeEventListener('click',onSidebar,true);if(dismissCurrent===close)dismissCurrent=null;}
- function onAccount(){accountRevision++;if(!canManage())notice('관리자 인증을 확인해 주세요. 검토 화면은 유지되며 권한 확인 전 저장은 차단됩니다.');}
+ function close(){if(closed)return;tagEditor?.dispose();tagEditor=null;closed=true;indexingPanelInstance?.dispose();indexingPanelInstance=null;operationsPanel?.close();clearTimeout(summaryTimer);document.removeEventListener('visibilitychange',onSummaryVisibility);disposePilotReport?.();disposePilotReport=null;version++;controller.abort();disposeProposals?.();editor?.close();editor?.remove();editor=null;page.remove();document.body.classList.remove('vinyl-admin-page-open');window.removeEventListener('vinyl-account-change',onAccount);window.removeEventListener('vinyl-approval-change',onAccount);window.removeEventListener('keydown',onKey);document.removeEventListener('click',onSidebar,true);if(dismissCurrent===close)dismissCurrent=null;}
+ function onAccount(){accountRevision++;tagEditor?.dispose();tagEditor=null;if(!canManage())notice('관리자 인증을 확인해 주세요. 검토 화면은 유지되며 권한 확인 전 저장은 차단됩니다.');}
  function onKey(e){if(e.key==='Escape'&&page.isConnected){e.preventDefault();close();}}
  function onSidebar(e){if(e.target.closest('.sidebar #nav button, .sidebar .brand'))close();}
  function check(){if(!canManage()){notice('관리자 인증을 확인해 주세요. 검토 화면은 유지됩니다.');throw Error('관리자 인증 확인 전 요청할 수 없습니다.');}}
- function tab(t){check();clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}if(t!=='indexing'){indexingPanelInstance?.dispose();indexingPanelInstance=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='indexing'&&!indexingPanelInstance)void openInlineIndexing().catch(error=>notice(error?.message||'색인 관리 화면을 불러오지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
+ function tab(t){check();if(t!=='tag-editor'){tagEditor?.dispose();tagEditor=null;}if(t==='tag-editor'&&!tagEditor)tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage()});clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}if(t!=='indexing'){indexingPanelInstance?.dispose();indexingPanelInstance=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='indexing'&&!indexingPanelInstance)void openInlineIndexing().catch(error=>notice(error?.message||'색인 관리 화면을 불러오지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
  function openPilotReport(){
   check();if(disposePilotReport)return;
   disposePilotReport=attachReviewToAdminPanel({adminRoot:q('[data-ai-pilot-report]'),isAdminVerified:true,
