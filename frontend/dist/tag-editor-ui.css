@@ -12,3 +12,5 @@ html,body{width:100%;min-width:0}.shell{width:100%;margin:0}.workspace>*{min-wid
 
 /* Dialogs follow the visible parent viewport instead of the full auto-height iframe. */
 dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto;margin:0 auto;max-height:calc(var(--tag-visible-height,100vh) - 24px);overflow:auto}.tag-cover-draft{max-height:calc(var(--tag-visible-height,100vh) - 24px)}
+
+.heading-actions{flex-wrap:wrap;justify-content:flex-end;min-width:0}#saveTags{display:inline-flex!important}#saveStatus{font-size:11px;flex-basis:100%;max-width:270px;overflow-wrap:anywhere;text-align:right}@media(max-width:650px){.heading-actions{max-width:58%}#saveTags{font-size:11px;min-height:30px}.editor-heading{align-items:flex-start}}
