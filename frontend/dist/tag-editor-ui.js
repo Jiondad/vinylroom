@@ -46,3 +46,6 @@ $('#artistList').addEventListener('click',e=>{const b=e.target.closest('[data-fo
 function start(){S.sourceMode='NAS_INDEX_READ_ONLY';$('.header-right .demo-pill').textContent='NAS 색인 태그 · 읽기 전용';$('footer span').textContent='NAS 저장 색인 조회 · 실제 파일 재읽기/태그 쓰기 없음';void browse();}
 
 $('#browseToggle').onclick=()=>{const folded=$('.browser').classList.toggle('collapsed');$('#browseToggle').textContent=folded?'펼치기':'접기';$('#browseToggle').setAttribute('aria-expanded',String(!folded))};
+
+import {installTagCoverDraft} from './tag-editor-cover-draft.js';
+installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected]});
