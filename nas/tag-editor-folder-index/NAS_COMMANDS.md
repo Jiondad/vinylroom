@@ -65,9 +65,9 @@ python3 nas/tag-editor-cover/nas_folder_release.py install \
 
 설치 승인 후에도 프론트엔드는 자동 게시하지 않는다. 승인된 관리자 API 브리지를 사용하는 개발 화면에서 다음 경로를 한 번 조회한다.
 
-`GET /v2/admin/tag-cover/folder-albums?path=<정확한 상대 폴더>&limit=20`
+`GET /v2/admin/tag-cover/folder-albums?path=<정확한 상대 폴더>&limit=50`
 
-서버의 기존 인증·Origin·CORS 계약을 유지한다. 관리자 토큰을 iframe이나 명령줄 인수로 전달하지 않는다. 응답 `state=READ_ONLY_FOLDER_ALBUMS`, `version=tag-folder-index-v1`을 확인한다. `has_more`이면 cursor로 이어서 조회한다. 프론트엔드는 최대 기존 4페이지까지만 받고 `truncated=true`로 미완료 범위를 명시한다.
+서버의 기존 인증·Origin·CORS 계약을 유지한다. 관리자 토큰을 iframe이나 명령줄 인수로 전달하지 않는다. 응답 `state=READ_ONLY_FOLDER_ALBUMS`, `version=tag-folder-index-v1`을 확인한다. `has_more`이면 cursor로 이어서 조회한다. 프론트엔드는 기존 참조 엔진과 같은 50개 단위, 최대 4페이지(200개)까지만 받고 `truncated=true`로 미완료 범위를 명시한다.
 
 실측 시 구분할 값:
 

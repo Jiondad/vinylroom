@@ -44,6 +44,8 @@ def container_check(payload,folder,query):
  if writer.lower() not in ('unset','','false','off','0'):raise ValueError('cover_writer_not_off')
  result={'runtime_hashes':hashes,'state':states[0],'writer':'OFF','router_hook':'EXACT_PHASE_H_EXISTING','source_writes':0,'db_writes':0,'media_reads':0,'media_writes':0,'http_requests':0}
  if query:
+  try:import PIL,mutagen
+  except ImportError as exc:raise ValueError('existing_phase_h_dependency_missing:'+str(exc.name))
   # Compile the verified package candidate in memory; no module source installation.
   candidate=base64.b64decode(payload['candidate_phase2c'])
   if digest(candidate)!=payload['desired']['tag_phase2c.py']:raise ValueError('candidate_payload_hash_mismatch')

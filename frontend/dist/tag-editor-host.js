@@ -65,9 +65,9 @@ export function createTagReader({api,canManage,signal}){
     if(!validPath(folder))throw Error('올바른 상대 폴더를 선택하세요.');
     const items=[],seenIds=new Set(),seenCursors=new Set();let cursor=null,hasMore=false,revision=null;
     for(let page=0;page<4;page++){
-     alive();const params=new URLSearchParams({path:folder,limit:'20'});if(cursor)params.set('cursor',cursor);
+     alive();const params=new URLSearchParams({path:folder,limit:'50'});if(cursor)params.set('cursor',cursor);
      let r;try{r=await get('/v2/admin/tag-cover/folder-albums?'+params);}catch(error){alive();throw Error('폴더 앨범 조회 API 확인 필요 · 상세 조회로 재시도하지 않습니다.');}
-     if(r?.state!=='READ_ONLY_FOLDER_ALBUMS'||r.version!=='tag-folder-index-v1'||r.folder!==folder||typeof r.revision!=='string'||!r.revision||(revision!==null&&revision!==r.revision)||!Array.isArray(r.items)||r.items.length>20||typeof r.has_more!=='boolean'||(r.has_more&&(!r.items.length||typeof r.next_cursor!=='string'||!r.next_cursor||seenCursors.has(r.next_cursor)))||(!r.has_more&&r.next_cursor!==null))throw Error('폴더 앨범 응답 불일치');
+     if(r?.state!=='READ_ONLY_FOLDER_ALBUMS'||r.version!=='tag-folder-index-v1'||r.folder!==folder||typeof r.revision!=='string'||!r.revision||(revision!==null&&revision!==r.revision)||!Array.isArray(r.items)||r.items.length>50||typeof r.has_more!=='boolean'||(r.has_more&&(!r.items.length||typeof r.next_cursor!=='string'||!r.next_cursor||seenCursors.has(r.next_cursor)))||(!r.has_more&&r.next_cursor!==null))throw Error('폴더 앨범 응답 불일치');
      for(const a of r.items){
       const path=a.relative_path;
       if(!UUID.test(a.id||'')||seenIds.has(a.id)||typeof a.title!=='string'||typeof a.artist!=='string'||typeof a.date!=='string'||!validPath(path)||(path!==folder&&!path.startsWith(folder+'/')))throw Error('폴더 소속 또는 앨범 식별 불일치');

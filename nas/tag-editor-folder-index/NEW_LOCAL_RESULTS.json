@@ -29,7 +29,9 @@
     "same_path_multiple_album_ids_preserved": true,
     "max_client_pages": 4,
     "partial_result_reported": true,
-    "missing_endpoint_holds_without_detail_fallback": true
+    "missing_endpoint_holds_without_detail_fallback": true,
+    "client_page_size": 50,
+    "max_client_items": 200
   },
   "operating_effects": {
     "nas_connections": 0,

@@ -86,7 +86,7 @@ def health():
  code="import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8787/health',timeout=5).status)"
  for _ in range(15):
   try:
-   if run(['docker','exec',C,'python3','-c',code]).strip()=='200':return 200
+   if run(['docker','exec',C,'python3','-B','-c',code]).strip()=='200':return 200
   except subprocess.CalledProcessError:pass
   time.sleep(1)
  raise ValueError('health_not_200_use_source_backup_restore')
@@ -111,7 +111,7 @@ def runtime(manifest,folder,query):
  payload={k:manifest[k] for k in ['baseline','desired','protected_cover_sha256']}
  payload['candidate_phase2c']=base64.b64encode(regular(R/'tag_phase2c.py')).decode('ascii')
  code='PAYLOAD='+repr(payload)+'\nFOLDER='+repr(folder)+'\nDO_QUERY='+repr(query)+'\n'+regular(R/'folder_container_check.py').decode()
- try:return json.loads(run(['docker','exec','-i',C,'python3','-'],stdin=code))
+ try:return json.loads(run(['docker','exec','-i',C,'python3','-B','-'],stdin=code))
  except subprocess.CalledProcessError as exc:
   try:reason=json.loads(exc.stdout).get('reason','runtime_check_failed')
   except (ValueError,TypeError):reason='runtime_check_failed'
