@@ -18,10 +18,37 @@ function cover(a,size=''){return `<span class="cover ${size}" style="--accent:${
 function save(){if(S.album)S.cache.set(S.album.id,{draft:clone(S.draft),renames:clone(S.renames)})}
 function route(){const home=location.hash==='#admin';$('#adminHome').hidden=!home;$('#editor').hidden=home;$('#adminLink').classList.toggle('active',home)}window.addEventListener('hashchange',route);route();
 async function loadArtists(){try{let data=await api('/api/artists?q='+encodeURIComponent($('#artistSearch').value));S.artists=data.items;$('#artistCount').textContent=`${data.items.length}명`;$('#artistList').innerHTML=data.items.map(a=>`<button class="artist-row ${S.artist?.id===a.id?'active':''}" data-artist="${esc(a.id)}"><span class="avatar">${esc(a.name.slice(0,2))}</span><span><strong>${esc(a.name)}</strong><small>${esc(a.folder)}</small></span><span class="count">${a.albums??''}</span></button>`).join('')||'<p class="browser-note">검색 결과가 없습니다.</p>';if(data.truncated)toast('현재 조회 범위만 표시합니다. 검색어를 구체화하세요.')}catch(e){toast(e.message)}}
-async function selectArtist(id){const request=++artistRequest;save();const a=S.artists.find(x=>x.id===id);if(!a)return;S.artist=a;const data=await api('/api/albums?artist='+encodeURIComponent(id));if(request!==artistRequest)return;S.albums=data.items;$('#albumListTitle').textContent=a.name+' · 앨범';$('#albumCount').textContent=`${data.items.length}장`;renderAlbums();document.querySelectorAll('[data-artist]').forEach(b=>b.classList.toggle('active',b.dataset.artist===id));if(data.items.length)await selectAlbum(data.items[0].id)}
+function clearAlbum(message='앨범을 선택해 주세요.'){
+ clearTimeout(schedule.id);requestSeq++;S.album=null;S.original=[];S.draft=[];S.selected=new Set();S.focus=null;S.plan=null;S.renames={};
+ $('#albumHeader').textContent=message;$('#commonFields').replaceChildren();$('#commonWarning').textContent='';
+ document.querySelector('#editor table tbody')?.replaceChildren();
+ $('#trackCount').textContent='0곡';$('#selectedCount').textContent='';$('#compare').replaceChildren();$('#preview').replaceChildren();$('#planStatus').textContent=message;$('#applyDraft').disabled=true;
+}
+async function selectArtist(id){
+ const a=S.artists.find(x=>x.id===id);if(!a)return;
+ const request=++artistRequest;save();++albumRequest;clearAlbum('앨범 목록을 불러오는 중…');S.artist=a;S.albums=[];
+ $('#albumList').replaceChildren();$('#albumListTitle').textContent=a.name+' · 조회 중…';$('#albumCount').textContent='';
+ document.querySelectorAll('[data-artist]').forEach(b=>b.classList.toggle('active',b.dataset.artist===id));
+ const data=await api('/api/albums?artist='+encodeURIComponent(id));if(request!==artistRequest)return;
+ S.albums=data.items;$('#albumListTitle').textContent=a.name+' · 앨범';$('#albumCount').textContent=data.items.length+'장';
+ renderAlbums();clearAlbum('앨범을 선택하면 태그를 표시합니다.');
+ // Do not auto-fetch the first album: user selection must never race an implicit read.
+}
 function covers(){parent.postMessage({type:'vr-tag-covers',channel},location.origin)}
 function renderAlbums(){$('#albumList').innerHTML=S.albums.map(a=>`<button class="album-card ${S.album?.id===a.id?'active':''}" data-album="${esc(a.id)}">${cover(a)}<span><strong>${esc(a.title)}</strong><small>${esc(a.date)}${a.count!=null?' · '+a.count+'곡':''} · ${'NAS 색인'}</small></span></button>`).join('');covers()}
-async function selectAlbum(id){const request=++albumRequest;save();try{let {album}=await api('/api/tracks?album='+encodeURIComponent(id));if(request!==albumRequest)return;S.imported=false;useAlbum(album);renderAlbums()}catch(e){toast(e.message)}}
+async function selectAlbum(id){
+ if(!S.albums.some(a=>a.id===id))return;
+ const request=++albumRequest;save();clearAlbum('앨범 태그를 불러오는 중…');
+ $('#albumList').setAttribute('aria-busy','true');
+ document.querySelectorAll('#albumList [data-album]').forEach(b=>b.classList.toggle('active',b.dataset.album===id));
+ try{
+  const {album}=await api('/api/tracks?album='+encodeURIComponent(id));
+  if(request!==albumRequest)return;
+  S.imported=false;useAlbum(album);
+  // Preserve existing album cards and loaded covers: do not recreate them.
+ }catch(e){if(request===albumRequest){clearAlbum('앨범 조회 실패 · 다시 선택해 주세요.');toast(e.message);}}
+ finally{if(request===albumRequest)$('#albumList').removeAttribute('aria-busy');}
+}
 function useAlbum(album){S.album=album;S.original=clone(album.entries);const saved=S.cache.get(album.id);S.draft=clone(saved?.draft||album.entries);S.renames=clone(saved?.renames||{});S.selected=new Set(S.draft.map(e=>e.file));S.focus=S.draft[0]?.file;S.revision++;$('#albumHeader').innerHTML=`${cover(album)}<div><h2>${esc(album.title)}</h2><p>${esc(album.artist)} · ${esc(album.date)} · ${'NAS 색인 태그 · 파일 재읽기 아님'}</p><div class="folder-path" title="${esc(album.path)}">${esc(album.path)}</div></div>`;renderCommon();renderTracks();schedule();covers()}
 function renderCommon(){let warnings=[];$('#commonFields').innerHTML=['album','album_artist','date'].map(f=>{const all=[...new Set(S.draft.map(e=>values(e,f)))],mixed=all.length>1;if(mixed)warnings.push(fields[f]);return `<label class="${mixed?'mixed':''}">${fields[f]}<input data-common="${f}" aria-label="앨범 공통 ${fields[f]}" value="${mixed?'':esc(all[0]||'')}" placeholder="${mixed?'파일마다 값이 다름 · 변경 없음':'빈 태그'}">${mixed?`<small>불일치: ${all.map(esc).join(' / ')}</small>`:''}</label>`}).join('');$('#commonWarning').textContent=warnings.length?`${warnings.join(', ')} 값이 파일마다 다릅니다. 직접 입력하기 전까지 원본을 유지합니다.`:''}
 function renderTracks(){let lastDisc=null,html='';const filtered=S.draft.filter(e=>!$('#missingOnly').checked||changed(e)||!(e.tags.title||[]).length||!padded(e));for(const e of filtered){const d=disc(e);if(lastDisc!==d){html+=`<tr class="disc-row"><td colspan="8">DISC ${String(d).padStart(2,'0')}</td></tr>`;lastDisc=d}const missing=!e.tags.title?.length||!padded(e);html+=`<tr class="${S.selected.has(e.file)?'selected ':''}${S.focus===e.file?'focused':''}" data-file="${esc(e.file)}"><td><input type="checkbox" data-select="${esc(e.file)}" aria-label="${esc(basename(e.file))} 선택" ${S.selected.has(e.file)?'checked':''}></td><td><button class="filename" data-path="${esc(e.file)}" title="${esc(e.file)}">${esc(basename(e.file))}</button><span class="file-ext">${S.renames[e.file]?'예정: '+esc(S.renames[e.file]):esc(basename(e.file).split('.').pop().toUpperCase())+' · 경로 확인'}</span></td><td><input data-field="tracknumber" data-id="${esc(e.file)}" aria-label="트랙번호 ${esc(basename(e.file))}" value="${padded(e)}" placeholder="없음" inputmode="numeric"></td>${['title','artist','featuring','genre'].map(f=>`<td><input data-field="${f}" data-id="${esc(e.file)}" aria-label="${fields[f]} ${esc(basename(e.file))}" value="${esc(values(e,f))}" placeholder="${f==='title'?'제목 없음':'—'}" title="${esc(values(e,f))}">${f==='title'&&!e.tags.title?.length?'<span class="state missing">제목 없음</span>':''}</td>`).join('')}<td><span class="state ${changed(e)?'draft':missing?'missing':''}">${changed(e)?'변경 초안':missing?'누락':'정상'}</span></td></tr>`}$('#trackCount').textContent=`${S.draft.length}곡`;$('#track-panel')?.setAttribute('data-count',S.draft.length);$('#selectedCount').textContent=`${S.selected.size} / ${S.draft.length}곡 선택`;$('#selectAll').checked=S.selected.size===S.draft.length;$('#selectAll').indeterminate=S.selected.size>0&&S.selected.size<S.draft.length;$('tbody')?.remove();$('#editor table').insertAdjacentHTML('beforeend','<tbody>'+html+'</tbody>');renderCompare()}
