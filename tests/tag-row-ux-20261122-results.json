@@ -1,0 +1,165 @@
+{
+  "status": "PASS",
+  "pass": 31,
+  "results": [
+    {
+      "name": "New album starts with no selected rows",
+      "status": "PASS"
+    },
+    {
+      "name": "PC unmodified row 32–36 px",
+      "status": "PASS",
+      "detail": {
+        "width": 1366,
+        "scrollWidth": 1351,
+        "clientWidth": 1351,
+        "row": 34,
+        "coverTop": 76.734375,
+        "innerScrollContainers": 0
+      }
+    },
+    {
+      "name": "No repeated format subtitle",
+      "status": "PASS"
+    },
+    {
+      "name": "Plain row click selects one",
+      "status": "PASS"
+    },
+    {
+      "name": "Shift range follows visible rows",
+      "status": "PASS"
+    },
+    {
+      "name": "CD1 numbered in screen order, not filename sort",
+      "status": "PASS"
+    },
+    {
+      "name": "Unselected CD2 unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "Next disc plain click clears previous selection",
+      "status": "PASS"
+    },
+    {
+      "name": "CD2 gets independent 01–14; CD1 draft retained",
+      "status": "PASS"
+    },
+    {
+      "name": "Ctrl adds row",
+      "status": "PASS"
+    },
+    {
+      "name": "Ctrl removes row",
+      "status": "PASS"
+    },
+    {
+      "name": "Command adds row",
+      "status": "PASS"
+    },
+    {
+      "name": "Ctrl+A selects album",
+      "status": "PASS"
+    },
+    {
+      "name": "Command+A selects album",
+      "status": "PASS"
+    },
+    {
+      "name": "Path popup does not alter selection",
+      "status": "PASS"
+    },
+    {
+      "name": "Selected cell enters edit without resetting selection",
+      "status": "PASS"
+    },
+    {
+      "name": "Ctrl+A in editable field stays local",
+      "status": "PASS"
+    },
+    {
+      "name": "Inline edit draft visible",
+      "status": "PASS"
+    },
+    {
+      "name": "Dedicated DISCNUMBER applies only selected row",
+      "status": "PASS"
+    },
+    {
+      "name": "Changing tools retains previous numbered draft",
+      "status": "PASS"
+    },
+    {
+      "name": "Filter clears selection but retains draft",
+      "status": "PASS"
+    },
+    {
+      "name": "Album switch clears selection",
+      "status": "PASS"
+    },
+    {
+      "name": "Returning to album restores draft without selection",
+      "status": "PASS"
+    },
+    {
+      "name": "Invalid DISCNUMBER leaves draft unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "Responsive layout 1920px",
+      "status": "PASS",
+      "detail": {
+        "width": 1920,
+        "scrollWidth": 1905,
+        "clientWidth": 1905,
+        "row": 49.046875,
+        "coverTop": 76.734375,
+        "innerScrollContainers": 0
+      }
+    },
+    {
+      "name": "Responsive layout 1366px",
+      "status": "PASS",
+      "detail": {
+        "width": 1366,
+        "scrollWidth": 1351,
+        "clientWidth": 1351,
+        "row": 49.046875,
+        "coverTop": 76.734375,
+        "innerScrollContainers": 0
+      }
+    },
+    {
+      "name": "Responsive layout 390px",
+      "status": "PASS",
+      "detail": {
+        "width": 390,
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "row": 247.96875,
+        "coverTop": 376.421875,
+        "innerScrollContainers": 0
+      }
+    },
+    {
+      "name": "Mobile row tap selects one",
+      "status": "PASS"
+    },
+    {
+      "name": "Five tools and cover popup remain available",
+      "status": "PASS"
+    },
+    {
+      "name": "Cover popup opens without a save call",
+      "status": "PASS"
+    },
+    {
+      "name": "Save capability stays OFF in DEMO",
+      "status": "PASS"
+    }
+  ],
+  "actual_nas_calls": 0,
+  "operating_writes": 0,
+  "save_calls": 0
+}
