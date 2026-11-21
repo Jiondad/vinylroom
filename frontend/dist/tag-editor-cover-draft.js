@@ -30,6 +30,7 @@ export function installTagCoverDraft({getAlbum,getSelectedFiles}) {
       </div>
     </div>`;
   albumHeader.insertAdjacentElement('afterend',region);
+  region.hidden=true;
   const fileInput=region.querySelector('#tagCoverFile');
   const art=region.querySelector('#tagCoverArt');
   const status=region.querySelector('#tagCoverStatus');
