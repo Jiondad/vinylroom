@@ -20,10 +20,11 @@ const track=(n,old)=>String(n).padStart(2,'0')+(String(old||'').trim().match(/^0
 export function renderFormat(fmt,tags){let out='';for(const [kind,name]of parseFormat(fmt,false)){if(kind==='lit'){out+=name;continue;}const f=F[name],v=tags[f];if(!v?.length)throw Error('missing_tag_for_format:'+f);if(['tracknumber','discnumber'].includes(f)){const n=component(v);if(n==null)throw Error('invalid_'+f+'_for_filename');out+=f==='tracknumber'?String(n).padStart(2,'0'):n;}else if(name==='year'){const m=/^\d{4}/.exec(v[0]);if(!m)throw Error('missing_year_for_filename');out+=m[0];}else if(['genre','featuring'].includes(f))out+=v.join(', ');else{if(v.length>1)throw Error('multivalue_field_for_filename:'+f);out+=v[0];}}
  out=out.trim();if(!out||['.','..'].includes(out)||out.endsWith('.')||out.length>220)throw Error('unsafe_rendered_filename');if(/[\\/\x00-\x1f<>:"|?*]/.test(out))throw Error('unsafe_filename_characters');if(['con','prn','aux','nul','com1','com2','lpt1','lpt2'].includes(norm(out.split('.')[0])))throw Error('reserved_filename');return out;}
 export function previewPlan(data){
- const {entries,selected,mode,format:fmt,replace}=data||{};
+ const {entries,selected,mode,format:fmt,replace,start=1}=data||{};
  if(!Array.isArray(entries)||!entries.length||entries.length>120||!Array.isArray(selected)||!selected.length)throw Error('선택 범위를 확인하세요.');
  if(new Set(entries.map(e=>e.file)).size!==entries.length||selected.some(f=>!entries.some(e=>e.file===f)))throw Error('선택 범위가 현재 앨범을 벗어났습니다.');
  const chosen=entries.filter(e=>selected.includes(e.file)),rows=[];let fatal=false;
+ if(mode==='number'&&(!Number.isInteger(start)||start<1||start>99))throw Error('시작 번호는 1~99입니다.');
  if(mode==='from')parseFormat(fmt);if(mode==='to')parseFormat(fmt,false);
  const disc=e=>component(e.tags.discnumber)||+(e.file.match(/\/(?:CD|DISC|DISK)[\s._-]*(\d{1,2})\//i)?.[1]||0)||1;
  const order=[...chosen].sort((a,b)=>base(a.file).localeCompare(base(b.file),'en',{numeric:true})),counts=new Map();
@@ -31,7 +32,7 @@ export function previewPlan(data){
   if(mode==='from'){const r=extractFormat(e.file,fmt);Object.assign(row,r,{parsed_fields:r.fields});row.changes={};row.skipped={};if(r.state==='PARSED'){for(const [f,after]of Object.entries(r.fields)){const before=e.tags[f]||[];if(common.has(f)){row.skipped[f]='album_common_editor_only';continue;}if(same(before,after))continue;if(f==='artist'&&before.some(v=>v.includes('\\'))){row.skipped[f]='joint_artist_backslash_protected';continue;}if(before.length&&!replace){row.skipped[f]='existing_value_preserved';continue;}if(f==='tracknumber'&&before.length&&component(before)===+after[0]){row.skipped[f]='use_normalize_tracknumbers_for_existing_format';continue;}row.changes[f]={before,after};}row.state=Object.keys(row.changes).length?'PROPOSED':'NO_CHANGE';}}
   else if(mode==='to'){const name=base(e.file),ext=name.includes('.')?name.slice(name.lastIndexOf('.')):'',dest=renderFormat(fmt,e.tags)+ext;row.current_file_name=name;row.suggested_file_name=dest;row.state=name===dest?'NO_CHANGE':'RENAME_PROPOSED';}
   else if(mode==='normalize'){const before=e.tags.tracknumber||[],n=component(before);if(n==null)throw Error('missing_or_invalid_tracknumber');row.before=before;row.after=[track(n,before[0])];row.state=same(before,row.after)?'NO_CHANGE':'PROPOSED';}
-  else if(mode==='number'){const d=disc(e),n=(counts.get(d)||0)+1;counts.set(d,n);if(n>99)throw Error('more_than_99_tracks_in_disc');const before=e.tags.tracknumber||[],after=[track(n,before[0])];if(!same(before,after))row.changes.tracknumber={before,after};if(d!==1&&!same(e.tags.discnumber,[String(d)]))row.changes.discnumber={before:e.tags.discnumber||[],after:[String(d)]};row.state=Object.keys(row.changes).length?'PROPOSED':'NO_CHANGE';}
+  else if(mode==='number'){const d=disc(e),n=(counts.get(d)??(start-1))+1;counts.set(d,n);if(n>99)throw Error('more_than_99_tracks_in_disc');const before=e.tags.tracknumber||[],after=[track(n,before[0])];if(!same(before,after))row.changes.tracknumber={before,after};if(d!==1&&!same(e.tags.discnumber,[String(d)]))row.changes.discnumber={before:e.tags.discnumber||[],after:[String(d)]};row.state=Object.keys(row.changes).length?'PROPOSED':'NO_CHANGE';}
   else throw Error('지원되지 않는 미리보기');
  }catch(ex){row.state='HOLD';row.reason=ex.message;}rows.push(row);}
  if(mode==='to'){

@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {coverTargets,coverImageError} from '../dist/tag-editor-cover-draft.js';
+import {applyBulkDraft} from '../dist/tag-editor-draft.js';
+const album={entries:[{file:'a.flac'},{file:'b.MP3'},{file:'c.cue'},{file:'a.flac'}]};
+test('new cover all/selected/single scopes keep only current supported files',()=>{assert.deepEqual(coverTargets(album,'__all__'),['a.flac','b.MP3']);assert.deepEqual(coverTargets(album,'__selected__',['b.MP3','outside.mp3']),['b.MP3']);assert.deepEqual(coverTargets(album,'a.flac'),['a.flac']);assert.deepEqual(coverTargets(album,'outside.mp3'),[])});
+test('new shared image entry rejects bad type, empty and oversize',()=>{assert.equal(coverImageError({type:'image/png',size:100}),null);for(const f of [{type:'image/gif',size:1},{type:'image/png',size:0},{type:'image/jpeg',size:11*1024*1024}])assert.ok(coverImageError(f))});
+const e=(file,d)=>({file,tags:{discnumber:[String(d)],tracknumber:[]}});
+test('new start-number option reuses filename order and independent discs',()=>{const entries=[e('CD1/10 ten.flac',1),e('CD2/01 one.flac',2),e('CD1/02 two.flac',1)];const r=applyBulkDraft({entries,scope:'album',field:'number',start:3});assert.deepEqual(r.entries.map(e=>e.tags.tracknumber),[['04'],['03'],['03']]);assert.deepEqual(entries.map(e=>e.tags.tracknumber),[[],[],[]])});
+test('new numbering rejects invalid start and holds 99 overflow',()=>{const entries=[e('01.flac',1),e('02.flac',1)];assert.throws(()=>applyBulkDraft({entries,scope:'album',field:'number',start:0}),/1~99/);const r=applyBulkDraft({entries,scope:'album',field:'number',start:99});assert.deepEqual(r.entries[0].tags.tracknumber,['99']);assert.deepEqual(r.entries[1].tags.tracknumber,[]);assert.equal(r.warnings['02.flac'],'more_than_99_tracks_in_disc')});

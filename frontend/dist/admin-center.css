@@ -299,3 +299,6 @@ body .vinyl-members-dialog .vinyl-members-overflow{overflow:auto;max-width:100%}
 .vinyl-admin-page [data-indexing-support]{margin-top:15px}
 .vinyl-admin-page [data-indexing-support] #vr-ai-index{background:#fff;border:1px solid #e5e7e9;padding:15px;border-radius:6px}
 @media(max-width:740px){.vinyl-admin-page .vr-admin-heading{gap:8px;align-items:center}.vinyl-admin-page .vr-admin-heading [data-close]{padding:5px;font-size:11px}.vinyl-admin-page .vr-inline-index{padding:12px}.vinyl-admin-page .vr-inline-index .folder-options{grid-template-columns:repeat(2,minmax(0,1fr));max-height:270px}.vinyl-admin-page .vr-inline-index .folder-options li button{font-size:11px}}
+
+/* Only the active Tag Editor uses the browser document scroll and full admin width. */
+body.vinyl-admin-page-open.vinyl-tag-editor-open{overflow:visible}.vinyl-admin-page.vr-tag-editor-active{position:absolute;inset:0 0 auto;min-height:100vh;overflow:visible}.vr-tag-editor-active .vr-admin-inner{width:calc(100% - 32px);max-width:none;margin:0 16px}.vr-tag-editor-active [data-tag-editor]{width:100%;min-width:0}@media(max-width:650px){.vr-tag-editor-active .vr-admin-inner{width:calc(100% - 16px);margin:0 8px}}

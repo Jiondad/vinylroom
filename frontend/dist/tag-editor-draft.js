@@ -3,14 +3,14 @@ import {previewPlan} from './tag-editor-plan.js';
 const clone=v=>structuredClone(v),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export const fields={title:'TITLE',artist:'ARTIST',featuring:'FEATURING',genre:'GENRE',tracknumber:'TRACKNUMBER',discnumber:'DISCNUMBER',album:'ALBUM',album_artist:'ALBUMARTIST',date:'DATE'};
 export const values=(e,f)=>(e?.tags?.[f]||[]).join(' | ');
-export function applyBulkDraft({entries,selected,scope,field,value='',replace=false,format=''}){
+export function applyBulkDraft({entries,selected,scope,field,value='',replace=false,format='',start=1}){
  if(!Array.isArray(entries)||entries.length>120||!['selected','album'].includes(scope))throw Error('현재 앨범과 범위를 확인하세요.');
  if(field==='title'&&scope!=='selected')throw Error('TITLE 공통 변경은 선택 트랙에서만 가능합니다.');
  const ids=scope==='album'?entries.map(e=>e.file):selected;
  if(!Array.isArray(ids)||!ids.length||ids.some(id=>!entries.some(e=>e.file===id)))throw Error('변경할 트랙을 선택하세요.');
  const output=clone(entries),renames={},warnings={},changed=new Set();
  if(['from','to','number','normalize'].includes(field)){
-  const plan=previewPlan({entries,selected:ids,mode:field,format,replace});
+  const plan=previewPlan({entries,selected:ids,mode:field,format,replace,start});
   for(const row of plan.rows||[]){
    if(['HOLD','UNPARSED'].includes(row.state)){warnings[row.file]=row.reason;continue;}
    const e=output.find(e=>e.file===row.file),updates=clone(row.changes||{});
