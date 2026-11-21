@@ -29,9 +29,13 @@ async function selectArtist(id){
  const request=++artistRequest;save();++albumRequest;clearAlbum('앨범 목록을 불러오는 중…');S.artist=a;S.albums=[];
  $('#albumList').replaceChildren();$('#albumListTitle').textContent=a.name+' · 조회 중…';$('#albumCount').textContent='';
  document.querySelectorAll('[data-artist]').forEach(b=>b.classList.toggle('active',b.dataset.artist===id));
- const data=await api('/api/albums?artist='+encodeURIComponent(id));if(request!==artistRequest)return;
- S.albums=data.items;$('#albumListTitle').textContent=a.name+' · 앨범';$('#albumCount').textContent=data.items.length+'장';
- renderAlbums();clearAlbum('앨범을 선택하면 태그를 표시합니다.');
+ try{
+  const data=await api('/api/albums?artist='+encodeURIComponent(id));if(request!==artistRequest)return;
+  S.albums=data.items;$('#albumListTitle').textContent=a.name+' · 앨범';$('#albumCount').textContent=data.items.length+'장';
+  renderAlbums();clearAlbum('앨범을 선택하면 태그를 표시합니다.');
+ }catch(e){
+  if(request===artistRequest){$('#albumListTitle').textContent=a.name+' · 조회 실패';clearAlbum('앨범 목록을 다시 선택해 주세요.');toast(e.message);}
+ }
  // Do not auto-fetch the first album: user selection must never race an implicit read.
 }
 function covers(){parent.postMessage({type:'vr-tag-covers',channel},location.origin)}
@@ -71,7 +75,7 @@ $('#resetBtn').onclick=()=>{S.draft=clone(S.original);S.renames={};save();render
 async function browse(path=''){
  const request=++artistRequest;save();++albumRequest;clearAlbum('폴더를 불러오는 중…');S.artist=null;S.albums=[];
  $('#albumList').replaceChildren();$('#albumListTitle').textContent='앨범';$('#albumCount').textContent='';
- try{const r=await api('/api/folders?path='+encodeURIComponent(path));if(request!==artistRequest)return;$('#folderNav').innerHTML='<div class="folder-controls"><button data-folder="">음악 폴더</button>'+(path?'<button data-folder="'+esc(path.split('/').slice(0,-1).join('/'))+'">상위 폴더</button>':'')+'</div><p class="browser-note">'+esc(path||'/music')+'</p>';S.artists=r.items;$('#artistList').innerHTML=r.items.map(a=>'<button class="artist-row" data-folder="'+esc(a.id)+'"><span>▸ '+esc(a.name)+'</span></button>').join('');if(path.includes('/')){S.artist={id:'folder:'+path,name:path.split('/').pop(),folder:path};const data=await api('/api/albums?artist='+encodeURIComponent(S.artist.id));if(request!==artistRequest)return;S.albums=data.items;$('#albumListTitle').textContent=S.artist.name+' · 앨범';$('#albumCount').textContent=data.items.length+'장';renderAlbums();if(data.truncated)toast('현재 페이지 앨범만 표시합니다. 아티스트 검색으로 범위를 좁혀 주세요.');}}catch(e){toast(e.message)}}
+ try{const r=await api('/api/folders?path='+encodeURIComponent(path));if(request!==artistRequest)return;$('#folderNav').innerHTML='<div class="folder-controls"><button data-folder="">음악 폴더</button>'+(path?'<button data-folder="'+esc(path.split('/').slice(0,-1).join('/'))+'">상위 폴더</button>':'')+'</div><p class="browser-note">'+esc(path||'/music')+'</p>';S.artists=r.items;$('#artistList').innerHTML=r.items.map(a=>'<button class="artist-row" data-folder="'+esc(a.id)+'"><span>▸ '+esc(a.name)+'</span></button>').join('');if(path.includes('/')){S.artist={id:'folder:'+path,name:path.split('/').pop(),folder:path};const data=await api('/api/albums?artist='+encodeURIComponent(S.artist.id));if(request!==artistRequest)return;S.albums=data.items;$('#albumListTitle').textContent=S.artist.name+' · 앨범';$('#albumCount').textContent=data.items.length+'장';renderAlbums();clearAlbum('앨범을 선택하면 태그를 표시합니다.');if(data.truncated)toast('현재 페이지 앨범만 표시합니다. 아티스트 검색으로 범위를 좁혀 주세요.');}else clearAlbum('아티스트 폴더를 선택해 주세요.');}catch(e){if(request===artistRequest)toast(e.message)}}
 $('#artistList').addEventListener('click',e=>{const b=e.target.closest('[data-folder]');if(b)void browse(b.dataset.folder)});$('#folderNav').addEventListener('click',e=>{const b=e.target.closest('[data-folder]');if(b)void browse(b.dataset.folder)});
 function start(){S.sourceMode='NAS_INDEX_READ_ONLY';$('.header-right .demo-pill').textContent='NAS 색인 태그 · 읽기 전용';$('footer span').textContent='NAS 저장 색인 조회 · 실제 파일 재읽기/태그 쓰기 없음';void browse();}
 
