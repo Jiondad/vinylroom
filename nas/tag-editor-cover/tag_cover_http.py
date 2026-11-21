@@ -115,6 +115,17 @@ def handle(h,index,music_root,origin,post=False):
         if route==PREFIX+'/apply' or route==PREFIX+'/restore':
             return h.reply(405,{'state':'HOLD','reason':'cover_http_write_disabled','write_enabled':False})
         if index is None:return h.reply(503,{'state':'HOLD','reason':'catalog_unavailable'})
+        # Reuse the installed Phase H admin route; no server.py or Compose changes.
+        if route==PREFIX+'/folder-albums':
+            if post:return h.reply(405,{'state':'HOLD','reason':'folder_albums_read_only'})
+            q=parse_qs(urlsplit(h.path).query,keep_blank_values=True)
+            if any(len(v)!=1 for v in q.values()) or set(q)-{'path','limit','cursor'}:
+                raise ValueError('invalid_folder_query')
+            try:result=cover.base.folder_albums_page(index.dbpath,q.get('path',[''])[0],int(q.get('limit',['20'])[0]),q.get('cursor',[None])[0])
+            except ValueError as exc:
+                if str(exc)=='folder_catalog_changed_reload':return h.reply(409,{'state':'HOLD','reason':'folder_catalog_changed_reload'})
+                raise
+            return h.reply(200,result)
         if not SLOTS.acquire(blocking=False):return h.reply(409,{'state':'HOLD','reason':'cover_preview_busy'})
         try:
             if not post and route==PREFIX+'/inspect':

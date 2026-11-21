@@ -1,0 +1,15 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {createTagReader} from '../frontend/dist/tag-editor-host.js';
+const folder='POP & ROCK/Chet Baker',id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
+function fixture(total=20,bad=''){
+ const calls=[];const api=async path=>{calls.push(path);const u=new URL(path,'https://fixture.test');
+  if(u.pathname==='/v2/folders')return {folders:[{name:'Chet Baker',path:folder}]};
+  if(u.pathname==='/v2/admin/tag-cover/folder-albums'){
+   if(bad==='missing')throw Error('HTTP 404');const start=+(u.searchParams.get('cursor')||0),end=Math.min(total,start+20);return {state:'READ_ONLY_FOLDER_ALBUMS',version:'tag-folder-index-v1',revision:bad==='revision'&&start?'r2':'r1',folder:bad==='wrong'?'Other':folder,items:Array.from({length:end-start},(_,j)=>({id:id(start+j),title:'Album '+(start+j),artist:'A',date:'1999',relative_path:folder+'/Album '+(start+j)})),has_more:end<total,next_cursor:end<total?String(end):null};
+  }
+  if(u.pathname==='/v2/admin-album')return {id:u.searchParams.get('id'),artist:'A',title:'Album',original_year:'1999',relative_path:folder+'/Album',physical_files:[{path:folder+'/Album/01.flac',raw_tags:{TITLE:['One']}}]};
+  throw Error('Forbidden list fallback '+path);
+ };return {calls,read:createTagReader({api,canManage:()=>true})};
+}
+test('20 folder albums: one summary request, zero detail requests; click adds exactly one detail',async()=>{const f=fixture();await f.read('/api/folders?path=');const before=f.calls.length;const r=await f.read('/api/albums?artist='+encodeURIComponent('folder:'+folder));assert.equal(r.items.length,20);assert.equal(f.calls.length-before,1);assert.equal(f.calls.filter(p=>p.startsWith('/v2/admin-album')).length,0);const tracks=await f.read('/api/tracks?album='+id(0));assert.equal(tracks.album.entries.length,1);assert.equal(f.calls.filter(p=>p.startsWith('/v2/admin-album')).length,1);});
+test('cursor pagination follows only folder summaries and reports the existing four-page bound',async()=>{const f=fixture(21);await f.read('/api/folders?path=');assert.equal((await f.read('/api/albums?artist='+encodeURIComponent('folder:'+folder))).items.length,21);assert.equal(f.calls.filter(p=>p.startsWith('/v2/admin/tag-cover/folder-albums')).length,2);const large=fixture(100);await large.read('/api/folders?path=');const r=await large.read('/api/albums?artist='+encodeURIComponent('folder:'+folder));assert.equal(r.items.length,80);assert.equal(r.truncated,true);assert.equal(large.calls.filter(p=>p.startsWith('/v2/admin-album')).length,0);const changed=fixture(21,'revision');await changed.read('/api/folders?path=');await assert.rejects(changed.read('/api/albums?artist='+encodeURIComponent('folder:'+folder)),/응답 불일치/);});
+test('uninstalled endpoint or wrong folder is HOLD, never empty success or detail fallback',async()=>{for(const bad of ['missing','wrong']){const f=fixture(20,bad);await f.read('/api/folders?path=');await assert.rejects(f.read('/api/albums?artist='+encodeURIComponent('folder:'+folder)));assert.equal(f.calls.filter(p=>p.startsWith('/v2/admin-album')||p.startsWith('/v2/albums')).length,0);}});

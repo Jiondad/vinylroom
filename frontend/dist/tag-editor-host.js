@@ -57,35 +57,32 @@ export function createTagReader({api,canManage,signal}){
    return {items:(r.items||[]).map(x=>{artists.add(x.name);return {id:x.name,name:x.name,folder:'Catalog 아티스트 · 공동 표기 보존',albums:x.count}}),truncated:r.pages>1};
   }
   if(u.pathname==='/api/albums'){
-   const artist=u.searchParams.get('artist')||'';let params,folder;
-   if(artist.startsWith('folder:')){folder=artist.slice(7);if(!folders.has(folder))throw Error('선택하지 않은 폴더');params={q:folder.split('/')[1]||folder.split('/').pop(),view:'library',page:'1'};}
-   else {if(!artists.has(artist))throw Error('먼저 아티스트를 선택하세요.');params={artist,view:'library',page:'1'};}
-   const items=[];let page=1,pages=1;
-   // The library list may already provide the album's relative path.
-   // Trust only a valid same-folder boundary; missing paths retain detail validation.
-   const inFolder=path=>typeof path==='string'&&(path===folder||path.startsWith(folder+'/'));
-   const safePath=path=>typeof path==='string'&&!!path&&!path.startsWith('/')&&!path.includes('\\')&&!path.split('/').some(p=>!p||p==='.'||p==='..');
-   async function folderItem(a){
-    let path=safePath(a.relative_path)?a.relative_path:null;
-    if(!path){const full=await detail(a.id);path=full.relative_path;}
-    alive();
-    if(!safePath(path)||!inFolder(path))return null;
-    const parts=path.split('/');for(let k=1;k<=parts.length;k++)folders.add(parts.slice(0,k).join('/'));
-    return {...a,relative_path:path,date:a.original_year||a.release_year||'',count:null};
-   }
-   // Bounded selected-artist lookup; never sweep the library. Existing pagination reused.
-   do{
-    const r=await get('/v2/albums?'+new URLSearchParams({...params,page:String(page)}));pages=Number(r.pages)||1;
-    const candidates=(r.items||[]).filter(a=>UUID.test(a.id||''));
-    if(folder){
-     // At most two missing-path detail probes at once; preserve list order.
-     for(let i=0;i<candidates.length;i+=2){
-      alive();
-      const verified=await Promise.all(candidates.slice(i,i+2).map(folderItem));
-      alive();
-      for(const a of verified)if(a){albums.add(a.id);items.push(a);}
+   const artist=u.searchParams.get('artist')||'';
+   if(artist.startsWith('folder:')){
+    const folder=artist.slice(7);
+    if(!folders.has(folder))throw Error('선택하지 않은 폴더');
+    const validPath=path=>typeof path==='string'&&!!path&&!path.startsWith('/')&&!/[\\:\x00-\x1f]/.test(path)&&!path.split('/').some(p=>!p||p==='.'||p==='..'||p.startsWith('.'));
+    if(!validPath(folder))throw Error('올바른 상대 폴더를 선택하세요.');
+    const items=[],seenIds=new Set(),seenCursors=new Set();let cursor=null,hasMore=false,revision=null;
+    for(let page=0;page<4;page++){
+     alive();const params=new URLSearchParams({path:folder,limit:'20'});if(cursor)params.set('cursor',cursor);
+     let r;try{r=await get('/v2/admin/tag-cover/folder-albums?'+params);}catch(error){alive();throw Error('폴더 앨범 조회 API 확인 필요 · 상세 조회로 재시도하지 않습니다.');}
+     if(r?.state!=='READ_ONLY_FOLDER_ALBUMS'||r.version!=='tag-folder-index-v1'||r.folder!==folder||typeof r.revision!=='string'||!r.revision||(revision!==null&&revision!==r.revision)||!Array.isArray(r.items)||r.items.length>20||typeof r.has_more!=='boolean'||(r.has_more&&(!r.items.length||typeof r.next_cursor!=='string'||!r.next_cursor||seenCursors.has(r.next_cursor)))||(!r.has_more&&r.next_cursor!==null))throw Error('폴더 앨범 응답 불일치');
+     for(const a of r.items){
+      const path=a.relative_path;
+      if(!UUID.test(a.id||'')||seenIds.has(a.id)||typeof a.title!=='string'||typeof a.artist!=='string'||typeof a.date!=='string'||!validPath(path)||(path!==folder&&!path.startsWith(folder+'/')))throw Error('폴더 소속 또는 앨범 식별 불일치');
+      seenIds.add(a.id);items.push({...a,count:null});
      }
-    }else for(const a of candidates){albums.add(a.id);items.push({...a,date:a.original_year||a.release_year||'',count:null});}
+     revision=r.revision;hasMore=r.has_more;if(!hasMore)break;cursor=r.next_cursor;seenCursors.add(cursor);
+    }
+    alive();for(const a of items){albums.add(a.id);const parts=a.relative_path.split('/');for(let k=1;k<=parts.length;k++)folders.add(parts.slice(0,k).join('/'));}
+    return {items,truncated:hasMore};
+   }
+   if(!artists.has(artist))throw Error('먼저 아티스트를 선택하세요.');
+   const items=[];let page=1,pages=1;
+   do{
+    const r=await get('/v2/albums?'+new URLSearchParams({artist,view:'library',page:String(page)}));pages=Number(r.pages)||1;
+    for(const a of r.items||[]){if(!UUID.test(a.id||''))continue;albums.add(a.id);items.push({...a,date:a.original_year||a.release_year||'',count:null});}
     page++;
    }while(page<=pages&&page<=4);
    return {items,truncated:pages>4};
@@ -130,4 +127,5 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  function dispose(){if(controller.signal.aborted)return;controller.abort();for(const job of jobs.values())job.controller.abort();queue.length=0;for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])clearMemberImage(img);window.removeEventListener('message',message);frame.contentWindow?.postMessage({type:'vr-tag-revoke'},origin);frame.remove();}
  window.addEventListener('message',message);container.replaceChildren(frame);return {dispose};
 }
+
 

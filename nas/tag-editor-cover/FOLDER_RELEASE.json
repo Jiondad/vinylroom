@@ -1,0 +1,21 @@
+{
+  "schema": "tag-folder-release-v1",
+  "baseline_git_commit": "ebd1552ff851f3f9dce311d1e1aed62fb2268112",
+  "route": "/v2/admin/tag-cover/folder-albums",
+  "baseline": {
+    "tag_phase2c.py": "d1d975a3d84123daccd4418cc103a60a7aa520fd9ceb928f8095c10b82473d7e",
+    "tag_cover_http.py": "2b6a95bbd51c406a4faa09ffedadf538d1f548fe2083d5dd1057839dcf0b9911"
+  },
+  "desired": {
+    "tag_phase2c.py": "0a98c4c73c6973a212d164d7de11da6384e3865aa4df39338a4e3b0064a6d4a5",
+    "tag_cover_http.py": "fc58e62c9f7021d993443de8b2e7d5880a6c5e5c4ae0b3ba3fb3df6aacde97b4"
+  },
+  "protected_cover_sha256": "13062756878a789fa3c27e65716a81330953e5f252ddc5234b2bd9d81b06a736",
+  "files": {
+    "tag_phase2c.py": "0a98c4c73c6973a212d164d7de11da6384e3865aa4df39338a4e3b0064a6d4a5",
+    "tag_cover_http.py": "fc58e62c9f7021d993443de8b2e7d5880a6c5e5c4ae0b3ba3fb3df6aacde97b4",
+    "nas_folder_release.py": "81fc272a8244e40aaf39cedafb230dd8bcbcf1ba0c68f6b2007c58c2404a5d48",
+    "folder_container_check.py": "0271d4932b272e6a5f0354e1a76f01ffeb719bded3770f73d2432f49802db435"
+  },
+  "operating_install_executed": false
+}

@@ -1,0 +1,48 @@
+{
+  "state": "DEVELOPMENT_PASS",
+  "operating_state": "NAS_PREFLIGHT_PENDING_NOT_INSTALLED",
+  "new_tests": {
+    "folder_query_and_auth": 4,
+    "frontend_folder_adapter": 3,
+    "source_release": 3,
+    "current_catalog_location_contract": 1,
+    "total": 11,
+    "failed": 0,
+    "old_tag_editor_7_tests_rerun": false,
+    "previous_folder_lookup_2_tests_rerun": false
+  },
+  "n_plus_one_proof": {
+    "scope": "synthetic response and real new adapter, not NAS traffic",
+    "folder_summaries": 20,
+    "folder_summary_http_calls": 1,
+    "album_detail_calls_during_folder_list": 0,
+    "album_detail_calls_after_one_click": 1,
+    "payload_json_selected": false,
+    "path_index_used": true,
+    "schema_writes": 0
+  },
+  "pagination": {
+    "exact_folder_and_descendants_only": true,
+    "adjacent_prefix_excluded": true,
+    "hidden_missing_excluded": true,
+    "keyset_cursor_revision_bound": true,
+    "same_path_multiple_album_ids_preserved": true,
+    "max_client_pages": 4,
+    "partial_result_reported": true,
+    "missing_endpoint_holds_without_detail_fallback": true
+  },
+  "operating_effects": {
+    "nas_connections": 0,
+    "nas_install": false,
+    "compose_changes": 0,
+    "container_restarts": 0,
+    "operating_db_writes": 0,
+    "audio_reads_or_writes": 0,
+    "ai_calls": 0,
+    "main_merge": false,
+    "production_publication": false
+  },
+  "nas_latency_ms": null,
+  "existing_user_browser_list_elapsed_ms": 487,
+  "latency_improvement_claimed": false
+}

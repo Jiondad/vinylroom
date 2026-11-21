@@ -362,6 +362,87 @@ def folder_albums(dbpath,folder,limit=40):
             'db_writes':0,'media_writes':0}
 
 
+# Folder index HTTP v1: existing Catalog path index only; no JSON payload or media reads.
+FOLDER_LIST_VERSION = 'tag-folder-index-v1'
+FOLDER_COLUMNS = frozenset({'id','artist','title','year','path','hidden','missing'})
+FOLDER_SELECT = '''SELECT id,artist,title,year,path FROM albums INDEXED BY album_path
+ WHERE hidden=0 AND missing=0 AND path=? COLLATE BINARY
+ AND (path>? COLLATE BINARY OR (path=? COLLATE BINARY AND id>?))
+ UNION ALL
+ SELECT id,artist,title,year,path FROM albums INDEXED BY album_path
+ WHERE hidden=0 AND missing=0 AND path>=? COLLATE BINARY AND path<? COLLATE BINARY
+ AND (path>? COLLATE BINARY OR (path=? COLLATE BINARY AND id>?))
+ ORDER BY path,id LIMIT ?'''
+
+
+def folder_list_path(value):
+    if not isinstance(value,str) or not value or len(value)>2000 or ':' in value or '\\' in value:
+        raise ValueError('invalid_relative_folder')
+    if value.startswith('/') or any(part in ('','.','..') or part.startswith('.') for part in value.split('/')) or any(ord(c)<32 for c in value):
+        raise ValueError('invalid_relative_folder')
+    if Path(value).suffix.lower() in AUDIO_EXT | {'.cue'}:
+        raise ValueError('file_path_not_allowed')
+    return value
+
+
+def folder_list_contract(db):
+    columns={row[1] for row in db.execute('PRAGMA table_info(albums)')}
+    if not FOLDER_COLUMNS <= columns:raise ValueError('folder_catalog_columns_mismatch')
+    indexes={row[1]:row for row in db.execute('PRAGMA index_list(albums)')}
+    if 'album_path' not in indexes or indexes['album_path'][4]:raise ValueError('existing_full_album_path_index_required')
+    keys=[row for row in db.execute('PRAGMA index_xinfo(album_path)') if row[5]]
+    if len(keys)!=1 or keys[0][2]!='path' or keys[0][3] or keys[0][4]!='BINARY':
+        raise ValueError('existing_binary_album_path_index_required')
+
+
+def folder_list_window(folder,limit,cursor):
+    import base64
+    folder=folder_list_path(folder)
+    if type(limit) is not int or not 1<=limit<=100:raise ValueError('folder_limit_must_be_1_to_100')
+    last_path='';last_id='';cursor_revision=None
+    if cursor:
+        if not isinstance(cursor,str) or len(cursor)>6000 or not re.fullmatch(r'[A-Za-z0-9_-]+',cursor):raise ValueError('invalid_folder_cursor')
+        try:
+            raw=base64.b64decode(cursor+'='*((-len(cursor))%4),altchars=b'-_',validate=True)
+            data=json.loads(raw.decode('utf-8'))
+            if not isinstance(data,list) or len(data)!=4 or data[0]!=folder:raise ValueError()
+            cursor_revision=data[1]
+            if not isinstance(cursor_revision,str) or not cursor_revision or len(cursor_revision)>200:raise ValueError()
+            last_path=folder_list_path(data[2]);last_id=data[3]
+            if not isinstance(last_id,str) or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}',last_id):raise ValueError()
+            if last_path!=folder and not last_path.startswith(folder+'/'):raise ValueError()
+        except (ValueError,TypeError,UnicodeError):raise ValueError('invalid_folder_cursor')
+    args=(folder,last_path,last_path,last_id,folder+'/',folder+'0',last_path,last_path,last_id,limit+1)
+    return folder,args,cursor_revision
+
+
+def folder_albums_page(dbpath,folder,limit=20,cursor=None):
+    import base64
+    folder,args,cursor_revision=folder_list_window(folder,limit,cursor)
+    with contextlib.closing(db_connect(dbpath)) as db:
+        db.execute('BEGIN')
+        folder_list_contract(db)
+        revision_row=db.execute("SELECT value FROM meta WHERE key='revision'").fetchone()
+        revision=revision_row[0] if revision_row else None
+        if not isinstance(revision,str) or not revision or len(revision)>200:raise ValueError('catalog_revision_unavailable')
+        if cursor_revision is not None and cursor_revision!=revision:raise ValueError('folder_catalog_changed_reload')
+        rows=db.execute(FOLDER_SELECT,args).fetchall()
+    has_more=len(rows)>limit;rows=rows[:limit];items=[]
+    for row in rows:
+        path=folder_list_path(row['path'])
+        if path!=folder and not path.startswith(folder+'/'):raise ValueError('folder_result_outside_scope')
+        if not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}',row['id'] or ''):raise ValueError('invalid_catalog_album_id')
+        items.append({'id':row['id'],'title':row['title'],'artist':row['artist'],'date':str(row['year'] or ''),'relative_path':path})
+    next_cursor=None
+    if has_more:
+        last=rows[-1]
+        token=json.dumps([folder,revision,last['path'],last['id']],ensure_ascii=False,separators=(',',':')).encode('utf-8')
+        next_cursor=base64.urlsafe_b64encode(token).decode('ascii').rstrip('=')
+    return {'state':'READ_ONLY_FOLDER_ALBUMS','version':FOLDER_LIST_VERSION,'folder':folder,'revision':revision,'items':items,
+            'has_more':has_more,'next_cursor':next_cursor,'limit':limit,'db_writes':0,'media_writes':0}
+
+
+
 def _common(entries,field):
     patterns=defaultdict(list)
     for e in entries:
