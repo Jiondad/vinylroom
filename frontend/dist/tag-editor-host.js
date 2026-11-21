@@ -61,13 +61,31 @@ export function createTagReader({api,canManage,signal}){
    if(artist.startsWith('folder:')){folder=artist.slice(7);if(!folders.has(folder))throw Error('선택하지 않은 폴더');params={q:folder.split('/')[1]||folder.split('/').pop(),view:'library',page:'1'};}
    else {if(!artists.has(artist))throw Error('먼저 아티스트를 선택하세요.');params={artist,view:'library',page:'1'};}
    const items=[];let page=1,pages=1;
+   // The library list may already provide the album's relative path.
+   // Trust only a valid same-folder boundary; missing paths retain detail validation.
+   const inFolder=path=>typeof path==='string'&&(path===folder||path.startsWith(folder+'/'));
+   const safePath=path=>typeof path==='string'&&!!path&&!path.startsWith('/')&&!path.includes('\\')&&!path.split('/').some(p=>!p||p==='.'||p==='..');
+   async function folderItem(a){
+    let path=safePath(a.relative_path)?a.relative_path:null;
+    if(!path){const full=await detail(a.id);path=full.relative_path;}
+    alive();
+    if(!safePath(path)||!inFolder(path))return null;
+    const parts=path.split('/');for(let k=1;k<=parts.length;k++)folders.add(parts.slice(0,k).join('/'));
+    return {...a,relative_path:path,date:a.original_year||a.release_year||'',count:null};
+   }
    // Bounded selected-artist lookup; never sweep the library. Existing pagination reused.
    do{
     const r=await get('/v2/albums?'+new URLSearchParams({...params,page:String(page)}));pages=Number(r.pages)||1;
-    for(const a of r.items||[]){if(!UUID.test(a.id||''))continue;
-     if(folder){const full=await detail(a.id);if(!(full.relative_path===folder||full.relative_path?.startsWith(folder+'/')))continue;Object.assign(a,{relative_path:full.relative_path});const parts=String(full.relative_path||'').split('/');for(let k=1;k<=parts.length;k++)folders.add(parts.slice(0,k).join('/')); }
-     albums.add(a.id);items.push({...a,date:a.original_year||a.release_year||'',count:null});
-    }
+    const candidates=(r.items||[]).filter(a=>UUID.test(a.id||''));
+    if(folder){
+     // At most two missing-path detail probes at once; preserve list order.
+     for(let i=0;i<candidates.length;i+=2){
+      alive();
+      const verified=await Promise.all(candidates.slice(i,i+2).map(folderItem));
+      alive();
+      for(const a of verified)if(a){albums.add(a.id);items.push(a);}
+     }
+    }else for(const a of candidates){albums.add(a.id);items.push({...a,date:a.original_year||a.release_year||'',count:null});}
     page++;
    }while(page<=pages&&page<=4);
    return {items,truncated:pages>4};
