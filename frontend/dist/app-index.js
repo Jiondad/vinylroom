@@ -414,6 +414,18 @@ async function detail(id,playIndex=null,trackAction='play',fromHistory=false){
  if(repo.admin){$('#edit-index').onclick=()=>edit(a);$('#tag-edit-index').onclick=action(()=>openAdminCenter(a));$('#review-index').onclick=action(async()=>{await api('/v2/edit',{admin:true,body:{id:a.id,fields:{reviewed:!a.reviewed}}});detail(a.id);render();});$('#hide-index').onclick=()=>{modal('서재에서 숨기기','<p>음악 파일과 개인 기록은 보존됩니다. 목록에서만 숨깁니다.</p><button id="confirm-hide">숨기기</button>');$('#confirm-hide').onclick=action(async()=>{await api('/v2/hide',{admin:true,body:{id:a.id}});$('#dialog').close();closeAlbumPage();render();});};}
  polishAlbumHeader(albumPage,a);
  mountAlbumReference(albumPage,a,trackLayout.rows,{player:getPlayer(),onQueue:isApprovedMember()?()=>getPlayer().add(trackLayout.rows.map(row=>describeTrack(a,row.index))):null,onPlaylist:isApprovedMember()?()=>window.dispatchEvent(new CustomEvent('save-playlist-tracks',{detail:trackLayout.rows.map(row=>describeTrack(a,row.index))})):null});
+ // Keep both album editing buttons visibly together after the existing header
+ // and reference layout finish. No changes to album editing, playback or storage.
+ if(repo.admin){
+  const tools=albumPage.querySelector('.album-cover-tools');
+  if(tools){
+   let tag=albumPage.querySelector('#tag-edit-index');
+   if(!tag){tag=document.createElement('button');tag.type='button';tag.id='tag-edit-index';tag.textContent='태그 수정';}
+   tools.append(tag);
+   tag.hidden=false;
+   tag.onclick=action(()=>openAdminCenter(a));
+  }
+ }
 }
 function openAlbumCover(albumId,fallback){
  const viewer=document.createElement('div');
