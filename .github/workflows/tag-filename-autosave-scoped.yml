@@ -1,0 +1,23 @@
+name: Tag to filename autosave scoped syntax
+on:
+  push:
+    branches: [fix/tag-to-filename-auto-rename-20261122]
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          node --check frontend/dist/tag-editor-ui.js
+          node --check frontend/dist/tag-editor-host.js
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('frontend/dist/tag-editor-ui.js').read_text()
+          assert "await saveRenames({files:proposed,automatic:true})" in s
+          assert "async function saveRenames({files=null,automatic=false}={})" in s
+          assert "if(result.state!=='RENAME_WRITE_COMPLETED'" in s
+          assert "tagSaveBusy=true;$('#saveTags').disabled=true;$('#bulkApply').disabled=true" in s
+          assert "file-proposal" in s and "S.renames[e.file]?'<del>'" not in s
+          assert "const fresh=await api('/api/tracks?album='" in s
+          print("TAG_FILENAME_AUTOSAVE_SCOPED_PASS")
+          PY
