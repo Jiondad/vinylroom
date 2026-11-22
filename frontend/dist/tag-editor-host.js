@@ -36,6 +36,23 @@ export function createTagReader({api,canManage,signal,initialAlbumId=null}){
   alive();const u=new URL(url,'https://tag.invalid');
   if(u.origin!=='https://tag.invalid')throw Error('허용되지 않은 조회');
   if(u.pathname==='/api/save-capabilities')return get('/v2/admin/tag-cover/save-capabilities');
+  if(['/api/rename/plan','/api/rename/apply','/api/rename/restore'].includes(u.pathname)){
+   if(u.pathname.endsWith('/restore'))throw Error('복구는 서버 감사 operation과 원본 경로 확인 후 실행하세요.');
+   const id=body?.album_id,file=body?.file,relative=coverFiles.get(id)?.get(file);
+   if(!relative||!albums.has(id))throw Error('현재 앨범에서 조회한 파일만 변경할 수 있습니다.');
+   if(typeof body.new_name!=='string'||/[\\/\x00-\x1f]/.test(body.new_name)||!body.new_name)throw Error('파일명은 폴더 경로 없이 입력하세요.');
+   const applying=u.pathname.endsWith('/apply');
+   if(applying){const caps=await get('/v2/admin/tag-cover/save-capabilities');if(caps.rename!==true||body.confirm_write!==true)throw Error('NAS 파일명 저장 OFF · 정식 색인 연결 미확인');}
+   const result=await api('/v2/admin/tag-cover/'+(applying?'rename-apply':'rename-plan'),{admin:true,signal,body:{...body,file:relative}});check();
+   if(result.state==='RENAME_WRITE_COMPLETED'){
+    const next=result.new_file;
+    if(typeof next!=='string'||next.split('/').slice(0,-1).join('/')!==relative.split('/').slice(0,-1).join('/')||next.split('/').some(p=>!p||p==='.'||p==='..')||next.includes('\\'))throw Error('저장 후 파일 경로 확인 실패 · 재조회하세요.');
+    const uiFile=file.startsWith('/music/')?'/music/'+next:next;
+    coverFiles.get(id).delete(file);coverFiles.get(id).set(uiFile,next);detailCache.delete(id);
+    return {...result,new_file:uiFile};
+   }
+   return result;
+  }
   if(['/api/tag/plan','/api/tag/apply'].includes(u.pathname)){
    const id=body?.album_id,file=body?.file,relative=coverFiles.get(id)?.get(file);if(!relative||!albums.has(id))throw Error('현재 앨범 파일만 저장할 수 있습니다.');
    if(!body.edits||!body.before_tags)throw Error('원본 태그와 변경 계획이 필요합니다.');
@@ -97,7 +114,16 @@ export function createTagReader({api,canManage,signal,initialAlbumId=null}){
   }
   if(u.pathname==='/api/tracks'){
    const id=u.searchParams.get('album');if(!UUID.test(id||'')||!albums.has(id))throw Error('먼저 조회한 앨범을 선택하세요.');
-   const album=indexedTagAlbum(await detail(id),id);
+   const indexed=await detail(id),caps=await get('/v2/admin/tag-cover/save-capabilities');let album;
+   if(caps.live_tags===true){
+    const live=await get('/v2/admin/tag-cover/tags?'+new URLSearchParams({album_id:id})),a=live.album;
+    if(live.state!=='ACTUAL_ALBUM_TAGS'||a?.id!==id||typeof a.path!=='string'||!a.path||a.path.startsWith('/')||a.path.includes('\\')||a.path.split('/').some(p=>!p||p==='.'||p==='..')||!Array.isArray(live.entries)||live.entries.length>120)throw Error('실제 파일 태그 조회 계약 불일치');
+    const seen=new Set(),entries=live.entries.map(e=>{
+     if(typeof e.file!=='string'||!e.file.startsWith(a.path+'/')||e.file.startsWith('/')||e.file.includes('\\')||e.file.split('/').some(p=>!p||p==='.'||p==='..')||seen.has(e.file)||!e.tags)throw Error('실제 파일 식별 불일치');
+     seen.add(e.file);return {...e,relative_file:e.file};
+    });
+    album={id,artist:a.artist,title:a.title,date:a.year||'',path:a.path,count:entries.length,entries,source:'NAS_ACTUAL_AUDIO_TAGS'};
+   }else album=indexedTagAlbum(indexed,id);
    coverFiles.set(id,new Map(album.entries.filter(e=>e.relative_file).map(e=>[e.file,e.relative_file])));return {album};
   }
   throw Error('Tag Editor는 지정된 읽기 조회만 허용합니다.');
@@ -111,7 +137,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,Math.min(innerHeight,r.bottom)-Math.max(0,r.top))},location.origin);}
  function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
  window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
- frame.src=new URL('tag-editor-ui.html?v=20261122-artist-scroll',document.baseURI).href;
+ frame.src=new URL('tag-editor-ui.html?v=20261122-fullsave-release',document.baseURI).href;
  const allowedInitialAlbum=initialAlbum&&UUID.test(initialAlbum.id||'')?{id:initialAlbum.id,title:String(initialAlbum.title||''),artist:String(initialAlbum.artist||''),date:String(initialAlbum.date||''),relative_path:String(initialAlbum.relative_path||'')}:null;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal,initialAlbumId:allowedInitialAlbum?.id});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
