@@ -77,14 +77,14 @@ function discDraft(entries){
 $('#discApply').onclick=()=>{if(!S.album)return;try{const r=discDraft(S.draft);S.draft=r.entries;S.warnings={...S.warnings,...r.warnings};saveDraft();renderTracks();$('#bulkStatus').textContent=`DISCNUMBER ${$('#discValue').value} · ${r.changed}곡 초안 변경 · ${Object.keys(r.warnings).length}곡 참고`;}catch(e){toast(e.message);}};
 $('#bulkApply').onclick=async()=>{if(!S.album||tagSaveBusy)return;try{
  const mode=$('#bulkField').value,withDisc=mode==='number'&&$('#numberDisc').checked;
+ const priorNumbers=new Map(S.draft.map(e=>[e.file,{tracknumber:values(e,'tracknumber'),discnumber:values(e,'discnumber')}]));
  if(withDisc&&$('#bulkScope').value!=='selected')throw Error('DISCNUMBER 동시 지정은 선택 트랙 범위를 사용하세요.');
  const disc=withDisc?discDraft(S.draft):null;
  const r=applyBulkDraft({entries:disc?.entries||S.draft,selected:[...S.selected],scope:$('#bulkScope').value,field:mode,value:$('#bulkValue').value,replace:$('#bulkPolicy').value==='replace',format:$('#format').value,start:Number($('#numberStart').value),order:mode==='number'?'display':'filename'});
  if(mode!=='to')S.draft=r.entries;if(mode==='to'){const targets=$('#bulkScope').value==='album'?S.draft.map(e=>e.file):[...S.selected];for(const file of targets)delete S.renames[file];Object.assign(S.renames,r.renames);}else Object.assign(S.renames,r.renames);
  S.warnings={...disc?.warnings,...r.warnings};saveDraft();renderTracks();
  if(mode==='number'||mode==='normalize'){
-  const changed=S.draft.filter(e=>changedFields(e).some(f=>f==='tracknumber'||f==='discnumber'));
-  const intended=changed.filter(e=>{const original=(mode==='number'?r.entries:disc?.entries||r.entries).find(x=>x.file===e.file);return !!original;});
+  const intended=S.draft.filter(e=>{const previous=priorNumbers.get(e.file);return previous&&(previous.tracknumber!==values(e,'tracknumber')||previous.discnumber!==values(e,'discnumber'))&&changedFields(e).some(f=>f==='tracknumber'||f==='discnumber');});
   if(!intended.length){$('#bulkStatus').textContent='저장할 트랙번호 변경이 없습니다.';return;}
   if(!saveCaps.tags){$('#bulkStatus').textContent='저장 실패 · NAS 저장 연결이 꺼져 있어 변경 내용은 미저장입니다.';return;}
   await persistTagRows(intended,{automatic:true,onlyFields:['tracknumber','discnumber']});
@@ -150,7 +150,7 @@ function saveButtonState(){
  const renameMode=activeTool==='to',enabled=renameMode?saveCaps.rename:saveCaps.tags;
  const count=S.draft.filter(e=>S.selected.has(e.file)&&(renameMode?S.renames[e.file]:changedFields(e).length)).length;
  $('#saveTags').disabled=tagSaveBusy||!enabled||!S.album;
- $('#saveTags').textContent=renameMode?'파일명 변경 저장':'태그 변경 저장';
+ $('#saveTags').textContent=renameMode?'파일명 변경 저장':activeTool==='number'?'기타 태그 저장':'태그 변경 저장';
  $('#saveTags').title=enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
 }
 async function readSaveCaps(){
@@ -206,6 +206,20 @@ async function persistTagRows(rows,{automatic=false,onlyFields=null}={}){
   failed=e;
   $('#saveStatus').textContent=`저장 중단 · ${completed}/${jobs.length}곡 완료 · ${e.message}`;
   $('#bulkStatus').textContent=`저장 실패 · ${completed}곡만 완료, 나머지는 미저장 · ${e.message}`;
+  if(automatic){
+   try{
+    const live=await api('/api/tracks?album='+encodeURIComponent(id));
+    if(S.album?.id===id&&Array.isArray(live?.album?.entries)){
+     const actual=new Map(live.album.entries.map(e=>[e.file,e]));
+     for(const job of jobs){
+      const now=actual.get(job.file),old=S.original.find(e=>e.file===job.file),draft=S.draft.find(e=>e.file===job.file);
+      if(!now||!old||!draft)continue;
+      for(const f of job.fields){old.tags[f]=clone(now.tags[f]||[]);draft.tags[f]=clone(now.tags[f]||[]);}
+     }
+     $('#bulkStatus').textContent=`저장 중단 · ${completed}곡 응답 확인 · NAS 실제 번호 재조회 완료 · ${e.message}`;
+    }
+   }catch{ $('#bulkStatus').textContent+=' · 실제 번호 재조회 실패'; }
+  }
  }finally{
   saveDraft();tagSaveBusy=false;$('#editor').inert=false;$('#bulkApply').disabled=!S.album;
   renderTracks();
