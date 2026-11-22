@@ -6,7 +6,7 @@ music gateway service and atomically exchanges its validated qualification
 receipt; automatic rollback restores both the original compose chain + receipt
 if a deployment/health/capability check fails.
 
-No direct production music or catalog writes. This is an operator-triggered
+No direct production music or catalog writes. The preflight mode is read-only.\nThis is an operator-triggered
 maintenance operation and NOT a general installer or qualification bypass.
 """
 import argparse
