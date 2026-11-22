@@ -83,3 +83,43 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
  .track-panel tbody tr>td:nth-child(8)::before{content:'GENRE'}
  .track-panel tbody tr>td:nth-child(9)::before{content:'상태'}
 }
+
+
+/* Desktop viewport fill: the parent reports the actual remaining screen space,
+   never the initially short iframe. Keep search fixed while only tree/table scroll. */
+@media(min-width:651px){
+ .shell{
+  display:flex;
+  flex-direction:column;
+  min-height:max(460px,calc(var(--tag-visible-height,100dvh) - 12px));
+ }
+ .editor-heading{flex:none}
+ .workspace{
+  flex:1 1 auto;
+  min-height:0;
+  align-items:stretch;
+ }
+ .workspace>.browser{
+  height:100%;
+  max-height:none;
+  min-height:280px;
+ }
+ .workspace>.working{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+ }
+ .workspace .track-panel{
+  display:flex;
+  flex-direction:column;
+  flex:1 1 auto;
+  min-height:170px;
+ }
+ .workspace .track-panel .table-scroll{
+  flex:1 1 auto;
+  min-height:115px;
+  overflow-x:auto;
+  overflow-y:auto;
+ }
+ .workspace>.working>footer{flex:none}
+}
