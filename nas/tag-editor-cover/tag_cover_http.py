@@ -136,7 +136,7 @@ def handle(h,index,music_root,origin,post=False):
 # TAG_EDITOR_SAVE_EXTENSION_V1 -- no engine or DB; server integration defaults OFF.
 _SAVE_CONTEXT = {'guard': None, 'backup_root': None, 'qualified': False}
 _READONLY_HANDLE = handle
-_SAVE_ROUTES = frozenset((PREFIX+'/save-capabilities', PREFIX+'/tag-plan', PREFIX+'/tag-apply', PREFIX+'/apply'))
+_SAVE_ROUTES = frozenset((PREFIX+'/save-capabilities', PREFIX+'/tag-plan', PREFIX+'/tag-apply', PREFIX+'/apply', PREFIX+'/tags', PREFIX+'/rename-plan', PREFIX+'/rename-apply', PREFIX+'/rename-restore'))
 
 def configure_save_context(runtime_guard, backup_root, qualification_passed=False):
     """Server-owned context only. Guard must HOLD the existing index/AI maintenance lease.
@@ -150,22 +150,17 @@ def save_capabilities():
     import os
     qualified=_SAVE_CONTEXT['qualified'];ready=bool(callable(_SAVE_CONTEXT['guard']) and _SAVE_CONTEXT['backup_root']);tag_ok=qualified is True or (isinstance(qualified,dict) and qualified.get('tags') is True);cover_ok=qualified is True or (isinstance(qualified,dict) and qualified.get('cover') is True)
     full_ok=(isinstance(qualified,dict) and qualified.get('full_tags') is True and os.getenv(cover.base.FULL_TAG_WRITE_ENV)=='true')
+    rename=rename_capable()
     return {'state':'TAG_EDITOR_SAVE_CAPABILITIES','version':'tag-editor-save-v1',
         'tags':ready and tag_ok and os.getenv(cover.base.TRACK_WRITE_ENV)=='true',
-        'cover':ready and cover_ok and os.getenv(cover.COVER_ENV)=='true', 'rename':False, 'mp3_tags':ready and tag_ok and full_ok,
+        'cover':ready and cover_ok and os.getenv(cover.COVER_ENV)=='true', 'rename':rename,'live_tags':True,'rename_reason':None if rename else 'native_reindex_and_nas_qualification_required', 'mp3_tags':ready and tag_ok and full_ok,
         'tag_formats':['flac','mp3'] if ready and tag_ok and full_ok else ['flac'],
         'tag_fields':sorted(cover.base.FULL_TAG_WRITE_FIELDS if ready and tag_ok and full_ok else cover.base.FLAC_WRITE_FIELDS),
         'reason':None if ready and tag_ok and cover_ok else 'nas_qualification_and_runtime_lease_not_connected'}
 
 def _writer_edits(raw):
-    if not isinstance(raw,dict):raise ValueError('invalid_edits')
-    result={}
-    for key,value in raw.items():
-        if key not in ('genre','featuring') and isinstance(value,list):
-            if len(value)!=1:raise ValueError('writer_requires_single_value')
-            value=value[0]
-        result[key]=value
-    return result
+    return cover.base.validate_track_edits(raw)
+
 
 def tag_plan(catalog,music_root,body):
     if not isinstance(body,dict) or set(body)-{'album_id','file','edits','before_tags','expected_plan_id','confirm_write'}:
@@ -184,8 +179,51 @@ def tag_plan(catalog,music_root,body):
     if any(entry['tags'].get(k,[])!=before[k] for k in edits):return cover.hold('tags_changed_since_browser_read')
     return cover.base.track_write_plan(album,entries,issues,file,raw)
 
+def configure_rename_context(reindex_album,qualification_passed=False):
+    """Server-only wiring; existing runtime guard must hold Catalog Lease synchronously."""
+    if not callable(reindex_album):raise ValueError('native_reindex_callback_required')
+    _SAVE_CONTEXT.update(reindex_album=reindex_album,rename_qualified=qualification_passed is True)
+
+
+def rename_capable():
+    import os
+    try:import tag_rename_writer as writer
+    except ImportError:return False
+    return bool(_SAVE_CONTEXT.get('rename_qualified') is True and callable(_SAVE_CONTEXT.get('reindex_album'))
+        and callable(_SAVE_CONTEXT.get('guard')) and _SAVE_CONTEXT.get('backup_root') and os.getenv(writer.RENAME_ENV)=='true')
+
+
+def rename_request(catalog,music_root,route,body):
+    try:import tag_rename_writer as writer
+    except ImportError:return cover.hold('rename_module_not_installed')
+    if not isinstance(body,dict):raise ValueError('invalid_rename_body')
+    if route.endswith('/rename-restore'):
+        if set(body)-{'operation_id','confirm_write'}:raise ValueError('unsupported_restore_fields')
+    else:
+        if set(body)-{'album_id','file','new_name','expected_plan_id','confirm_write'}:raise ValueError('unsupported_rename_fields')
+        _identity(body.get('album_id'),body.get('file'))
+    if route.endswith('/rename-plan'):return writer.plan(catalog,music_root,body['album_id'],body['file'],body.get('new_name'))
+    if not rename_capable():return cover.hold('native_reindex_and_nas_qualification_required')
+    if body.get('confirm_write') is not True:return cover.hold('explicit_save_confirmation_required')
+    with _SAVE_CONTEXT['guard']():
+        if route.endswith('/rename-restore'):
+            result=writer.restore(catalog,music_root,_SAVE_CONTEXT['backup_root'],body.get('operation_id'),_SAVE_CONTEXT['reindex_album'],True)
+        else:
+            result=writer.apply(catalog,music_root,_SAVE_CONTEXT['backup_root'],body['album_id'],body['file'],body.get('new_name'),body.get('expected_plan_id'),_SAVE_CONTEXT['reindex_album'],True)
+        if result.get('state') in ('RENAME_WRITE_COMPLETED','RENAME_RESTORE_COMPLETED'):
+            result['saved_tags']=cover.base.read_tags(Path(music_root)/result['new_file'])
+        return result
+
+
+def read_album_tags(catalog,music_root,album_id):
+    album,entries,issues=cover.base.inventory(catalog,music_root,album_id)
+    if issues:return cover.hold('album_inventory_issue',issues=issues)
+    return {'state':'ACTUAL_ALBUM_TAGS','album_id':album_id,'album':album,'entries':entries,'source':'actual_audio_tags','media_writes':0,'db_writes':0}
+
+
 def save_request(catalog,music_root,route,body):
     """Single-file adapter, called under verified admin auth AND existing runtime lease."""
+    if '/rename-' in route:return rename_request(catalog,music_root,route,body)
     caps=save_capabilities();kind='tags' if route.endswith('/tag-apply') else 'cover'
     if route.endswith('/tag-plan'):return tag_plan(catalog,music_root,body)
     if not isinstance(body,dict) or body.get('confirm_write') is not True:return cover.hold('explicit_save_confirmation_required')
@@ -223,6 +261,11 @@ def handle(h,index,music_root,origin,post=False):
         if h.member_gate() is False:return
         if h.headers.get('Origin') not in (None,origin) or (post and h.headers.get('Origin')!=origin):return h.reply(403,cover.hold('origin_not_allowed'))
         if route.endswith('/save-capabilities') and not post:return h.reply(200,save_capabilities())
+        if route.endswith('/tags') and not post:
+            if index is None:return h.reply(503,cover.hold('catalog_unavailable'))
+            q=parse_qs(urlsplit(h.path).query)
+            if set(q)!={'album_id'} or len(q['album_id'])!=1:raise ValueError('invalid_album_query')
+            return h.reply(200,read_album_tags(index.dbpath,music_root,q['album_id'][0]))
         if not post:return h.reply(405,cover.hold('post_required'))
         if index is None:return h.reply(503,cover.hold('catalog_unavailable'))
         length=int(h.headers.get('Content-Length','0'))

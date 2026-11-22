@@ -1,0 +1,26 @@
+{
+  "frontend/dist/tag-editor-ui.css": {
+    "same_as_current_main": true,
+    "sha256": "f1adcbd5f9786e8f630e731a72f9ff45aa810acf032ba909b2ec9d254f9698ab"
+  },
+  "frontend/dist/admin-center.js": {
+    "same_as_current_main": true,
+    "sha256": "94654f8934b7c70787864d0424c73b4bcd4782fd5565a518e6461f0c951d3787"
+  },
+  "frontend/dist/app-index.js": {
+    "same_as_current_main": true,
+    "sha256": "2080a7f2d144f835901952abc88b6ac35d35e39ab4091c9044492817217de24e"
+  },
+  "frontend/dist/tag-editor-plan.js": {
+    "same_as_current_main": true,
+    "sha256": "028522578d18b2da31f9afad4f6839282e73bd8eea8dc6f9e19661da4e0d564d"
+  },
+  "frontend/dist/tag-editor-draft.js": {
+    "same_as_current_main": true,
+    "sha256": "2e572ac80da6b2005f87f47767749e011dda26af5f15f7202bc6deae37971e26"
+  },
+  "nas/tag-editor-cover/tag_cover_h.py": {
+    "same_as_current_main": true,
+    "sha256": "13062756878a789fa3c27e65716a81330953e5f252ddc5234b2bd9d81b06a736"
+  }
+}

@@ -21,11 +21,11 @@ export function indexedTagAlbum(a,id){
  if(entries.length>120)throw Error('현재 미리보기는 앨범당 120개 실제 파일까지 지원합니다.');
  return {id,artist:a.artist,title:a.title,date:a.original_year||a.release_year||'',path:a.relative_path||'',count:entries.length,entries,source:'NAS_INDEX_READ_ONLY'};
 }
-export function createTagReader({api,canManage,signal}){
+export function createTagReader({api,canManage,signal,initialAlbumId=null}){
  const coverFiles=new Map(),detailCache=new Map(),inflight=new Map();
  const ttl=30000;
  const remember=(key,value)=>{detailCache.delete(key);detailCache.set(key,{at:Date.now(),value});if(detailCache.size>64)detailCache.delete(detailCache.keys().next().value);return value;};
- const albums=new Set(),folders=new Set(['']),artists=new Set();
+ const albums=new Set(UUID.test(initialAlbumId||'')?[initialAlbumId]:[]),folders=new Set(['']),artists=new Set();
  const check=()=>{if(signal?.aborted||!canManage())throw Error('관리자 인증이 필요합니다.');};
  return async (url,body,request={})=>{
   const alive=()=>{check();if(request.signal?.aborted)throw Error('selection_superseded');};
@@ -36,6 +36,23 @@ export function createTagReader({api,canManage,signal}){
   alive();const u=new URL(url,'https://tag.invalid');
   if(u.origin!=='https://tag.invalid')throw Error('허용되지 않은 조회');
   if(u.pathname==='/api/save-capabilities')return get('/v2/admin/tag-cover/save-capabilities');
+  if(['/api/rename/plan','/api/rename/apply','/api/rename/restore'].includes(u.pathname)){
+   if(u.pathname.endsWith('/restore'))throw Error('복구는 서버 감사 operation과 원본 경로 확인 후 실행하세요.');
+   const id=body?.album_id,file=body?.file,relative=coverFiles.get(id)?.get(file);
+   if(!relative||!albums.has(id))throw Error('현재 앨범에서 조회한 파일만 변경할 수 있습니다.');
+   if(typeof body.new_name!=='string'||/[\\/\x00-\x1f]/.test(body.new_name)||!body.new_name)throw Error('파일명은 폴더 경로 없이 입력하세요.');
+   const applying=u.pathname.endsWith('/apply');
+   if(applying){const caps=await get('/v2/admin/tag-cover/save-capabilities');if(caps.rename!==true||body.confirm_write!==true)throw Error('NAS 파일명 저장 OFF · 정식 색인 연결 미확인');}
+   const result=await api('/v2/admin/tag-cover/'+(applying?'rename-apply':'rename-plan'),{admin:true,signal,body:{...body,file:relative}});check();
+   if(result.state==='RENAME_WRITE_COMPLETED'){
+    const next=result.new_file;
+    if(typeof next!=='string'||next.split('/').slice(0,-1).join('/')!==relative.split('/').slice(0,-1).join('/')||next.split('/').some(p=>!p||p==='.'||p==='..')||next.includes('\\'))throw Error('저장 후 파일 경로 확인 실패 · 재조회하세요.');
+    const uiFile=file.startsWith('/music/')?'/music/'+next:next;
+    coverFiles.get(id).delete(file);coverFiles.get(id).set(uiFile,next);detailCache.delete(id);
+    return {...result,new_file:uiFile};
+   }
+   return result;
+  }
   if(['/api/tag/plan','/api/tag/apply'].includes(u.pathname)){
    const id=body?.album_id,file=body?.file,relative=coverFiles.get(id)?.get(file);if(!relative||!albums.has(id))throw Error('현재 앨범 파일만 저장할 수 있습니다.');
    if(!body.edits||!body.before_tags)throw Error('원본 태그와 변경 계획이 필요합니다.');
@@ -97,13 +114,22 @@ export function createTagReader({api,canManage,signal}){
   }
   if(u.pathname==='/api/tracks'){
    const id=u.searchParams.get('album');if(!UUID.test(id||'')||!albums.has(id))throw Error('먼저 조회한 앨범을 선택하세요.');
-   const album=indexedTagAlbum(await detail(id),id);
+   const indexed=await detail(id),caps=await get('/v2/admin/tag-cover/save-capabilities');let album;
+   if(caps.live_tags===true){
+    const live=await get('/v2/admin/tag-cover/tags?'+new URLSearchParams({album_id:id})),a=live.album;
+    if(live.state!=='ACTUAL_ALBUM_TAGS'||a?.id!==id||typeof a.path!=='string'||!a.path||a.path.startsWith('/')||a.path.includes('\\')||a.path.split('/').some(p=>!p||p==='.'||p==='..')||!Array.isArray(live.entries)||live.entries.length>120)throw Error('실제 파일 태그 조회 계약 불일치');
+    const seen=new Set(),entries=live.entries.map(e=>{
+     if(typeof e.file!=='string'||!e.file.startsWith(a.path+'/')||e.file.startsWith('/')||e.file.includes('\\')||e.file.split('/').some(p=>!p||p==='.'||p==='..')||seen.has(e.file)||!e.tags)throw Error('실제 파일 식별 불일치');
+     seen.add(e.file);return {...e,relative_file:e.file};
+    });
+    album={id,artist:a.artist,title:a.title,date:a.year||'',path:a.path,count:entries.length,entries,source:'NAS_ACTUAL_AUDIO_TAGS'};
+   }else album=indexedTagAlbum(indexed,id);
    coverFiles.set(id,new Map(album.entries.filter(e=>e.relative_file).map(e=>[e.file,e.relative_file])));return {album};
   }
   throw Error('Tag Editor는 지정된 읽기 조회만 허용합니다.');
  };
 }
-export function mountTagEditor({container,api,canManage,loadCover=coverMemberImage,preview=false}){
+export function mountTagEditor({container,api,canManage,loadCover=coverMemberImage,preview=false,initialAlbum=null}){
  if(!canManage?.())throw Error('승인된 관리자만 이용할 수 있습니다.');
  const controller=new AbortController(),channel=crypto.randomUUID(),frame=document.createElement('iframe');
  frame.title='Tag Editor · NAS 색인 태그 읽기 전용';frame.style.cssText='width:100%;height:320px;min-height:320px;display:block;border:0;border-radius:8px;background:#f5f7f8';frame.referrerPolicy='no-referrer';frame.scrolling='no';
@@ -111,8 +137,9 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,Math.min(innerHeight,r.bottom)-Math.max(0,r.top))},location.origin);}
  function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
  window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
- frame.src=new URL('tag-editor-ui.html?v=20261122-complete-save',document.baseURI).href;
- const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal});
+ frame.src=new URL('tag-editor-ui.html?v=20261122-artist-scroll',document.baseURI).href;
+ const allowedInitialAlbum=initialAlbum&&UUID.test(initialAlbum.id||'')?{id:initialAlbum.id,title:String(initialAlbum.title||''),artist:String(initialAlbum.artist||''),date:String(initialAlbum.date||''),relative_path:String(initialAlbum.relative_path||'')}:null;
+ const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal,initialAlbumId:allowedInitialAlbum?.id});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
  const queue=[],jobs=new Map();let active=0;
  function pump(){while(active<2&&queue.length){const job=queue.shift();if(job.controller.signal.aborted){jobs.delete(job.id);continue;}active++;
@@ -125,7 +152,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  const origin=location.origin;
  async function message(event){
   if(event.origin!==origin||event.source!==frame.contentWindow)return;
-  const m=event.data;if(m?.type==='vr-tag-ready'){scheduleViewport();if(canManage())frame.contentWindow.postMessage({type:'vr-tag-init',channel,preview},origin);return;}
+  const m=event.data;if(m?.type==='vr-tag-ready'){scheduleViewport();if(canManage())frame.contentWindow.postMessage({type:'vr-tag-init',channel,preview,initialAlbum:allowedInitialAlbum},origin);return;}
   if(m?.type==='vr-tag-covers'&&m.channel===channel){if(canManage())for(const img of frame.contentDocument.querySelectorAll('img[data-tag-cover]')){if(UUID.test(img.dataset.tagCover)&&!img.dataset.loading){img.dataset.loading='true';void loadCover(img,img.dataset.tagCover).catch(()=>{img.hidden=true;});}}return;}
   if(m?.type==='vr-tag-measured'&&m.channel===channel){const v=m.measurement;if(v&&UUID.test(v.album_id||'')&&Number.isFinite(v.display_ms))frame.dataset.lastReadMetrics=JSON.stringify(v);return;}
   if(m?.type==='vr-tag-cancel'&&m.channel===channel){jobs.get(m.id)?.controller.abort();return;}
@@ -141,7 +168,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
   if(!controller.signal.aborted&&canManage()){
    const doc=frame.contentDocument;
    if(!doc?.getElementById('accessLock')){container.textContent='Tag Editor 화면 파일을 불러오지 못했습니다. 다시 접속해 주세요.';return;}
-   frame.contentWindow?.postMessage({type:'vr-tag-init',channel,preview},origin);
+   frame.contentWindow?.postMessage({type:'vr-tag-init',channel,preview,initialAlbum:allowedInitialAlbum},origin);
    sizeObserver?.disconnect();const shell=doc.querySelector('.shell');if(shell){const fit=()=>{if(controller.signal.aborted)return;const height=Math.max(320,Math.ceil(shell.getBoundingClientRect().height)+2);if(Math.abs(parseFloat(frame.style.height)-height)>1)frame.style.height=height+'px';scheduleViewport();};sizeObserver=new ResizeObserver(fit);sizeObserver.observe(shell);fit();}
   }
  });

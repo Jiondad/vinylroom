@@ -20,12 +20,10 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
 @media(min-width:651px){th{padding:5px 4px}td{padding:2px 4px;vertical-align:middle}#tracks tr[data-track]{height:34px}td input:not([type=checkbox]){min-height:27px;height:27px;line-height:1.25;padding:3px}.state{padding-top:0}.disc-row td{padding:2px 8px;line-height:18px}.table-scroll{overflow:visible}}
 @media(max-width:650px){.shell{padding-top:9px}.editor-heading{margin-bottom:6px}.album-summary{min-height:65px;padding-bottom:6px}.editor-tools{margin:6px 0}.disc-controls{gap:6px}.disc-controls button{min-height:34px}.disc-controls input{min-height:34px}#numberControls{flex-direction:row;align-items:center}.row-marker{min-height:0;padding:0;line-height:5px}tbody tr:not(.disc-row){padding:5px 0}.file-cell .filename{white-space:nowrap}.path-open{width:28px;min-height:28px}.table-heading>div{gap:8px}}
 
-
-/* Tag Editor artist navigation: search stays visible, only the results/tree scroll.
-   The host supplies --tag-visible-height from its actual parent viewport because the
-   iframe itself grows to fit the editor and 100vh inside it is not the screen height. */
+/* Artist pane scroll only: keep the search visible while the album tree scrolls.
+   The iframe can be taller than the parent viewport; use host-provided viewport height. */
 .browser{
- height:clamp(240px,calc(var(--tag-visible-height, 100vh) - 105px),860px);
+ height:clamp(240px,calc(var(--tag-visible-height,100vh) - 105px),860px);
  max-height:860px;
  overflow:hidden;
 }
@@ -48,6 +46,6 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
  padding-bottom:10px;
 }
 @media(max-width:650px){
- .browser{height:min(420px,var(--tag-visible-height, 100vh));max-height:420px}
+ .browser{height:min(420px,var(--tag-visible-height,100vh));max-height:420px}
  .browser.collapsed{height:auto;max-height:none}
 }

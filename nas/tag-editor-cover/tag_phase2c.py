@@ -624,14 +624,16 @@ def validate_track_edits(raw):
             if key=='genre' and not value:raise ValueError('empty_genre_not_allowed')
             result[key]=[s.strip() for s in value]
         elif key in ('tracknumber','discnumber'):
+            if isinstance(value,list) and len(value)==1:value=value[0]
             if not isinstance(value,(str,int)) or not str(value).isdigit():raise ValueError('invalid_number')
             n=int(value)
             if not 1<=n<=99:raise ValueError('track_or_disc_out_of_range')
             result[key]=[f'{n:02d}' if key=='tracknumber' else str(n)]
         else:
-            if not isinstance(value,str) or not value.strip() or len(value)>500 or '\x00' in value:
+            values=value if isinstance(value,list) else [value]
+            if not values or len(values)>20 or (key=='date' and len(values)!=1) or any(not isinstance(v,str) or not v.strip() or len(v)>500 or '\x00' in v for v in values):
                 raise ValueError('invalid_'+key)
-            result[key]=[value.strip()]
+            result[key]=[v.strip() for v in values]
     return result
 
 
@@ -1172,7 +1174,16 @@ def _make_stage_track(original,changes):
                     code,klass=mapping[field]
                     tag.setall(code,[klass(encoding=3,text=value)])
                 else:raise ValueError('empty_field_not_allowed:'+field)
-            tag.save(str(stage),v2_version=3 if original_id3.version[1]==3 else 4)
+            # Keep ID3v1/APE trailing data and explicit multi-values; never
+            # rewrite old v1 fields or collapse v2.3 values with '/' separators.
+            with open(original,'rb') as f:
+                f.seek(-128,2) if original.stat().st_size>=128 else f.seek(0)
+                tail=f.read(128)
+            v1=tail if len(tail)==128 and tail.startswith(b'TAG') else b''
+            tag.save(str(stage),v1=0,v2_version=3 if original_id3.version[1]==3 else 4,v23_sep=None)
+            if v1:
+                with open(stage,'ab') as f:f.write(v1)
+            if get_id3(stage).unknown_frames!=original_id3.unknown_frames:raise ValueError('unknown_id3_frames_changed')
             if _cover._mp3_audio_hash(stage)!=original_stream:
                 raise ValueError('mp3_audio_bytes_changed')
             if _cover._covers(stage)!=original_covers:

@@ -36,7 +36,7 @@ export function polishAlbumHeader(root,album){
  const edit=root.querySelector('#edit-index');
  const share=hero.querySelector('.album-primary-actions');if(share){share.classList.add('album-header-actions');top.append(share);}
  if(edit&&!top.querySelector('.album-cover-tools')){
-  const tools=root.ownerDocument.createElement('div');tools.className='album-cover-tools';tools.append(edit);top.append(tools);
+  const tools=root.ownerDocument.createElement('div');tools.className='album-cover-tools';tools.append(edit);const tag=root.querySelector('#tag-edit-index');if(tag)tools.append(tag);top.append(tools);
   if(review?.parentElement?.children.length===1)review.parentElement.hidden=true;
  }
  // Force the detail-only typographic size at the final render point:

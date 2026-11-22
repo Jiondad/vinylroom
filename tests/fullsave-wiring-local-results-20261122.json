@@ -1,0 +1,13 @@
+{
+  "state": "LOCAL_NEW_CONNECTION_CHECKS_PASS",
+  "new_backend_unique_pass": 9,
+  "new_frontend_unique_pass": 4,
+  "existing_suites_rerun": 0,
+  "nas_execution": false,
+  "nas_native_reindex_callback": "UNCONFIRMED",
+  "main_published": false,
+  "operating_source_writes": 0,
+  "operating_media_writes": 0,
+  "operating_db_writes": 0,
+  "note": "New collision fixture was corrected; only the failed case rerun. GitHub CI result is recorded separately."
+}

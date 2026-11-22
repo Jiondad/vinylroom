@@ -16,7 +16,9 @@ jobs:
         run: python -m pip install mutagen==1.47.0 pillow imageio-ffmpeg
       - name: Check fixture encoder
         run: python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())'
-      - name: Run only new full-tag writer fixtures
-        run: python -m unittest discover -s tests -p 'test_tag_full_save_extension_20261122.py' -v
-      - name: Check isolated artist sidebar scroll structure
-        run: node --test frontend/tests/tag-editor-artist-pane-scroll.test.mjs
+      - name: Run only new save connection and path fixtures
+        run: |
+          export TAG_EDITOR_FIXTURE_FFMPEG="$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
+          python -m unittest discover -s tests -p 'test_tag_save_wiring_20261122.py' -v
+      - name: Check only new rename browser adapter
+        run: node --test frontend/tests/tag-editor-rename-wiring-20261122.test.mjs
