@@ -12,6 +12,7 @@ import unittest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'nas/tag-editor-cover'))
 import tag_cover_http as http
+import tag_rename_writer as rename
 
 
 class FullTagSaveFixture(unittest.TestCase):
@@ -33,7 +34,7 @@ class FullTagSaveFixture(unittest.TestCase):
             db.execute('CREATE TABLE albums (id TEXT,artist TEXT,title TEXT,path TEXT,year TEXT,format TEXT,missing INTEGER,hidden INTEGER,data TEXT)')
             db.execute('INSERT INTO albums VALUES(?,?,?,?,?,?,?,?,?)',
                        (self.id,'Original','Album','TEST/Album','2026','FLAC',0,0,
-                        json.dumps({'physical_files':[{},{}]})))
+                        json.dumps({'physical_files':[{'path':'TEST/Album/01.mp3'},{'path':'TEST/Album/01.flac'}]})))
         self.oldflags={name:os.getenv(name) for name in
                        (http.cover.base.TRACK_WRITE_ENV,http.cover.base.FULL_TAG_WRITE_ENV)}
         os.environ[http.cover.base.TRACK_WRITE_ENV]='true'
@@ -110,5 +111,50 @@ class FullTagSaveFixture(unittest.TestCase):
         p=http.cover.base.track_write_plan(album,entries,issues,
                   'TEST/Album/01.flac',{'album':'New Album'})
         self.assertEqual(p['state'],'HOLD')
+
+    def test_rename_writer_requires_catalog_callback(self):
+        os.environ[rename.RENAME_ENV]='true'
+        try:
+            plan=rename.plan(self.db,self.music,self.id,'TEST/Album/01.flac',
+                             '1 - 01. Updated.flac')
+            self.assertEqual(plan['state'],'READ_ONLY_RENAME_PLAN',plan)
+            original=http.cover.base.file_sha256(self.album_dir/'01.flac')
+            result=rename.apply(self.db,self.music,self.backup,self.id,
+                                'TEST/Album/01.flac','1 - 01. Updated.flac',
+                                plan['plan_id'],None,True)
+            self.assertEqual(result['state'],'HOLD')
+            self.assertTrue((self.album_dir/'01.flac').exists())
+            self.assertFalse((self.album_dir/'1 - 01. Updated.flac').exists())
+            self.assertEqual(original,http.cover.base.file_sha256(self.album_dir/'01.flac'))
+        finally:
+            os.environ.pop(rename.RENAME_ENV,None)
+
+    def test_rename_requires_synchronous_catalog_update(self):
+        os.environ[rename.RENAME_ENV]='true'
+        try:
+            old_file=self.album_dir/'01.flac'
+            old_sha=http.cover.base.file_sha256(old_file)
+            plan=rename.plan(self.db,self.music,self.id,'TEST/Album/01.flac',
+                             '1 - 01. Updated.flac')
+            self.assertEqual(plan['state'],'READ_ONLY_RENAME_PLAN',plan)
+            def reindex(album_id,album_path):
+                with sqlite3.connect(str(self.db)) as db:
+                    row=db.execute('SELECT data FROM albums WHERE id=?',(album_id,)).fetchone()
+                    data=json.loads(row[0])
+                    data['physical_files']=[{'path':'TEST/Album/'+p.name}
+                         for p in sorted(self.album_dir.glob('*')) if p.suffix in ('.mp3','.flac')]
+                    db.execute('UPDATE albums SET data=? WHERE id=?',
+                               (json.dumps(data),album_id))
+            result=rename.apply(self.db,self.music,self.backup,self.id,
+                                'TEST/Album/01.flac','1 - 01. Updated.flac',
+                                plan['plan_id'],reindex,True)
+            self.assertEqual(result['state'],'RENAME_WRITE_COMPLETED',result)
+            self.assertFalse(old_file.exists())
+            self.assertEqual(http.cover.base.file_sha256(
+                self.album_dir/'1 - 01. Updated.flac'),old_sha)
+            self.assertIn('1 - 01. Updated.flac',
+                rename._catalog_file_names(self.db,self.id))
+        finally:
+            os.environ.pop(rename.RENAME_ENV,None)
 
 if __name__=='__main__':unittest.main()
