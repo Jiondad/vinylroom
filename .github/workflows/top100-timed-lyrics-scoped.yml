@@ -1,0 +1,11 @@
+name: Top100 synchronized lyrics scoped test
+on:
+  push:
+    branches: [fix/top100-realtime-lyrics-20261122]
+jobs:
+  lyrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Top100 timed lyrics and track following
+        run: node --test frontend/tests/top100-timed-lyrics-recovery.test.mjs
