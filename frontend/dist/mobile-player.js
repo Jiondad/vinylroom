@@ -73,7 +73,7 @@ export function mountMobilePlayer(player,host){
  expanded.querySelector('[data-save]').onclick=save;
  function inlineArea(){queue.querySelector('.queue-inline-form')?.remove();const host=document.createElement('div');host.className='queue-inline-form';queue.querySelector('ol').before(host);return host;}
  queue.querySelector('[data-save]').onclick=()=>{const inlineHost=inlineArea();window.dispatchEvent(new CustomEvent('save-playlist-tracks',{detail:{tracks:player.items.map(t=>({...t})),inlineHost}}));};
- queue.querySelector('[data-clear]').onclick=()=>{const host=inlineArea();const text=document.createElement('p');text.textContent='재생 대기열을 비울까요?';const actions=document.createElement('div');actions.className='actions';const cancel=document.createElement('button');cancel.type='button';cancel.textContent='취소';cancel.onclick=()=>host.remove();const confirm=document.createElement('button');confirm.type='button';confirm.textContent='비우기';confirm.dataset.vrRole='danger';confirm.onclick=()=>{host.remove();player.clear();};actions.append(cancel,confirm);host.append(text,actions);};
+ queue.querySelector('[data-clear]').onclick=()=>{queue.querySelector('.queue-inline-form')?.remove();player.clear();};
  const list=queue.querySelector('ol');
  bindQueueReordering(list,player);
  list.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.play!==undefined)player.play(Number(b.dataset.play));if(b.dataset.remove!==undefined)player.remove(Number(b.dataset.remove));});
