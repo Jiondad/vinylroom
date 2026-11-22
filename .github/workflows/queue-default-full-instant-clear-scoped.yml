@@ -1,0 +1,15 @@
+name: Queue default-full instant-clear scoped test
+on:
+  push:
+    branches: [fix/queue-show-all-instant-clear-20261122]
+jobs:
+  queue-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test only queue default and direct-clear changes
+        run: |
+          node --check frontend/dist/reference-ui.js
+          node --check frontend/dist/queue-controls.js
+          node --check frontend/dist/mobile-player.js
+          node --test frontend/tests/queue-default-full-and-direct-clear.test.mjs
