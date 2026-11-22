@@ -15,7 +15,7 @@ import {createListToolbar} from './list-toolbar.js';
 import {arrangeHomeSummary,fitTodayCovers} from './home-layout.js';
 import {createNavigationHistory,navigationSnapshot} from './navigation-history.js';
 import {indexingPanel,mountIndexing} from './indexing-ui.js';
-import {mountAdminCenter,closeAdminCenter} from './admin-center.js';
+import {mountAdminCenter,closeAdminCenter,tagEditorRefreshRequested} from './admin-center.js';
 import {openMemberManagement} from './member-management.js';
 import {createCatalogRequests} from './catalog-requests.js';
 import {initializeBrowse,publicBrowseEnabled,readRequest,installMemberPrompts} from './browse-access.js';
@@ -553,6 +553,11 @@ window.addEventListener('vinyl-approval-change',()=>{
 });
 if(!isApprovedMember()&&publicBrowseEnabled())getPlayer().clear();
 finishAccessInitialization(isApprovedMember());
+// Restore only a previously open Tag Editor after session/approval revalidation.
+// This path never runs on a fresh visit or after the Admin back button clears the flag.
+if(tagEditorRefreshRequested()&&repo.admin&&isApprovedMember()){
+ try{await openAdminCenter();}catch(error){console.warn('Tag Editor 화면 복원 보류:',error?.message||'관리자 승인 필요');}
+}
 
 
 

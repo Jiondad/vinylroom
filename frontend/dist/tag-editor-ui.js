@@ -4,6 +4,20 @@ const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>
 const S={album:null,original:[],draft:[],selected:new Set(),renames:{},warnings:{},drafts:new Map(),nodes:new Map(),active:'',search:[],metrics:[],anchor:null,visible:[]};
 let saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};let activeTool='tags';const toolInputs={};
 let tagSaveBusy=false;const justSaved=new Set();
+const REFRESH_VIEW_KEY='vinyl-tag-editor-refresh-view-v1';
+function readRefreshView(){try{const v=JSON.parse(sessionStorage.getItem(REFRESH_VIEW_KEY)||'null');return v&&typeof v==='object'&&!Array.isArray(v)?v:null;}catch{return null;}}
+const refreshView=readRefreshView();
+function rememberEditorView(){
+ try{
+  const previous=readRefreshView()||{};
+  const album=S.album?{id:S.album.id,title:S.album.title||'',artist:S.album.artist||'',date:S.album.date||'',relative_path:S.album.path||''}:previous.album||null;
+  const scroll=$('#artistScroll');
+  sessionStorage.setItem(REFRESH_VIEW_KEY,JSON.stringify({
+   album,tool:activeTool,scrollTop:scroll?.scrollTop||0
+  }));
+ }catch{}
+}
+
 const pending=new Map(),inflight=new Map(),gate=selectionGate();let channel=null,rpcSeq=0,toastTimer,searchVersion=0,currentTrackRequest=null;
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2600);}
 function read(url,body){const key=body===undefined?url:null;if(key&&inflight.has(key))return inflight.get(key);
@@ -58,7 +72,8 @@ async function selectAlbum(id){if(S.active===id&&S.album)return;const info=[...S
  saveDraft();const ticket=gate.next(),started=performance.now();if(currentTrackRequest)currentTrackRequest.cancel();S.active=id;S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();coverEditor.close();$('#albumHeader').innerHTML=summary(info);$('#loadStatus').textContent='트랙 태그를 불러오는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;renderTree();renderTracks('트랙 태그를 불러오는 중…');
  $('#albumHeader').setAttribute('aria-busy','true');parent.postMessage({type:'vr-tag-covers',channel},location.origin);
  const request=read('/api/tracks?album='+encodeURIComponent(id));currentTrackRequest=request;
- try{const {result,metrics}=await request;if(!gate.current(ticket))return;const album=result.album;S.album=album;$('#albumHeader .folder-path').textContent=album.path||'';$('#albumHeader .folder-path').title=album.path||'';S.original=clone(album.entries);const saved=S.drafts.get(id+'|shared'),valid=saved?.original===JSON.stringify(S.original);S.draft=clone(valid?saved.draft:album.entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};S.selected=new Set();S.anchor=null;$('#loadStatus').textContent='';$('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();const measurement={album_id:id,...metrics,display_ms:performance.now()-started};S.metrics.push(measurement);parent.postMessage({type:'vr-tag-measured',channel,measurement},location.origin);$('#albumHeader').dataset.readMetrics=JSON.stringify(measurement);window.vrTagEditorLastSelection=measurement;window.dispatchEvent(new CustomEvent('vr-tag-selection-measured',{detail:measurement}));
+ try{const {result,metrics}=await request;if(!gate.current(ticket))return;const album=result.album;S.album=album;$('#albumHeader .folder-path').textContent=album.path||'';$('#albumHeader .folder-path').title=album.path||'';S.original=clone(album.entries);const saved=S.drafts.get(id+'|shared'),valid=saved?.original===JSON.stringify(S.original);S.draft=clone(valid?saved.draft:album.entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};S.selected=new Set();S.anchor=null;$('#loadStatus').textContent='';$('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();rememberEditorView();
+ if(refreshView?.album?.id===id&&Number.isFinite(refreshView.scrollTop))requestAnimationFrame(()=>{$('#artistScroll').scrollTop=refreshView.scrollTop;});const measurement={album_id:id,...metrics,display_ms:performance.now()-started};S.metrics.push(measurement);parent.postMessage({type:'vr-tag-measured',channel,measurement},location.origin);$('#albumHeader').dataset.readMetrics=JSON.stringify(measurement);window.vrTagEditorLastSelection=measurement;window.dispatchEvent(new CustomEvent('vr-tag-selection-measured',{detail:measurement}));
  if(matchMedia('(max-width:650px)').matches){$('.browser').classList.add('collapsed');$('#browseToggle').textContent='펼치기';$('#browseToggle').setAttribute('aria-expanded','false');}
  }catch(e){if(gate.current(ticket)&&e.message!=='selection_superseded'){$('#loadStatus').textContent=e.message;renderTracks('조회 실패 · 왼쪽 앨범을 다시 선택하세요.');}}
  finally{if(gate.current(ticket)){$('#albumHeader').removeAttribute('aria-busy');currentTrackRequest=null;}}
@@ -160,9 +175,10 @@ function activateTool(tool){
  for(const button of document.querySelectorAll('[data-tool]'))button.setAttribute('aria-pressed',String(button.dataset.tool===tool));
  for(const option of $('#bulkField').options){option.hidden=!group.includes(option.value);option.disabled=option.hidden;}
  const savedField=toolInputs[tool]?.field;$('#bulkField').value=group.includes(savedField)?savedField:group[0];
- $('.bulk-toolbar').setAttribute('data-mode',tool);const caption=$('#formatCaption');if(caption)caption.textContent=tool==='to'?'파일명 생성 패턴':'파일명 추출 패턴';toolbar();renderTracks();
+ $('.bulk-toolbar').setAttribute('data-mode',tool);rememberEditorView();const caption=$('#formatCaption');if(caption)caption.textContent=tool==='to'?'파일명 생성 패턴':'파일명 추출 패턴';toolbar();renderTracks();
 }
-document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[data-tool]');if(b)activateTool(b.dataset.tool);};activateTool('tags');
+document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[data-tool]');if(b)activateTool(b.dataset.tool);};activateTool(toolGroups[refreshView?.tool]&&refreshView.tool!=='cover'?refreshView.tool:'tags');
+$('#artistScroll').addEventListener('scroll',rememberEditorView,{passive:true});
 
 function saveButtonState(){
  const renameMode=activeTool==='to',enabled=renameMode?saveCaps.rename:saveCaps.tags;
