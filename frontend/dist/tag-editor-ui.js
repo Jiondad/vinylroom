@@ -25,7 +25,18 @@ function addPath(path){let parent='';for(const name of path.split('/').filter(Bo
 function addAlbums(items,parentPath){for(const a of items){const path=a.tree_path||a.relative_path||a.path||parentPath+'/@'+a.id;const n=addPath(path);n.album=a;n.name=a.title;let par=path;while(par){node(par).albumsLoaded=true;par=par.split('/').slice(0,-1).join('/');}}
  node(parentPath).albumsLoaded=true;
 }
-function renderTree(){const render=(path,depth=0)=>{const n=node(path),isAlbum=!!n.album,open=n.expanded;return `<li><div class="tree-row ${isAlbum?'album ':''}${isAlbum&&S.active===n.album.id?'active':''}" style="padding-left:${depth*13+4}px"><button class="tree-toggle" data-expand="${esc(path)}" aria-label="${esc(n.name)} ${open?'접기':'펼치기'}" aria-expanded="${open}" ${isAlbum&&!n.children.size?'disabled':''}>${isAlbum&&!n.children.size?'·':open?'▾':'▸'}</button><button class="tree-label" ${isAlbum?'data-album="'+esc(n.album.id)+'"':'data-folder="'+esc(path)+'"'} title="${esc(path||'/music')}"><span class="tree-icon">${isAlbum?'♫':'▱'}</span>${esc(n.name)}${isAlbum?'<small>'+esc(n.album.date||'')+'</small>':''}</button></div>${open?`<ul class="tree-branch">${[...n.children].sort((a,b)=>node(a).name.localeCompare(node(b).name,'ko',{numeric:true})).map(p=>render(p,depth+1)).join('')}</ul>`:''}${n.loading?'<p class="tree-feedback">불러오는 중…</p>':''}${n.error?`<p class="tree-feedback">${esc(n.error)} <button data-retry="${esc(path)}">다시 조회</button></p>`:''}</li>`;};$('#artistList').innerHTML='<ul class="tree-branch">'+render('')+'</ul>';}
+// Use the real NAS folder name for sibling ordering, not the album's display title.
+// This matches Windows Explorer's name-based/natural ascending folder order.
+function treeFolderSortKey(path){
+ const n=node(path);
+ const source=n.album?.relative_path||n.album?.path||path;
+ return String(source).split('/').filter(Boolean).pop()||n.name;
+}
+function compareTreeFolders(a,b){
+ return treeFolderSortKey(a).localeCompare(treeFolderSortKey(b),'ko',{numeric:true,sensitivity:'base'})||
+  a.localeCompare(b,'ko',{numeric:true,sensitivity:'base'});
+}
+function renderTree(){const render=(path,depth=0)=>{const n=node(path),isAlbum=!!n.album,open=n.expanded;return `<li><div class="tree-row ${isAlbum?'album ':''}${isAlbum&&S.active===n.album.id?'active':''}" style="padding-left:${depth*13+4}px"><button class="tree-toggle" data-expand="${esc(path)}" aria-label="${esc(n.name)} ${open?'접기':'펼치기'}" aria-expanded="${open}" ${isAlbum&&!n.children.size?'disabled':''}>${isAlbum&&!n.children.size?'·':open?'▾':'▸'}</button><button class="tree-label" ${isAlbum?'data-album="'+esc(n.album.id)+'"':'data-folder="'+esc(path)+'"'} title="${esc(path||'/music')}"><span class="tree-icon">${isAlbum?'♫':'▱'}</span>${esc(n.name)}${isAlbum?'<small>'+esc(n.album.date||'')+'</small>':''}</button></div>${open?`<ul class="tree-branch">${[...n.children].sort(compareTreeFolders).map(p=>render(p,depth+1)).join('')}</ul>`:''}${n.loading?'<p class="tree-feedback">불러오는 중…</p>':''}${n.error?`<p class="tree-feedback">${esc(n.error)} <button data-retry="${esc(path)}">다시 조회</button></p>`:''}</li>`;};$('#artistList').innerHTML='<ul class="tree-branch">'+render('')+'</ul>';}
 async function expand(path,{retry=false}={}){const n=node(path);if(n.album&&!n.children.size)return;const opening=!n.expanded||!n.loaded||retry;n.expanded=opening;if(!opening){renderTree();return;}if(n.loading){renderTree();return;}n.loading=true;n.error='';renderTree();try{
  if(!n.loaded||retry){const r=await api('/api/folders?path='+encodeURIComponent(path));for(const a of r.items||[]) {n.children.add(a.id);node(a.id,a.name);}n.loaded=true;}
  if(path.split('/').length>=2&&!n.albumsLoaded){const r=await api('/api/albums?artist='+encodeURIComponent('folder:'+path));addAlbums(r.items||[],path);if(r.truncated)n.error='조회 범위 일부만 표시';}
