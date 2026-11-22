@@ -102,6 +102,13 @@ class FullTagSaveFixture(unittest.TestCase):
         c=http.save_capabilities()
         self.assertFalse(c['mp3_tags'])
         self.assertEqual(c['tag_formats'],['flac'])
+        # Even with FULL_TAG_WRITE_ENV=true, unqualified album fields stay HOLD.
+        unapproved=http.tag_plan(self.db,self.music,
+                      {'album_id':self.id,'file':'TEST/Album/01.flac',
+                       'edits':{'album':['Unauthorized change']},
+                       'before_tags':{'album':['Album']}})
+        self.assertEqual(unapproved['state'],'HOLD',unapproved)
+        self.assertEqual(unapproved['reason'],'tag_fields_not_nas_qualified')
         p=http.tag_plan(self.db,self.music,
                         {'album_id':self.id,'file':'TEST/Album/01.mp3',
                          'edits':{'title':['New']},'before_tags':{'title':['Before']}})
