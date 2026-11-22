@@ -134,10 +134,10 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  const controller=new AbortController(),channel=crypto.randomUUID(),frame=document.createElement('iframe');
  frame.title='Tag Editor · NAS 색인 태그 읽기 전용';frame.style.cssText='width:100%;height:320px;min-height:320px;display:block;border:0;border-radius:8px;background:#f5f7f8';frame.referrerPolicy='no-referrer';frame.scrolling='no';
  const adminPage=container.closest('.vinyl-admin-page');adminPage?.classList.add('vr-tag-editor-active');if(adminPage)document.body.classList.add('vinyl-tag-editor-open');let sizeObserver=null,viewportTick=0;
- function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,Math.min(innerHeight,r.bottom)-Math.max(0,r.top))},location.origin);}
+ function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,innerHeight-Math.max(0,r.top)-12)},location.origin);}
  function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
  window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
- frame.src=new URL('tag-editor-ui.html?v=20261122-wide-albumartist',document.baseURI).href;
+ frame.src=new URL('tag-editor-ui.html?v=20261122-viewport-fill',document.baseURI).href;
  const allowedInitialAlbum=initialAlbum&&UUID.test(initialAlbum.id||'')?{id:initialAlbum.id,title:String(initialAlbum.title||''),artist:String(initialAlbum.artist||''),date:String(initialAlbum.date||''),relative_path:String(initialAlbum.relative_path||'')}:null;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal,initialAlbumId:allowedInitialAlbum?.id});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
