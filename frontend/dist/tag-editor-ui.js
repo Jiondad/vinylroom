@@ -126,16 +126,16 @@ function activateTool(tool){
 }
 document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[data-tool]');if(b)activateTool(b.dataset.tool);};activateTool('tags');
 
-async function readSaveCaps(){try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:false};}catch{saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};}$('#saveTags').disabled=!saveCaps.tags;$('#saveTags').textContent=saveCaps.tags?'태그 변경 저장':'파일 저장 OFF';$('#saveStatus').textContent=saveCaps.tags?'FLAC 지원 필드만 저장':'NAS 저장 경로·시험 파일 검증 확인 필요';}
+async function readSaveCaps(){try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:r.rename===true};}catch{saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};}$('#saveTags').disabled=!saveCaps.tags;$('#saveTags').textContent=saveCaps.tags?'태그 변경 저장':'파일 저장 OFF';$('#saveStatus').textContent=saveCaps.tags?`태그 저장 지원: ${(saveCaps.tag_formats||['flac']).join('·').toUpperCase()} · ${(saveCaps.tag_fields||[]).length}개 필드`:'NAS 저장 경로·시험 파일 검증 확인 필요';}
 $('#saveTags').onclick=async()=>{
  if(!saveCaps.tags||!S.album)return;if(Object.keys(S.renames).length){toast('파일명 변경 Writer는 아직 지원되지 않습니다. 저장하지 않았습니다.');return;}
  const rows=S.draft.filter(e=>S.selected.has(e.file)&&changedFields(e).length);if(!rows.length){toast('선택 트랙의 변경 초안이 없습니다.');return;}
- if(rows.some(e=>!e.file.toLowerCase().endsWith('.flac')||changedFields(e).some(f=>!saveCaps.tag_fields.includes(f)))){toast('현재 Writer는 FLAC 지원 필드만 저장합니다. MP3·공통 앨범 태그는 OFF입니다.');return;}
+ if(rows.some(e=>!(saveCaps.tag_formats||['flac']).includes(e.file.split('.').pop().toLowerCase())||changedFields(e).some(f=>!saveCaps.tag_fields.includes(f)))){toast('NAS에서 아직 승인되지 않은 파일 형식 또는 태그 필드입니다.');return;}
  if(!window.confirm(`선택한 ${rows.length}곡의 태그 변경 초안을 저장할까요? 백업과 파일 충돌 검사를 적용합니다.`))return;
  $('#saveTags').disabled=true;$('#editor').inert=true;let completed=0;try{
   const id=S.album.id,plans=[];for(const e of rows){const old=S.original.find(x=>x.file===e.file),fs=changedFields(e),body={album_id:id,file:e.file,edits:Object.fromEntries(fs.map(f=>[f,e.tags[f]])),before_tags:Object.fromEntries(fs.map(f=>[f,old.tags[f]||[]]))};const p=await api('/api/tag/plan',body);if(p.state!=='READ_ONLY_TRACK_WRITE_PLAN')throw Error(p.reason||p.state);plans.push({e,body,p});}
   if(!window.confirm(`선택 ${plans.length}곡의 표시된 태그 변경을 저장합니다. 백업·충돌 검사를 적용합니다. 계속할까요?`))return;
   for(const {e,body,p} of plans){if(S.album?.id!==id)throw Error('앨범 선택이 변경됐습니다.');const r=await api('/api/tag/apply',{...body,expected_plan_id:p.plan_id,confirm_write:true});if(r.state!=='TAG_TRACK_WRITE_COMPLETED')throw Error(r.reason||r.state);S.original.find(x=>x.file===e.file).tags=clone(r.saved_tags||e.tags);e.tags=clone(r.saved_tags||e.tags);completed++;$('#saveStatus').textContent=`저장 ${completed}곡 · operation ${r.operation_id}`;}
-  S.drafts.delete(id+'|'+activeTool);renderTracks();
+  S.drafts.delete(id+'|shared');saveDraft();renderTracks();
  }catch(e){$('#saveStatus').textContent=`저장 ${completed}곡 · 중단: ${e.message}`;}finally{$('#editor').inert=false;$('#saveTags').disabled=!saveCaps.tags;}
 };
