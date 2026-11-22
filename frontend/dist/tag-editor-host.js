@@ -111,7 +111,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,Math.min(innerHeight,r.bottom)-Math.max(0,r.top))},location.origin);}
  function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
  window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
- frame.src=new URL('tag-editor-ui.html?v=20261122-save-ui',document.baseURI).href;
+ frame.src=new URL('tag-editor-ui.html?v=20261122-artist-scroll',document.baseURI).href;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
  const queue=[],jobs=new Map();let active=0;
