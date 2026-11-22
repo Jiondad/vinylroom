@@ -1,0 +1,41 @@
+name: Tag Editor HTTP400 diagnostics scoped
+on:
+  push:
+    branches: [fix/tag-editor-apply400-diagnostics-20261122]
+jobs:
+  metadata-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate only safe diagnostic module and install scripts
+        run: |
+          python3 - <<'PY'
+          import ast, io, sys, json, hashlib, contextlib
+          from pathlib import Path
+          root=Path('nas/tag-editor-cover')
+          for name in ('tag_cover_http.py','stage_apply400_diagnostic_nas.py','qualify_apply400_diagnostic_nas.py','deploy_apply400_diagnostic_nas.py'):
+              ast.parse((root/name).read_text())
+          src=(root/'tag_cover_http.py').read_text()
+          tree=ast.parse(src)
+          node=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='_safe_apply_error_log')
+          ns={'Path':Path,'hashlib':hashlib,'json':json,'_SAVE_ROUTES':{'/v2/admin/tag-cover/tag-apply'}}
+          exec(compile(ast.Module(body=[node],type_ignores=[]),'tag_cover_http.py','exec'),ns)
+          out=io.StringIO()
+          try:raise ValueError('secret_token=abc /music/private/track.flac')
+          except ValueError as e:
+              with contextlib.redirect_stderr(out):
+                  ns['_safe_apply_error_log']('/v2/admin/tag-cover/tag-apply',e)
+          event=json.loads(out.getvalue())
+          assert event['event']=='TAG_EDITOR_APPLY_HTTP_ERROR'
+          assert event['exception_type']=='ValueError'
+          assert event['route']=='/v2/admin/tag-cover/tag-apply'
+          assert 'abc' not in out.getvalue() and '/music/' not in out.getvalue()
+          assert 'line' in event and 'function' in event
+          stage=(root/'stage_apply400_diagnostic_nas.py').read_text()
+          assert 'source_sha256' in stage and 'fullsave-native-qualified.json' in stage
+          deploy=(root/'deploy_apply400_diagnostic_nas.py').read_text()
+          assert 'len(chain)!=11' in deploy
+          assert 'compose.aux-safe-save-qualified.json' in deploy
+          assert 'atomic_receipt(root,receipt,original)' in deploy
+          print('REDACTED_HTTP400_DIAGNOSTIC_SCOPED_PASS')
+          PY
