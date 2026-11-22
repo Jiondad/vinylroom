@@ -1,0 +1,35 @@
+name: Tag Editor nested stage script only
+on:
+  push:
+    branches: [feature/tag-editor-complete-save-20261122]
+    paths:
+      - nas/tag-editor-cover/stage_nested_aux_readonly_nas.py
+jobs:
+  validate-staging-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate no-write staging patch against original full-save source
+        run: |
+          python3 - <<'PY'
+          import importlib.util,subprocess,pathlib
+          script='nas/tag-editor-cover/stage_nested_aux_readonly_nas.py'
+          compile(pathlib.Path(script).read_text(),script,'exec')
+          spec=importlib.util.spec_from_file_location('stager',script)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          parent='d6a182211a44bdd1af2e55650a2c5b4dde1f8c52^'
+          for name,patch in [('tag_phase2c.py',m.patch_tags),('tag_cover_http.py',m.patch_http)]:
+              raw=subprocess.check_output(['git','show',parent+':nas/tag-editor-cover/'+name]).decode()
+              updated=patch(raw)
+              compile(updated,name,'exec')
+              assert updated!=raw
+              assert 'allow_auxiliary_disc_dirs=True' in (updated if name.endswith('http.py') else m.patch_http('def read_album_tags(catalog,music_root,album_id):\n    album,entries,issues=cover.base.inventory(catalog,music_root,album_id)'))
+              if name.endswith('phase2c.py'):
+                  assert 'def discover_files(root,folder,allow_auxiliary_disc_dirs=False)' in updated
+                  assert "if allow_auxiliary_disc_dirs:" in updated
+              else:
+                  assert "def read_album_tags(catalog,music_root,album_id):" in updated
+          print('STAGING_SOURCE_ANCHORS_AND_SYNTAX_PASS')
+          PY
