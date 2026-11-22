@@ -15,10 +15,8 @@ export function bindDesktopQueueInline(panel,save,clear,getTracks){
  const doc=panel.ownerDocument,win=doc.defaultView,clearOriginal=clear?.onclick;
  function area(){panel.querySelector('.queue-inline-form')?.remove();const box=doc.createElement('div');box.className='queue-inline-form';panel.querySelector('ol').before(box);return box;}
  if(save)save.onclick=()=>{const inlineHost=area();win.dispatchEvent(new win.CustomEvent('save-playlist-tracks',{detail:{tracks:getTracks().map(t=>({...t})),inlineHost}}));};
- if(clear&&clearOriginal)clear.onclick=()=>{
-  const box=area(),text=doc.createElement('p'),actions=doc.createElement('div');text.textContent='재생 대기열을 비울까요?';actions.className='actions';
-  const cancel=doc.createElement('button');cancel.type='button';cancel.textContent='취소';cancel.onclick=()=>box.remove();
-  const confirm=doc.createElement('button');confirm.type='button';confirm.textContent='비우기';confirm.dataset.vrRole='danger';confirm.onclick=event=>{box.remove();clearOriginal.call(clear,event);};
-  actions.append(cancel,confirm);box.append(text,actions);
+ if(clear&&clearOriginal)clear.onclick=event=>{
+  panel.querySelector('.queue-inline-form')?.remove();
+  clearOriginal.call(clear,event);
  };
 }
