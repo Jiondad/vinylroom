@@ -226,6 +226,6 @@ export async function renderTop100(root,{isCurrent=()=>true,initialFolder='',onF
 }
 
 
-window.addEventListener('vinyl-approval-change',()=>{if(!isApprovedMember()){releaseCovers();for(const url of coverCache.values())URL.revokeObjectURL(url);coverCache.clear();// Shared lyrics dialog closes through the existing approval/account listeners.}});
+window.addEventListener('vinyl-approval-change',()=>{if(!isApprovedMember()){releaseCovers();for(const url of coverCache.values())URL.revokeObjectURL(url);coverCache.clear();/* Shared lyrics dialog closes through its existing approval/account listeners. */}});
 
 
