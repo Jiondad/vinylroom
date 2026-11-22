@@ -112,7 +112,32 @@ def valid_album_folder(root,relative):
     return root,target
 
 
-def discover_files(root,folder):
+def _auxiliary_tree_issue(root,folder):
+    """Bounded read-only check: ignore a disc subfolder ONLY if it has no audio.
+    Links, inaccessible entries and unusual filesystem objects stay HOLD.
+    """
+    pending=[(folder,0)]
+    visited=0
+    while pending:
+        directory,depth=pending.pop()
+        if depth>8:return {'code':'nested_directory_inspection_limit','path':folder.relative_to(root).as_posix()}
+        try:
+            children=directory.iterdir()
+            for entry in children:
+                visited+=1
+                if visited>2000:return {'code':'nested_directory_inspection_limit','path':folder.relative_to(root).as_posix()}
+                if entry.is_symlink():return {'code':'nested_directory_symlink','path':entry.relative_to(root).as_posix()}
+                if entry.is_dir():
+                    pending.append((entry,depth+1))
+                elif entry.is_file():
+                    if entry.suffix.lower() in AUDIO_EXT:
+                        return {'code':'nested_directory_contains_audio','path':entry.relative_to(root).as_posix()}
+                else:return {'code':'nested_directory_special_file','path':entry.relative_to(root).as_posix()}
+        except OSError:return {'code':'nested_directory_unreadable','path':directory.relative_to(root).as_posix()}
+    return None
+
+
+def discover_files(root,folder,allow_auxiliary_disc_dirs=False):
     files=[];issues=[]
     # Inspect album root and recognized CD/Disc subfolders only.
     try:children=sorted(folder.iterdir(),key=lambda p:p.name.casefold())
@@ -141,7 +166,11 @@ def discover_files(root,folder):
             elif p.is_file() and p.suffix.lower() in AUDIO_EXT:
                 files.append(p)
             elif p.is_dir():
-                issues.append({'code':'nested_directory_below_disc','path':p.relative_to(root).as_posix()})
+                if allow_auxiliary_disc_dirs:
+                    issue=_auxiliary_tree_issue(root,p)
+                    if issue:issues.append(issue)
+                else:
+                    issues.append({'code':'nested_directory_below_disc','path':p.relative_to(root).as_posix()})
     if not files:issues.append({'code':'no_audio_files_found'})
     if len(files)>MAX_RECORDS:issues.append({'code':'too_many_audio_files','count':len(files),'max':MAX_RECORDS})
     return files[:MAX_RECORDS],issues
@@ -158,10 +187,10 @@ def _as_list(value):
     return [str(value)]
 
 
-def inventory(dbpath,rootpath,album_id):
+def inventory(dbpath,rootpath,album_id,allow_auxiliary_disc_dirs=False):
     row,data=album_record(dbpath,album_id)
     root,folder=valid_album_folder(rootpath,row['path'])
-    paths,issues=discover_files(root,folder)
+    paths,issues=discover_files(root,folder,allow_auxiliary_disc_dirs)
     entries=[]
     for p in paths:
         rel=p.relative_to(root).as_posix()
