@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import sqlite3
 import subprocess
+import imageio_ffmpeg
 import sys
 import tempfile
 import unittest
@@ -24,7 +25,7 @@ class FullTagSaveFixture(unittest.TestCase):
         self.backup=self.root/'backups'
         self.id='11111111-1111-4111-8111-111111111111'
         for ext in ('mp3','flac'):
-            subprocess.run(['ffmpeg','-y','-v','error','-f','lavfi','-i',
+            subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(),'-y','-v','error','-f','lavfi','-i',
                             'sine=frequency=440:duration=0.15',
                             '-metadata','title=Before','-metadata','artist=Original',
                             '-metadata','album=Album',str(self.album_dir/('01.'+ext))],check=True)
