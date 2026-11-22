@@ -30,6 +30,11 @@ jobs:
           assert 'compose.nested-aux-qualified.json' in d
           assert 'len(chain)!=10' in d
           assert 'atomic_receipt(root,receipt,original)' in d
+          assert 'newv=json.loads(json.dumps(oldv))' in d
+          assert 'newv["source"]=str(STAGE/name)' in d
+          assert 'qualified_compose_bind_not_read_only' in d
+          assert 'replacement.append(newv)' in d
+          assert 'if oldv!=newv or rm[target]["source"]' in d
           assert 'PATCH_APPLIED_ADMIN_API_VERIFICATION_PENDING' in d
           assert 'NAS_QUALIFIED_SWITCH_PREFLIGHT_PASS_NOT_INSTALLED' in d
           assert 'if a.mode=="preflight":preflight()' in d
