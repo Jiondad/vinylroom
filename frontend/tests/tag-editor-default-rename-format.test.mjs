@@ -15,5 +15,5 @@ test('track numbers 9, 10 and 99 retain exactly two digits',()=>{
  assert.equal(parseFormat(fmt,false).some(([kind,value])=>kind==='var'&&value==='track'),true);
 });
 test('only the exact supported $num track expression is accepted',()=>{
- assert.throws(()=>renderFormat('%discnumber% - $num(%artist%,2). %title%',{discnumber:['1'],artist:['A'],title:['X']}),/unsupported_placeholder|pattern_has_no_variables|missing_tag/);
+ assert.throws(()=>renderFormat('%discnumber% - $num(%artist%,2). %title%',{discnumber:['1'],artist:['A'],title:['X']}),/unsupported_num_expression/);
 });
