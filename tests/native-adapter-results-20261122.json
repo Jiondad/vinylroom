@@ -1,0 +1,9 @@
+{
+  "scope": "new native adapter only",
+  "unique_new_checks": 12,
+  "passed": 12,
+  "previous_13_checks": "reused; not rerun",
+  "operating_writes": 0,
+  "nas_fixture": "NOT_RUN",
+  "pages": "HOLD"
+}

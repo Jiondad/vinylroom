@@ -142,6 +142,7 @@ def apply(catalog,music_root,backup_root,album_id,file,new_name,expected_plan_id
             if prepared.get('state')!='READ_ONLY_RENAME_PLAN':return prepared
             if prepared['plan_id']!=expected_plan_id:
                 return base.hold('rename_plan_changed_since_confirmation')
+            if callable(getattr(reindex_album,'preflight',None)):reindex_album.preflight(album_id,prepared['album_path'])
             source=Path(music_root)/file
             target=Path(music_root)/prepared['new_file']
             expected_sha=prepared['expected_file_sha256']

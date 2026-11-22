@@ -5,6 +5,7 @@ import {readRequest} from './browse-access.js';
 import {NAS_URL} from './config.js';
 import {currentMemberToken,invalidateMemberAccess,isApprovedMember} from './playlists.js';
 import {getPlayer,playItem,syncPlayButtons} from './player.js';
+import {showLyricDialog} from './lyrics-dialog.js';
 
 // Reuse existing line SVGs; keep actual buttons and handlers, with desktop labels intact.
 export function decorateTop100Actions(root){
@@ -109,23 +110,19 @@ function loadVisibleCovers(root,folder){
   if(cached)img.src=cached;else coverObserver.observe(img);
  }
 }
-let lyricsGeneration=0;
-async function showLyrics(folder,rank,title,artist){
- const version=++lyricsGeneration;
- let dialog=document.querySelector('#top100-lyrics-dialog');
- if(!dialog){
-  dialog=document.createElement('dialog');dialog.id='top100-lyrics-dialog';dialog.className='top100-lyrics-dialog';
-  document.body.append(dialog);
-  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
- }
- dialog.innerHTML='<div class="top100-lyrics-header"><div><strong>'+esc(title)+'</strong><small>'+esc(artist)+'</small></div><button type="button" aria-label="가사 닫기" data-close-lyrics>×</button></div><div class="top100-lyrics-content">가사를 불러오는 중…</div>';
- dialog.querySelector('[data-close-lyrics]').onclick=()=>dialog.close();
- dialog.showModal();
- try{
-  const response=await request('/v2/top100-lyrics?folder='+encodeURIComponent(folder)+'&rank='+rank);
-  const data=await response.json();
-  if(dialog.open&&version===lyricsGeneration)dialog.querySelector('.top100-lyrics-content').textContent=data.lyrics?.trim()||'등록된 가사가 없습니다.';
- }catch(error){if(dialog.open&&version===lyricsGeneration)dialog.querySelector('.top100-lyrics-content').textContent=error.message;}
+// Top100 uses the same timed LRC viewer and player observer as album tracks.
+function showLyrics(folder,rank,title,artist){
+ return showLyricDialog({
+  title,artist,player:getPlayer(),
+  target:{top100_folder:folder,top100_rank:rank},
+  load:async({signal,target})=>{
+   const selectedFolder=target?.top100_folder,selectedRank=Number(target?.top100_rank);
+   if(typeof selectedFolder!=='string'||!selectedFolder||!Number.isSafeInteger(selectedRank)||selectedRank<1)throw Error('가사 대상 확인 실패');
+   const response=await request('/v2/top100-lyrics?folder='+encodeURIComponent(selectedFolder)+'&rank='+selectedRank,{signal});
+   const data=await response.json();
+   return typeof data.lyrics==='string'?data.lyrics:'';
+  }
+ });
 }
 function showLoadError(root,error,retry){
  root.innerHTML='<div class="top100-load-error" role="alert"><p>Top100 목록을 불러오지 못했습니다.</p><p data-error></p><button type="button" id="top100-retry">다시 시도</button></div>';
@@ -229,6 +226,6 @@ export async function renderTop100(root,{isCurrent=()=>true,initialFolder='',onF
 }
 
 
-window.addEventListener('vinyl-approval-change',()=>{if(!isApprovedMember()){releaseCovers();for(const url of coverCache.values())URL.revokeObjectURL(url);coverCache.clear();lyricsGeneration++;document.querySelector('#top100-lyrics-dialog')?.remove();}});
+window.addEventListener('vinyl-approval-change',()=>{if(!isApprovedMember()){releaseCovers();for(const url of coverCache.values())URL.revokeObjectURL(url);coverCache.clear();/* Shared lyrics dialog closes through its existing approval/account listeners. */}});
 
 

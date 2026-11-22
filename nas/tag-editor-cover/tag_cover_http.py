@@ -138,13 +138,38 @@ _SAVE_CONTEXT = {'guard': None, 'backup_root': None, 'qualified': False}
 _READONLY_HANDLE = handle
 _SAVE_ROUTES = frozenset((PREFIX+'/save-capabilities', PREFIX+'/tag-plan', PREFIX+'/tag-apply', PREFIX+'/apply', PREFIX+'/tags', PREFIX+'/rename-plan', PREFIX+'/rename-apply', PREFIX+'/rename-restore'))
 
-def configure_save_context(runtime_guard, backup_root, qualification_passed=False):
+def configure_save_context(runtime_guard, backup_root, qualification_passed=False, index=None):
     """Server-owned context only. Guard must HOLD the existing index/AI maintenance lease.
     Qualification is set by deployment code after NAS fixture apply/restore succeeds;
     neither this function nor environment flags are exposed through HTTP.
     """
     if not callable(runtime_guard):raise ValueError('runtime_lease_guard_required')
     _SAVE_CONTEXT.update(guard=runtime_guard, backup_root=backup_root, qualified=qualification_passed if isinstance(qualification_passed,dict) else qualification_passed is True)
+    if index is not None:
+        # Existing legacy tag/cover qualification remains intact. Full-save only
+        # loads from the owner-protected NAS fixture receipt for THESE sources.
+        proof=_fullsave_receipt(backup_root)
+        if proof:
+            from tag_native_index import NativeAlbumIndex
+            callback=NativeAlbumIndex(index)
+            qualified=dict(qualification_passed) if isinstance(qualification_passed,dict) else {'tags':qualification_passed is True,'cover':qualification_passed is True}
+            qualified['full_tags']=True;_SAVE_CONTEXT['qualified']=qualified
+            configure_rename_context(callback,True)
+
+
+def _fullsave_receipt(backup_root):
+    import os,stat
+    try:
+        root=Path(backup_root);p=root/'fullsave-native-qualified.json'
+        if root.is_symlink() or p.is_symlink() or not p.is_file():return None
+        if root.stat().st_uid!=os.geteuid() or stat.S_IMODE(root.stat().st_mode)!=0o700:return None
+        if p.stat().st_uid!=os.geteuid() or stat.S_IMODE(p.stat().st_mode)!=0o600:return None
+        proof=json.loads(p.read_text())
+        names={'server.py','index_engine.py','catalog_lease.py','tag_cover_http.py','tag_phase2c.py','tag_cover_h.py','tag_rename_writer.py','tag_native_index.py'}
+        if proof.get('schema')!='fullsave-native-qualification-v1' or proof.get('state')!='PASS' or set(proof.get('hashes',{}))!=names:return None
+        if any(hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest()!=proof['hashes'][name] for name in names):return None
+        return proof
+    except (OSError,ValueError,TypeError):return None
 
 def save_capabilities():
     import os

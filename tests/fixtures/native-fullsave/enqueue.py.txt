@@ -1,0 +1,32 @@
+class Index:
+    @index_job
+    def enqueue(self,path='',recursive=True,kind='manual',scan_mode='changes'):
+        if scan_mode not in ('changes','full'):raise ValueError('색인 유형을 확인하세요.')
+        if kind=='automatic' and not self.automatic_enabled:raise ValueError('automatic_index_disabled')
+        selected=self.folder(path)
+        path=selected.relative_to(self.root).as_posix()
+        if path=='.':path=''
+        if scan_mode=='full' and path:raise ValueError('전체 색인은 Music 최상위 범위에서 실행하세요.')
+        if selected != self.root and selected.relative_to(self.root).parts[0].casefold()=='000 top100':
+            raise ValueError('Top100은 일반 앨범 색인에서 제외됩니다.')
+        if getattr(self.scanner,'disc_number',lambda _:None)(selected.name):
+            raise ValueError('디스크의 상위 앨범 폴더를 선택하세요.')
+        if type(recursive) is not bool:raise ValueError('하위 폴더 옵션을 확인하세요.')
+        if scan_mode=='full' and not recursive:raise ValueError('전체 색인은 하위 폴더를 포함해야 합니다.')
+        with self.db() as db:
+            for row in db.execute('SELECT data FROM jobs ORDER BY rowid DESC LIMIT 500'):
+                previous=json.loads(row[0])
+                if previous.get('state') in ('queued','running') and previous.get('path')==path and previous.get('recursive')==recursive and previous.get('scan_mode','changes')==scan_mode:
+                    return {**previous,'deduplicated':True}
+        # Acquire in the same order as execute_job: lease before application lock.
+        with self.whole_job_lease(),self.lock:
+            with self.db() as db:
+                for row in db.execute('SELECT data FROM jobs ORDER BY rowid DESC LIMIT 500'):
+                    previous=json.loads(row[0])
+                    if previous.get('state') in ('queued','running') and previous.get('path')==path and previous.get('recursive')==recursive and previous.get('scan_mode','changes')==scan_mode:
+                        return {**previous,'deduplicated':True}
+            if self.jobs.full():raise ValueError('색인 대기열이 가득 찼습니다.')
+            job={'id':str(uuid.uuid4()),'path':path,'recursive':recursive,'scan_mode':scan_mode,'kind':kind,'state':'queued','processed':0,'added':0,'updated':0,'unchanged':0,'missing':0,'errors':[],'message':'대기 중','created_at':time.time()}
+            self.progress(job);self.jobs.put_nowait(job)
+            with self.db() as db:db.execute('DELETE FROM jobs WHERE rowid NOT IN (SELECT rowid FROM jobs ORDER BY rowid DESC LIMIT 500)')
+        return job
