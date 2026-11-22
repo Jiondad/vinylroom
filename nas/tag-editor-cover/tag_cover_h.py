@@ -199,7 +199,7 @@ def cover_plan(catalog,music_root,album_id,file,action,image_path=None):
     try:
         blob,info=image_file(image_path) if action!='remove' else (None,None)
         if action=='remove' and image_path:return hold('remove_must_not_include_image')
-        album,entries,issues=base.inventory(catalog,music_root,album_id)
+        album,entries,issues=base.inventory(catalog,music_root,album_id,allow_auxiliary_disc_dirs=True)
         if issues:return hold('album_inventory_issue',issues=issues)
         e=base._safe_track_choice(entries,album,file)
         if e['format'] not in ('.flac','.mp3'):return hold('cover_format_not_supported')
