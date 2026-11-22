@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guarded deployment of a requalified *two-file* Tag Editor read-only patch.
+"""Guarded deployment of a requalified *four-file* Tag Editor save-path patch.
 
 PREVIEW does no operational writes. APPLY explicitly recreates only the existing
 music gateway service and atomically exchanges its validated qualification
@@ -109,8 +109,17 @@ def check_target(info,mounts,chain,project,service):
     for name in NAMES:
         if old_mounts.get("/app/"+name,{}).get("source")!=mounts["/app/"+name]["Source"]:
             hold("compose_bind_mount_mismatch:"+name)
-    change={"services":{service:{"volumes":[{"type":"bind","source":str(STAGE/name),
-          "target":"/app/"+name,"read_only":True} for name in NAMES]}}}
+    # Clone the *actual resolved* Compose bind options. Only the four source
+    # paths may change; do not silently add/remove bind, relabel or RO options.
+    replacement=[]
+    for name in NAMES:
+        oldv=old_mounts["/app/"+name]
+        if oldv.get("type")!="bind" or oldv.get("read_only") is not True:
+            hold("qualified_compose_bind_not_read_only:"+name)
+        newv=json.loads(json.dumps(oldv))
+        newv["source"]=str(STAGE/name)
+        replacement.append(newv)
+    change={"services":{service:{"volumes":replacement}}}
     # Verify a temporary overlay's merged compose model without writing to stage.
     with tempfile.TemporaryDirectory(prefix="nested-aux-compose-") as tmp:
         temp=Path(tmp)/"overlay.json"
