@@ -612,7 +612,7 @@ def featuring_candidates(album,entries,issues):
 
 
 def validate_track_edits(raw):
-    if not isinstance(raw,dict) or not raw or set(raw)-set(TRACK_FIELDS):
+    if not isinstance(raw,dict) or not raw or set(raw)-set(ALL_TRACK_FIELDS):
         raise ValueError('edits_must_contain_only_track_fields')
     result={}
     for key,value in raw.items():
@@ -866,6 +866,8 @@ FORMAT_FIELDS = {
 }
 FORMAT_TRACK_FIELDS=frozenset(('title','artist','tracknumber','discnumber','genre','featuring'))
 FLAC_WRITE_FIELDS=FORMAT_TRACK_FIELDS
+FULL_TAG_WRITE_FIELDS=frozenset(ALL_TRACK_FIELDS)
+FULL_TAG_WRITE_ENV='VINYL_TAG_EDITOR_FULL_TAG_WRITE_ENABLED'  # defaults OFF pending NAS fixture qualification
 TRACK_WRITE_ENV='VINYL_TAG_EDITOR_TRACK_WRITE_ENABLED'
 TRACK_WRITE_MAX_BYTES=256*1024*1024
 
@@ -1090,7 +1092,9 @@ def track_write_plan(album,entries,issues,target_file,raw_edits):
     try:
         e=_safe_track_choice(entries,album,target_file)
         edits=validate_track_edits(raw_edits)
-        if set(edits)-FLAC_WRITE_FIELDS:raise ValueError('field_outside_flac_writer_scope')
+        full=os.getenv(FULL_TAG_WRITE_ENV)=='true'
+        allowed=FULL_TAG_WRITE_FIELDS if full and e['format'] in ('.flac','.mp3') else FLAC_WRITE_FIELDS if e['format']=='.flac' else frozenset()
+        if set(edits)-allowed:raise ValueError('field_outside_qualified_writer_scope')
     except ValueError as ex:return hold(str(ex))
     if 'artist' in edits and any(_collaboration(x) for x in e['tags'].get('artist',[])) and edits['artist']!=e['tags']['artist']:
         return hold('joint_artist_migration_requires_separate_approval')
@@ -1104,26 +1108,83 @@ def track_write_plan(album,entries,issues,target_file,raw_edits):
 
 
 def _make_stage_track(original,changes):
+    """Stage FLAC or MP3 tag changes without changing audio, embedded covers or unrelated metadata.
+
+    MP3 and album-common fields require the separate FULL_TAG_WRITE_ENV gate, which
+    remains OFF until fixture qualification and NAS runtime activation.
+    """
+    original=Path(original)
+    full=os.getenv(FULL_TAG_WRITE_ENV)=='true'
+    if original.suffix.lower()=='.mp3' and not full:
+        raise ValueError('mp3_tag_writer_not_qualified')
+    allowed=FULL_TAG_WRITE_FIELDS if full else FLAC_WRITE_FIELDS
+    if not set(changes)<=allowed:
+        raise ValueError('field_outside_qualified_writer_scope')
     stage=_stage_copy(original)
     try:
-        before_md5,before_pics,before_tags=_flac_unchanged_signature(original)
-        frame_sha=flac_frames_sha256(original)
-        a=FLAC(str(stage))
+        if original.suffix.lower()=='.flac':
+            before_md5,before_pics,before_tags=_flac_unchanged_signature(original)
+            frame_sha=flac_frames_sha256(original)
+            audio=FLAC(str(stage))
+            for field,value in changes.items():
+                key='albumartist' if field=='album_artist' else field
+                if value:audio[key]=value
+                elif field=='featuring' and key in audio:del audio[key]
+                else:raise ValueError('empty_field_not_allowed:'+field)
+            audio.save()
+            after_md5,after_pics,after_tags=_flac_unchanged_signature(stage)
+            if after_md5!=before_md5 or flac_frames_sha256(stage)!=frame_sha:
+                raise ValueError('flac_audio_frames_changed')
+            if after_pics!=before_pics:raise ValueError('cover_art_changed')
+            changed_keys={'albumartist' if k=='album_artist' else k for k in changes}
+            if any(before_tags[k]!=after_tags.get(k) for k in set(before_tags)-changed_keys):
+                raise ValueError('untargeted_metadata_changed')
+        elif original.suffix.lower()=='.mp3':
+            from mutagen.id3 import (ID3,ID3NoHeaderError,TIT2,TPE1,TPE2,TALB,TDRC,
+                                    TCON,TRCK,TPOS,TXXX)
+            import tag_cover_h as _cover
+            original_stream=_cover._mp3_audio_hash(original)
+            original_covers=_cover._covers(original)
+            def get_id3(path):
+                try:return ID3(str(path))
+                except ID3NoHeaderError:return ID3()
+            original_id3=get_id3(original)
+            tag=get_id3(stage)
+            mapping={'title':('TIT2',TIT2),'artist':('TPE1',TPE1),
+                     'album_artist':('TPE2',TPE2),'album':('TALB',TALB),
+                     'date':('TDRC',TDRC),'genre':('TCON',TCON),
+                     'tracknumber':('TRCK',TRCK),'discnumber':('TPOS',TPOS)}
+            changed_codes={mapping[k][0] for k in changes if k in mapping}
+            def protected_frames(obj):
+                return sorted((frame.FrameID,frame.HashKey,frame.pprint()) for frame in obj.values()
+                    if frame.FrameID not in changed_codes
+                    and not (frame.FrameID=='TXXX' and 'featuring' in changes
+                             and frame.desc.strip().casefold()=='featuring'))
+            protected_before=protected_frames(original_id3)
+            for field,value in changes.items():
+                if field=='featuring':
+                    # Preserve every other TXXX custom field, even with similar descriptions.
+                    for frame in list(tag.getall('TXXX')):
+                        if frame.desc.strip().casefold()=='featuring':
+                            tag.delall(frame.HashKey)
+                    if value:tag.add(TXXX(encoding=3,desc='FEATURING',text=value))
+                elif value:
+                    code,klass=mapping[field]
+                    tag.setall(code,[klass(encoding=3,text=value)])
+                else:raise ValueError('empty_field_not_allowed:'+field)
+            tag.save(str(stage),v2_version=3 if original_id3.version[1]==3 else 4)
+            if _cover._mp3_audio_hash(stage)!=original_stream:
+                raise ValueError('mp3_audio_bytes_changed')
+            if _cover._covers(stage)!=original_covers:
+                raise ValueError('embedded_cover_changed')
+            if protected_frames(get_id3(stage))!=protected_before:
+                raise ValueError('untargeted_id3_metadata_changed')
+        else:
+            raise ValueError('writer_format_not_supported')
+        after=read_tags(stage)
         for field,value in changes.items():
-            if field not in FLAC_WRITE_FIELDS:raise ValueError('unsupported_writer_field')
-            if value:
-                a[field]=value
-            elif field=='featuring' and field in a:
-                del a[field]
-            else:raise ValueError('empty_field_not_allowed:'+field)
-        a.save()
-        after_md5,after_pics,after_tags=_flac_unchanged_signature(stage)
-        if after_md5!=before_md5 or flac_frames_sha256(stage)!=frame_sha:raise ValueError('flac_audio_frames_changed')
-        if after_pics!=before_pics:raise ValueError('cover_art_changed')
-        if any(before_tags[k]!=after_tags.get(k) for k in set(before_tags)-set(changes)):
-            raise ValueError('untargeted_metadata_changed')
-        for field,value in changes.items():
-            if read_tags(stage).get(field,[])!=value:raise ValueError('staged_tag_verification_failed:'+field)
+            if after.get(field,[])!=value:
+                raise ValueError('staged_tag_verification_failed:'+field)
         os.chmod(stage,stat.S_IMODE(original.stat().st_mode))
         with open(stage,'rb') as f:os.fsync(f.fileno())
         return stage
@@ -1139,7 +1200,8 @@ def track_write_preflight(catalog,music_root,backup_root,album_id,target_file,ed
     if plan['plan_id']!=expected_plan_id:return hold('plan_id_changed_since_preview',current_plan_id=plan['plan_id'])
     try:e=_safe_track_choice(entries,album,target_file)
     except ValueError as ex:return hold(str(ex))
-    if e['format']!='.flac':return hold('phase2c_write_flac_only')
+    if e['format']!='.flac' and not (os.getenv(FULL_TAG_WRITE_ENV)=='true' and e['format']=='.mp3'):
+        return hold('track_writer_format_not_qualified')
     if e['size']>TRACK_WRITE_MAX_BYTES:return hold('track_file_over_256MB')
     if album['catalog_physical_file_count'] is not None and len(entries)!=album['catalog_physical_file_count']:
         return hold('catalog_file_count_mismatch')
