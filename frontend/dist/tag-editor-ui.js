@@ -219,7 +219,7 @@ $('#tracks').addEventListener('focusout',e=>{if(e.target.matches('input[data-fie
 $('.track-panel').addEventListener('keydown',e=>{
  if(e.target.matches('input:not([readonly]),textarea,select,button')||document.querySelector('dialog[open]'))return;
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){
-  e.preventDefault();$('#missingOnly').checked=false;S.selected=new Set(S.draft.map(x=>x.file));S.anchor=S.draft[0]?.file||null;renderTracks();$('#tracks [data-track]')?.focus({preventScroll:true});return;
+  e.preventDefault();$('#missingOnly').checked=false;S.selected=new Set(S.draft.map(x=>x.file));S.anchor=S.draft[0]?.file||null;renderTracks();syncMultiTags();$('#tracks [data-track]')?.focus({preventScroll:true});return;
  }
  const row=e.target.closest('[data-track]');if(!row)return;
  if(e.key===' '){e.preventDefault();selectTrack(row.dataset.track,e);}
