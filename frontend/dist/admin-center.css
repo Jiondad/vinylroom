@@ -307,3 +307,23 @@ body.vinyl-admin-page-open.vinyl-tag-editor-open{overflow:visible}.vinyl-admin-p
 body.vinyl-tag-editor-open>.sidebar{z-index:9900}.vinyl-admin-page.vr-tag-editor-active{left:var(--vr-sidebar-width,230px);right:0;width:auto}.vr-tag-editor-active .vr-admin-inner{width:calc(100% - 32px);max-width:1900px;margin:0 auto}.vinyl-tag-editor-open .sidebar nav{pointer-events:auto}@media(max-width:740px){body.vinyl-tag-editor-open>.sidebar{position:relative;z-index:9900}.vinyl-admin-page.vr-tag-editor-active{position:relative;inset:auto;width:100%;min-height:0}.vr-tag-editor-active .vr-admin-inner{width:calc(100% - 16px)}}
 
 @media(max-width:740px){body.vinyl-tag-editor-open>main{display:none}.vinyl-admin-page.vr-tag-editor-active{position:relative;inset:auto;min-height:100vh;width:100%;margin:0}.vr-tag-editor-active .vr-admin-inner{margin-left:auto;margin-right:auto}}
+
+
+/* Only Tag Editor: remove the inherited 1120/1900px centered admin cap.
+   Preserve the site's left navigation and every other admin pane. */
+body .vinyl-admin-page.vr-tag-editor-active .vr-admin-inner{
+ width:calc(100% - 12px);
+ max-width:none;
+ margin:0 6px;
+}
+body .vinyl-admin-page.vr-tag-editor-active [data-tag-editor]{
+ width:100%;
+ max-width:none;
+ min-width:0;
+}
+@media(max-width:740px){
+ body .vinyl-admin-page.vr-tag-editor-active .vr-admin-inner{
+  width:calc(100% - 12px);
+  margin:0 6px;
+ }
+}
