@@ -31,7 +31,7 @@ jobs:
           ui=(base/'tag-editor-ui.js').read_text()
           host=(base/'tag-editor-host.js').read_text()
           cover=(base/'tag-editor-cover-draft.js').read_text()
-          panel=(base/'tag-editor-ui.html').read_text()
+          panel=(root/'tag-editor-ui.html').read_text()
           album=(base/'app-index.js').read_text()
           top100=(base/'top100-ui.js').read_text()
           assert '/api/rename/plan' in host and '/api/rename/apply' in host
