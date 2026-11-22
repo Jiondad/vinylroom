@@ -13,8 +13,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install isolated audio-tag dependencies
-        run: python -m pip install mutagen==1.47.0 pillow
+        run: python -m pip install mutagen==1.47.0 pillow imageio-ffmpeg
       - name: Check fixture encoder
-        run: ffmpeg -version | head -n 1
+        run: python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())'
       - name: Run only new full-tag writer fixtures
         run: python -m unittest discover -s tests -p 'test_tag_full_save_extension_20261122.py' -v
