@@ -1,4 +1,4 @@
-name: Tag Editor admin HTTP dispatch scoped test
+name: Tag Editor full-save HTTP fixture scoped test
 on:
   push:
     branches:
@@ -13,6 +13,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install only adapter import dependencies
-        run: python -m pip install mutagen==1.47.0 pillow
-      - name: Test only newly added HTTP dispatch boundary
-        run: python -m unittest discover -s tests -p 'test_tag_admin_http_dispatch_20261122.py' -v
+        run: python -m pip install mutagen==1.47.0 pillow imageio-ffmpeg
+      - name: Test only new handler to Writer fixture roundtrip
+        run: python -m unittest discover -s tests -p 'test_tag_http_fullsave_fixture_20261122.py' -v
