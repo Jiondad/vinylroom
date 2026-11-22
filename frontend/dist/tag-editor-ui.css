@@ -149,3 +149,21 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
   overscroll-behavior-y:contain;
  }
 }
+
+
+/* Tag Editor nine-field batch editing: compact Mp3tag-inspired field grid. */
+.multi-tag-panel{border:1px solid var(--border);border-radius:6px;background:#fafbfb;padding:10px 12px;margin:8px 0 12px;min-width:0}
+.multi-tag-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:9px;font-size:12px;color:#758188}
+.multi-tag-heading>div{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.multi-tag-heading strong{color:#34484e;font-size:13px;font-weight:500}
+.multi-tag-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:10px;row-gap:7px}
+.multi-tag-grid label{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:10px;color:#6b7b82;letter-spacing:0}
+.multi-tag-grid input{height:30px;min-height:30px;width:100%;font-size:12px;background:#fff}
+.multi-tag-grid input[data-edited="true"]{border-color:#9e8054;background:#fffaf0}
+.multi-tag-grid input:disabled{background:#f4f5f5}
+.multi-tag-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:10px}
+#multiTagStatus{font-size:11px;color:#7e898c;flex:1;min-width:0}
+#multiTagReset{font-size:12px}
+#multiTagSave{font-size:12px}
+@media(max-width:900px){.multi-tag-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.multi-tag-panel{padding:9px}.multi-tag-heading{align-items:flex-start;flex-direction:column;gap:3px}.multi-tag-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}.multi-tag-actions{flex-wrap:wrap}#multiTagStatus{flex-basis:100%}}
