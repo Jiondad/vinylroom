@@ -152,7 +152,7 @@ class FullTagSaveFixture(unittest.TestCase):
             self.assertFalse(old_file.exists())
             self.assertEqual(http.cover.base.file_sha256(
                 self.album_dir/'1 - 01. Updated.flac'),old_sha)
-            self.assertIn('1 - 01. Updated.flac',
+            self.assertIn('1 - 01. updated.flac',
                 rename._catalog_file_names(self.db,self.id))
         finally:
             os.environ.pop(rename.RENAME_ENV,None)
