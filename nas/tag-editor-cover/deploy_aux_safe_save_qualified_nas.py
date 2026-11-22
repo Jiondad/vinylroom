@@ -141,8 +141,25 @@ def check_target(info,mounts,chain,project,service):
             else:
                 oldv=dict(lm[target]);newv=dict(rm[target])
                 oldv.pop("source");newv.pop("source")
-                if oldv!=newv or rm[target]["source"]!=str(STAGE/target.split("/")[-1]):
-                    hold("candidate_mount_not_only_change:"+target)
+                expected_source=str(STAGE/target.split("/")[-1])
+                actual_source=rm[target].get("source")
+                options_match=(oldv==newv)
+                source_match=(actual_source==expected_source)
+                if not options_match or not source_match:
+                    diagnostic={
+                        "target":target,
+                        "options_match":options_match,
+                        "source_match":source_match,
+                        "option_diffs":{
+                            k:{"before":oldv.get(k),"after":newv.get(k)}
+                            for k in sorted(set(oldv)|set(newv))
+                            if oldv.get(k)!=newv.get(k)
+                        },
+                        "expected_source":expected_source,
+                        "actual_source":actual_source,
+                        "compose_chain_count":len(chain),
+                    }
+                    hold("candidate_mount_not_only_change:"+json.dumps(diagnostic,sort_keys=True,ensure_ascii=False))
     return root,proof,raw,new,change
 
 
