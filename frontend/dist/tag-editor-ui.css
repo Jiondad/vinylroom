@@ -123,3 +123,29 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
  }
  .workspace>.working>footer{flex:none}
 }
+
+
+/* 2026-11-23: artist pane 80% of prior width, search remains fixed.
+   Only the tree below the search scrolls; no changes to the track editor. */
+@media(min-width:901px){
+ .workspace{grid-template-columns:minmax(0,22.88%) minmax(0,1fr)}
+}
+@media(min-width:651px) and (max-width:900px){
+ .workspace{grid-template-columns:minmax(0,23.92%) minmax(0,1fr)}
+}
+@media(min-width:651px){
+ .workspace>.browser{
+  height:clamp(320px,calc(var(--tag-visible-height,100dvh) - 110px),900px);
+  max-height:900px;
+  overflow:hidden;
+ }
+ .workspace>.browser #navigation{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+ .workspace>.browser #artistForm{flex:0 0 auto}
+ .workspace>.browser #artistScroll{
+  flex:1 1 0;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
+ }
+}
