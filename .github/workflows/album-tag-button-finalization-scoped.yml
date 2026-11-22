@@ -1,0 +1,11 @@
+name: Album tag button finalization scoped test
+on:
+  push:
+    branches: [fix/album-tag-visible-finalize-20261122]
+jobs:
+  verify-button:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exercise album button rendering and permissions
+        run: node --test frontend/tests/album-tag-button-finalization.test.mjs
