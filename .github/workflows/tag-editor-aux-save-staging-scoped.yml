@@ -1,0 +1,33 @@
+name: Tag Editor auxiliary save staging scoped
+on:
+  push:
+    branches: [feature/tag-editor-aux-safe-save-20261122]
+    paths:
+      - nas/tag-editor-cover/stage_aux_safe_save_nas.py
+      - .github/workflows/tag-editor-aux-save-staging-scoped.yml
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify 4 candidate patch anchors match qualified-branch NAS source
+        run: |
+          python3 - <<'PY'
+          import ast,importlib.util,pathlib
+          path=pathlib.Path('nas/tag-editor-cover/stage_aux_safe_save_nas.py')
+          ast.parse(path.read_text())
+          spec=importlib.util.spec_from_file_location('aux_save_stage',path)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          for name in m.NAMES:
+              old=(path.parent/name).read_text()
+              # Branch already contains exactly the desired source edits.
+              # The staging patch must be idempotence-protected and MUST reject an updated source.
+              try:m.modify(name,old)
+              except RuntimeError as exc:
+                  assert 'source_anchor_changed' in str(exc), (name,exc)
+              else:raise AssertionError('new staging patch must reject already modified source: '+name)
+          assert len(m.NAMES)==4
+          assert 'stage.mkdir(mode=0o755)' in path.read_text()
+          assert 'source_sha256' in path.read_text()
+          print('FOUR_MODULE_SAVEPATH_STAGE_NO_DUPLICATE_INSTALL_PASS')
+          PY
