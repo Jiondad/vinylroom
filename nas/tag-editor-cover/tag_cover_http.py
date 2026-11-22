@@ -241,7 +241,9 @@ def rename_request(catalog,music_root,route,body):
 
 
 def read_album_tags(catalog,music_root,album_id):
-    album,entries,issues=cover.base.inventory(catalog,music_root,album_id)
+    # Only tag viewing may ignore fully inspected non-audio ancillary disc folders.
+    # All write plan/apply inventory remains strict by default.
+    album,entries,issues=cover.base.inventory(catalog,music_root,album_id,allow_auxiliary_disc_dirs=True)
     if issues:return cover.hold('album_inventory_issue',issues=issues)
     return {'state':'ACTUAL_ALBUM_TAGS','album_id':album_id,'album':album,'entries':entries,'source':'actual_audio_tags','media_writes':0,'db_writes':0}
 
