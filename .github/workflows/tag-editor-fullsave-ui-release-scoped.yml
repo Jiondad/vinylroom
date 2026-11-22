@@ -39,8 +39,8 @@ jobs:
           assert 'saveRenames()' in ui and 'RENAME_WRITE_COMPLETED' in ui
           assert 'READ_ONLY_TRACK_WRITE_PLAN' in ui and 'TAG_TRACK_WRITE_COMPLETED' in ui
           assert 'COVER_WRITE_COMPLETED' in cover and '/api/cover/apply' in cover
-          assert 'tag-editor-ui.js?v=20261122-complete-save' in panel
-          assert 'tag-editor-ui.html?v=20261122-complete-save' in host
+          assert 'tag-editor-ui.js?v=20261122-fullsave-release' in panel
+          assert 'tag-editor-ui.html?v=20261122-fullsave-release' in host
           assert '태그 수정' in album and '정보 수정' in album
           assert 'showLyricDialog' in top100
           print('FULL_SAVE_RELEASE_BUNDLE_SCOPED_PASS',m.group(1))
