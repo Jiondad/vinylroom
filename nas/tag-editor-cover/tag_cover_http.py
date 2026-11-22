@@ -177,6 +177,8 @@ def tag_plan(catalog,music_root,body):
     if entry['format'] not in ('.flac','.mp3') or (entry['format']=='.mp3' and not caps['mp3_tags']):
         return cover.hold('tag_writer_format_not_qualified')
     raw=_writer_edits(body.get('edits'));edits=cover.base.validate_track_edits(raw)
+    # The environment flag alone never qualifies new MP3 or album-common writes.
+    if set(edits)-set(caps['tag_fields']):return cover.hold('tag_fields_not_nas_qualified')
     before=body.get('before_tags')
     if not isinstance(before,dict) or set(before)!=set(edits):return cover.hold('original_field_snapshot_required')
     if any(entry['tags'].get(k,[])!=before[k] for k in edits):return cover.hold('tags_changed_since_browser_read')
