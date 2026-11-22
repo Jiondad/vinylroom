@@ -1,0 +1,39 @@
+name: Album tag button published asset check
+on:
+  push:
+    branches: [fix/album-tag-button-visibility-only-20261122]
+jobs:
+  published-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact Pages candidate without publishing
+        working-directory: frontend
+        run: |
+          node scripts/header-actions-release.mjs
+          node scripts/copy-artist-profiles.mjs
+      - name: Verify generated production bundle and UI
+        working-directory: frontend
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('out')
+          html=(root/'index.html').read_text()
+          release=re.search(r'releases/(header-actions-[0-9a-f]+)/entry.js',html)
+          assert release, 'production release missing'
+          bundle=root/'releases'/release.group(1)
+          app=(bundle/'app-index.js').read_text()
+          polish=(bundle/'ui-polish.js').read_text()
+          css=(bundle/'ui-polish.css').read_text()
+          admin=(bundle/'admin-center.js').read_text()
+          host=(bundle/'tag-editor-host.js').read_text()
+          ui=(bundle/'tag-editor-ui.js').read_text()
+          assert '<button id="tag-edit-index">태그 수정</button>' in app
+          assert "tools.append(edit);const tag=root.querySelector('#tag-edit-index');if(tag)tools.append(tag)" in polish
+          assert '.album-cover-tools{display:flex;justify-content:center;align-items:center;gap:8px' in css
+          assert "if(initialTagAlbum?.id)tab('tag-editor')" in admin
+          assert 'initialAlbum:allowedInitialAlbum' in host
+          assert 'if(m.initialAlbum)openLinkedAlbum(m.initialAlbum)' in ui
+          print('PRODUCTION_BUNDLE_TAG_BUTTON_PASS',release.group(1))
+          PY
