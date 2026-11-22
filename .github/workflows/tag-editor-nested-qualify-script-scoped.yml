@@ -1,0 +1,28 @@
+name: Tag Editor staged qualification script scoped
+on:
+  push:
+    branches: [feature/tag-editor-complete-save-20261122]
+    paths:
+      - nas/tag-editor-cover/qualify_nested_aux_candidate_nas.py
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check qualification command only, without Docker or runtime reads
+        run: |
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          src=Path('nas/tag-editor-cover/qualify_nested_aux_candidate_nas.py').read_text()
+          ast.parse(src)
+          assert 'ISOLATED_REQUALIFICATION_PASS_NOT_INSTALLED' in src
+          assert '"--network","none","--read-only"' in src
+          assert '"--user","1026:100"' in src
+          assert 'if dest.startswith("/app/") and m.get("Type")=="bind"' in src
+          assert 'cmd+=mount(q,"/qualification-data",False)' in src
+          assert 'old_proof' in src and 'after!=old_proof' in src
+          assert 'EXPECTED_CANDIDATE' in src
+          assert 'RECEIPT = "/tag-editor-backups/fullsave-native-qualified.json"' in src
+          print('STAGED_NAS_QUALIFICATION_COMMAND_SYNTAX_AND_MOUNT_BOUNDARIES_PASS')
+          PY
