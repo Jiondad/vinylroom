@@ -5,6 +5,8 @@ const common=new Set(['album','album_artist','date']);
 const norm=s=>String(s).normalize('NFKC').trim().toLowerCase(),base=s=>s.split('/').pop(),parent=s=>s.slice(0,s.lastIndexOf('/')+1),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export function parseFormat(fmt,dummy=true){
  if(typeof fmt!=='string'||!fmt||fmt.length>400)throw Error('invalid_format_string');
+ // Exact Mp3tag $num(%track%,2) syntax shares the existing two-digit %track% formatter.
+ fmt=fmt.replace(/\$num\(\s*%track%\s*,\s*2\s*\)/gi,'%track%');
  let chunks=[],lit='',seen=new Set();const flush=()=>{if(lit){chunks.push(['lit',lit]);lit='';}};
  for(let i=0;i<fmt.length;){if(fmt[i]!=='%'){lit+=fmt[i++];continue;}if(fmt[i+1]==='%'){lit+='%';i+=2;continue;}const end=fmt.indexOf('%',i+1);if(end<0)throw Error('unclosed_format_placeholder');const name=fmt.slice(i+1,end).toLowerCase();if(!Object.hasOwn(F,name))throw Error('unsupported_placeholder:'+name);if(name==='dummy'&&!dummy)throw Error('dummy_cannot_generate_filename');if(F[name]!=null){if(seen.has(F[name]))throw Error('repeated_output_field:'+F[name]);seen.add(F[name]);}flush();chunks.push(['var',name]);i=end+1;}
  flush();if(!chunks.some(c=>c[0]==='var'))throw Error('pattern_has_no_variables');if(chunks.some((c,i)=>i&&c[0]==='var'&&chunks[i-1][0]==='var'))throw Error('adjacent_variables_ambiguous');return chunks;
