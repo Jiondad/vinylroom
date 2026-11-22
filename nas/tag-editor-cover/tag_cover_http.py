@@ -279,6 +279,28 @@ def save_request(catalog,music_root,route,body):
             elif kind=='tags':result['saved_tags']=cover.base.read_tags(Path(music_root)/body['file'])
         return result
 
+def _safe_apply_error_log(route, exc):
+    """Record only safe exception metadata. No auth token, path or user payload."""
+    import sys
+    import traceback
+    try:
+        frames=traceback.extract_tb(exc.__traceback__)
+        frame=frames[-1] if frames else None
+        payload={
+            'event':'TAG_EDITOR_APPLY_HTTP_ERROR',
+            'route':route if route in _SAVE_ROUTES else 'unknown',
+            'exception_type':type(exc).__name__,
+            'errno':getattr(exc,'errno',None),
+            'source':Path(frame.filename).name if frame else 'unknown',
+            'function':frame.name if frame else 'unknown',
+            'line':frame.lineno if frame else 0,
+            'message_sha256':hashlib.sha256(str(exc).encode('utf-8','replace')).hexdigest()[:16],
+        }
+        print(json.dumps(payload,ensure_ascii=False,sort_keys=True),file=sys.stderr,flush=True)
+    except Exception:
+        pass
+
+
 def handle(h,index,music_root,origin,post=False):
     route=urlsplit(h.path).path
     if route not in _SAVE_ROUTES:return _READONLY_HANDLE(h,index,music_root,origin,post)
@@ -301,4 +323,6 @@ def handle(h,index,music_root,origin,post=False):
         try:return h.reply(200,save_request(index.dbpath,music_root,route,json.loads(h.rfile.read(length))))
         finally:SLOTS.release()
     except PermissionError:return h.reply(403,cover.hold('administrator_required_or_runtime_not_idle'))
-    except (ValueError,TypeError,KeyError,OSError,cover.base.sqlite3.Error):return h.reply(400,cover.hold('save_validation_or_file_conflict'))
+    except (ValueError,TypeError,KeyError,OSError,cover.base.sqlite3.Error) as exc:
+        _safe_apply_error_log(route,exc)
+        return h.reply(400,cover.hold('save_validation_or_file_conflict'))
