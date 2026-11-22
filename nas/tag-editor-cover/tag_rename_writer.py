@@ -81,7 +81,7 @@ def _references_match(catalog,album_id,present,absent):
 
 def plan(catalog,music_root,album_id,file,new_name):
     try:
-        album,entries,issues=base.inventory(catalog,music_root,album_id)
+        album,entries,issues=base.inventory(catalog,music_root,album_id,allow_auxiliary_disc_dirs=True)
         if issues:return base.hold('album_inventory_issue',issues=issues)
         e=base._safe_track_choice(entries,album,file)
         if e['format'] not in ('.mp3','.flac'):return base.hold('rename_format_not_supported')
