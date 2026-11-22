@@ -37,7 +37,7 @@ export function summaryResponseState(data){
 }
 let dismissCurrent=null;
 export function closeAdminCenter(){dismissCurrent?.();}
-export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndexing,openPlaybackDiagnostics,api,letters=[],toast=()=>{}}={}){
+export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndexing,openPlaybackDiagnostics,api,letters=[],toast=()=>{},initialTagAlbum=null}={}){
  if(!canManage?.())throw Error('승인된 관리자만 이용할 수 있습니다.');
  dismissCurrent?.();
  const page=document.createElement('section');page.id='vinyl-admin-center';page.className='vinyl-admin-page';
@@ -158,14 +158,14 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
   }
   // Token refresh or a routine account notification must not remove an active editor.
   if(!tagEditor&&q('[data-tab="tag-editor"]')?.getAttribute('aria-current')==='page'){
-   tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage()});
+   tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage(),initialAlbum:initialTagAlbum});
    notice('');
   }
  }
  function onKey(e){if(e.key==='Escape'&&page.isConnected){e.preventDefault();close();}}
  function onSidebar(e){if(e.target.closest('.sidebar #nav button, .sidebar .brand'))close();}
  function check(){if(!canManage()){notice('관리자 인증을 확인해 주세요. 검토 화면은 유지됩니다.');throw Error('관리자 인증 확인 전 요청할 수 없습니다.');}}
- function tab(t){check();if(t!=='tag-editor'){tagEditor?.dispose();tagEditor=null;}if(t==='tag-editor'&&!tagEditor)tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage()});clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}if(t!=='indexing'){indexingPanelInstance?.dispose();indexingPanelInstance=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='indexing'&&!indexingPanelInstance)void openInlineIndexing().catch(error=>notice(error?.message||'색인 관리 화면을 불러오지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
+ function tab(t){check();if(t!=='tag-editor'){tagEditor?.dispose();tagEditor=null;}if(t==='tag-editor'&&!tagEditor)tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage(),initialAlbum:initialTagAlbum});clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}if(t!=='indexing'){indexingPanelInstance?.dispose();indexingPanelInstance=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='indexing'&&!indexingPanelInstance)void openInlineIndexing().catch(error=>notice(error?.message||'색인 관리 화면을 불러오지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
  function openPilotReport(){
   check();if(disposePilotReport)return;
   disposePilotReport=attachReviewToAdminPanel({adminRoot:q('[data-ai-pilot-report]'),isAdminVerified:true,
@@ -378,7 +378,8 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  window.addEventListener('keydown',onKey);
  document.addEventListener('click',onSidebar,true);
  dismissCurrent=close;
- void loadPreviewMembers();
+ if(initialTagAlbum?.id)tab('tag-editor');
+ else void loadPreviewMembers();
  return {close,tab};
 }
 
