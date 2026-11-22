@@ -50,7 +50,7 @@ def _preview(blob):
 
 def inspect(catalog,music_root,album_id,file):
     _identity(album_id,file)
-    album,entries,issues=cover.base.inventory(catalog,music_root,album_id)
+    album,entries,issues=cover.base.inventory(catalog,music_root,album_id,allow_auxiliary_disc_dirs=True)
     if issues:return cover.hold('album_inventory_issue',issues=issues)
     entry=cover.base._safe_track_choice(entries,album,file)
     if entry['format'] not in ('.flac','.mp3'):return cover.hold('cover_format_not_supported')
@@ -191,7 +191,7 @@ def tag_plan(catalog,music_root,body):
     if not isinstance(body,dict) or set(body)-{'album_id','file','edits','before_tags','expected_plan_id','confirm_write'}:
         raise ValueError('unsupported_tag_fields')
     album_id,file=_identity(body.get('album_id'),body.get('file'))
-    album,entries,issues=cover.base.inventory(catalog,music_root,album_id)
+    album,entries,issues=cover.base.inventory(catalog,music_root,album_id,allow_auxiliary_disc_dirs=True)
     entry=cover.base._safe_track_choice(entries,album,file)
     caps=save_capabilities()
     if entry['format'] not in ('.flac','.mp3') or (entry['format']=='.mp3' and not caps['mp3_tags']):
