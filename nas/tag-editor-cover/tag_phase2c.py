@@ -1234,7 +1234,8 @@ def _make_stage_track(original,changes):
 
 
 def track_write_preflight(catalog,music_root,backup_root,album_id,target_file,edits,expected_plan_id):
-    album,entries,issues=inventory(catalog,music_root,album_id)
+    # Same bounded non-audio disc ancillary check as the read/plan route; fail closed.
+    album,entries,issues=inventory(catalog,music_root,album_id,allow_auxiliary_disc_dirs=True)
     plan=track_write_plan(album,entries,issues,target_file,edits)
     if plan['state']!='READ_ONLY_TRACK_WRITE_PLAN':return hold(plan.get('reason','no_actual_change'))
     if plan['plan_id']!=expected_plan_id:return hold('plan_id_changed_since_preview',current_plan_id=plan['plan_id'])
