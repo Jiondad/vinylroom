@@ -1,0 +1,35 @@
+name: Tag Editor qualified switch script scoped
+on:
+  push:
+    branches: [feature/tag-editor-complete-save-20261122]
+    paths:
+      - nas/tag-editor-cover/deploy_nested_aux_qualified_nas.py
+jobs:
+  check-guarded-switch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source syntax and safety invariants
+        run: |
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          s=Path('nas/tag-editor-cover/deploy_nested_aux_qualified_nas.py').read_text()
+          t=ast.parse(s)
+          assert 'NAS_QUALIFIED_SWITCH_PREFLIGHT_PASS_NOT_INSTALLED' in s
+          assert 'PATCH_APPLIED_ADMIN_API_VERIFICATION_PENDING' in s
+          assert 'ROLLBACK_PASS_OLD_QUALIFIED_SERVICE' in s
+          assert 'atomic_receipt(root,receipt,original)' in s
+          assert 'command(original_cmd+["stop",service])' in s
+          assert 'command(new_cmd+["up","-d","--no-deps","--force-recreate",service])' in s
+          assert 'check_health_capability()' in s
+          assert 'qualification.json' in s
+          assert 'new.get("operating_media_writes")!=0' in s
+          assert 'old_proof_sha' in s and 'old_sources' in s
+          assert 'if a.mode=="preflight":preflight()' in s
+          assert '"--confirm-maintenance-idle"' in s
+          assert 'tag_cover_http.py' in s and 'tag_phase2c.py' in s
+          assert 'for n in before["services"]' in s
+          assert 'if lhs!=rhs:hold(' in s
+          print('QUALIFIED_SWITCH_STATIC_SAFETY_PASS')
+          PY
