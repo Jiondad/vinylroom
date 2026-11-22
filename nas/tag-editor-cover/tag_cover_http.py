@@ -149,10 +149,12 @@ def configure_save_context(runtime_guard, backup_root, qualification_passed=Fals
 def save_capabilities():
     import os
     qualified=_SAVE_CONTEXT['qualified'];ready=bool(callable(_SAVE_CONTEXT['guard']) and _SAVE_CONTEXT['backup_root']);tag_ok=qualified is True or (isinstance(qualified,dict) and qualified.get('tags') is True);cover_ok=qualified is True or (isinstance(qualified,dict) and qualified.get('cover') is True)
+    full_ok=(isinstance(qualified,dict) and qualified.get('full_tags') is True and os.getenv(cover.base.FULL_TAG_WRITE_ENV)=='true')
     return {'state':'TAG_EDITOR_SAVE_CAPABILITIES','version':'tag-editor-save-v1',
         'tags':ready and tag_ok and os.getenv(cover.base.TRACK_WRITE_ENV)=='true',
-        'cover':ready and cover_ok and os.getenv(cover.COVER_ENV)=='true', 'rename':False, 'mp3_tags':False,
-        'tag_formats':['flac'],'tag_fields':sorted(cover.base.FLAC_WRITE_FIELDS),
+        'cover':ready and cover_ok and os.getenv(cover.COVER_ENV)=='true', 'rename':False, 'mp3_tags':ready and tag_ok and full_ok,
+        'tag_formats':['flac','mp3'] if ready and tag_ok and full_ok else ['flac'],
+        'tag_fields':sorted(cover.base.FULL_TAG_WRITE_FIELDS if ready and tag_ok and full_ok else cover.base.FLAC_WRITE_FIELDS),
         'reason':None if ready and tag_ok and cover_ok else 'nas_qualification_and_runtime_lease_not_connected'}
 
 def _writer_edits(raw):
@@ -171,7 +173,9 @@ def tag_plan(catalog,music_root,body):
     album_id,file=_identity(body.get('album_id'),body.get('file'))
     album,entries,issues=cover.base.inventory(catalog,music_root,album_id)
     entry=cover.base._safe_track_choice(entries,album,file)
-    if entry['format']!='.flac':return cover.hold('phase2c_write_flac_only')
+    caps=save_capabilities()
+    if entry['format'] not in ('.flac','.mp3') or (entry['format']=='.mp3' and not caps['mp3_tags']):
+        return cover.hold('tag_writer_format_not_qualified')
     raw=_writer_edits(body.get('edits'));edits=cover.base.validate_track_edits(raw)
     before=body.get('before_tags')
     if not isinstance(before,dict) or set(before)!=set(edits):return cover.hold('original_field_snapshot_required')
