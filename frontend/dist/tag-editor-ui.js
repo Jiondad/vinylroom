@@ -1,4 +1,4 @@
-import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?v=20261122-row-ux';
+import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?v=20261122-default-rename';
 import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261122-save-ui';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),clone=v=>structuredClone(v),base=f=>f.split('/').pop();
 const S={album:null,original:[],draft:[],selected:new Set(),renames:{},warnings:{},drafts:new Map(),nodes:new Map(),active:'',search:[],metrics:[],anchor:null,visible:[]};
