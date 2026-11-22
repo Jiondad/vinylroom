@@ -2,7 +2,7 @@
 """Stage the verified nested-aux READ-ONLY fix without touching operational files.
 
 Reads the two active Docker bind sources and the existing immutable receipt.
-Writes a NEW, distinct staging directory. Does not change Compose, receipts,
+Writes a NEW, distinct staging directory. Existing qualified source SHA checks happen before any stage is created.\nDoes not change Compose, receipts,
 backup, original candidates, catalog, music or the running container.
 """
 import argparse
