@@ -1,0 +1,38 @@
+name: Tag Editor auxiliary save qualification and deploy guards
+on:
+  push:
+    branches: [feature/tag-editor-aux-safe-save-20261122]
+    paths:
+      - nas/tag-editor-cover/qualify_aux_safe_save_nas.py
+      - nas/tag-editor-cover/deploy_aux_safe_save_qualified_nas.py
+      - .github/workflows/tag-editor-aux-save-qualification-deploy-scoped.yml
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and four-source qualified deployment guard only
+        run: |
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          root=Path('nas/tag-editor-cover')
+          q=(root/'qualify_aux_safe_save_nas.py').read_text()
+          d=(root/'deploy_aux_safe_save_qualified_nas.py').read_text()
+          ast.parse(q);ast.parse(d)
+          assert 'tag-editor-aux-safe-save-stage-20261122' in q
+          assert 'tag-editor-aux-safe-save-stage-20261122' in d
+          for name in ('tag_phase2c.py','tag_cover_http.py','tag_cover_h.py','tag_rename_writer.py'):
+              assert name in q and name in d
+          assert 'original_receipt_unchanged' in q
+          assert '"--network","none","--read-only"' in q
+          assert 'qualification.json' in q and 'qualification.json' in d
+          assert 'compose.nested-aux-qualified.json' in d
+          assert 'len(chain)!=10' in d
+          assert 'atomic_receipt(root,receipt,original)' in d
+          assert 'PATCH_APPLIED_ADMIN_API_VERIFICATION_PENDING' in d
+          assert 'NAS_QUALIFIED_SWITCH_PREFLIGHT_PASS_NOT_INSTALLED' in d
+          assert 'if a.mode=="preflight":preflight()' in d
+          assert '"--confirm-maintenance-idle"' in d
+          print('FOUR_SOURCE_QUALIFICATION_SWITCH_GUARDS_PASS')
+          PY
