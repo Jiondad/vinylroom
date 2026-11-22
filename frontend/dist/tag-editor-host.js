@@ -137,7 +137,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,innerHeight-Math.max(0,r.top)-12)},location.origin);}
  function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
  window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
- frame.src=new URL('tag-editor-ui.html?v=20261122-rename-autosave',document.baseURI).href;
+ frame.src=new URL('tag-editor-ui.html?v=20261123-artist-pane-80-scroll',document.baseURI).href;
  const allowedInitialAlbum=initialAlbum&&UUID.test(initialAlbum.id||'')?{id:initialAlbum.id,title:String(initialAlbum.title||''),artist:String(initialAlbum.artist||''),date:String(initialAlbum.date||''),relative_path:String(initialAlbum.relative_path||'')}:null;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal,initialAlbumId:allowedInitialAlbum?.id});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
