@@ -30,7 +30,7 @@ export function installTagCoverDraft({getAlbum,getSelectedFiles,api,getSaveCapab
   q('[data-cover-inspect]').disabled=busy||!chosen.length;
   q('[data-cover-inspect]').textContent=inspected&&inspected<chosen.length?'다음 현재 상태 조회':'현재 상태 조회';
   q('[data-cover-plan]').disabled=busy||!draft||!chosen.length;
-  q('[data-cover-plan]').textContent=planned&&planned<chosen.length?'다음 변경 계획 확인':'변경 계획 확인';const save=q('[data-cover-save]');save.disabled=busy||!getSaveCapabilities().cover||!draft||!chosen.length;save.title=planned===chosen.length?'저장 전에 변경 계획을 다시 검증합니다.':'저장 시 현재 상태와 변경 계획을 자동 확인하고 최종 승인을 요청합니다.';save.textContent=getSaveCapabilities().cover?'내장 커버 저장':'파일 저장 OFF';
+  q('[data-cover-plan]').textContent=planned&&planned<chosen.length?'다음 변경 계획 확인':'변경 계획 확인';const save=q('[data-cover-save]');save.disabled=busy||!getSaveCapabilities().cover;save.title=planned===chosen.length?'저장 전에 변경 계획을 다시 검증합니다.':'저장 시 현재 상태와 변경 계획을 자동 확인하고 최종 승인을 요청합니다.';save.textContent=getSaveCapabilities().cover?'내장 커버 저장':'파일 저장 OFF';
   art.replaceChildren();if(draft?.url){const img=document.createElement('img');img.src=draft.url;img.alt='변경 예정 내장 앞표지';art.append(img);}else art.append(text('span',draft?.action==='remove'?'앞표지 제거 예정':'표지 초안 없음'));
   files.replaceChildren(text('p',`${scope==='__all__'?'전체':'선택'} ${chosen.length}곡 · 변경 초안 ${draft?chosen.length:0}곡 · 상태 확인 ${inspected}/${chosen.length} · 계획 확인 ${planned}/${chosen.length}`));
   if(chosen.length>10)files.append(text('p','현재 상태와 계획은 10곡씩 확인합니다.','tag-cover-warning'));
@@ -41,7 +41,9 @@ export function installTagCoverDraft({getAlbum,getSelectedFiles,api,getSaveCapab
   const representative=withFront.find(r=>r.preview_data_url?.startsWith('data:image/jpeg;base64,'));if(representative){const img=document.createElement('img');img.src=representative.preview_data_url;img.alt='현재 내장 앞표지 대표 이미지';current.append(img);}
   const holds=chosen.filter(f=>plans.get(f)&&plans.get(f).state!=='READ_ONLY_COVER_PLAN');if(holds.length)files.append(text('p',`계획 보류 ${holds.length}곡 · `+[...new Set(holds.map(f=>plans.get(f).reason||'현재 상태 확인 필요'))].join(', ')));
  }
- async function saveChosen(){const chosen=[...selected()],id=albumId,ticket=version;if(busy||!getSaveCapabilities().cover||!draft||!chosen.length)return;
+ async function saveChosen(){const chosen=[...selected()],id=albumId,ticket=version;if(busy||!getSaveCapabilities().cover)return;
+  if(!chosen.length){status.textContent='저장할 곡을 선택하세요.';return;}
+  if(!draft){status.textContent='추가·교체·제거할 커버 변경 초안을 먼저 만드세요.';return;}
   // Save is a guided action: read and plan every selected file before asking for write approval.
   // Existing inspect/plan API remains read-only and uses file/Catalog CAS.
   for(let offset=0;offset<chosen.length;offset+=10){if(ticket!==version||id!==albumId)return;await inspectChosen();if(chosen.slice(offset,offset+10).some(f=>states.get(f)?.state!=='EMBEDDED_COVER_INSPECTED')){status.textContent='현재 상태 조회에 실패한 트랙이 있습니다. 저장하지 않았습니다.';return;}}
