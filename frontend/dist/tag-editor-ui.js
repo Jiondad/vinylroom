@@ -141,14 +141,14 @@ document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[d
 function saveButtonState(){
  const renameMode=activeTool==='to',enabled=renameMode?saveCaps.rename:saveCaps.tags;
  const count=S.draft.filter(e=>S.selected.has(e.file)&&(renameMode?S.renames[e.file]:changedFields(e).length)).length;
- $('#saveTags').disabled=!enabled||!S.album||!count;
+ $('#saveTags').disabled=!enabled||!S.album;
  $('#saveTags').textContent=renameMode?'파일명 변경 저장':'태그 변경 저장';
- $('#saveTags').title=enabled?`선택 변경 ${count}곡 저장`:(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
+ $('#saveTags').title=enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
 }
 async function readSaveCaps(){
  try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:r.rename===true};}
  catch{saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};}
- $('#saveStatus').textContent=saveCaps.tags?`태그 ${(saveCaps.tag_formats||['flac']).join('·').toUpperCase()} · ${(saveCaps.tag_fields||[]).length}개 필드 / 파일명 ${saveCaps.rename?'ON':'OFF'}`:'NAS 저장 경로·검증 확인 필요';saveButtonState();
+ $('#saveStatus').textContent=saveCaps.tags?`실제 저장 ON · 태그 ${(saveCaps.tag_formats||['flac']).join('·').toUpperCase()} · ${(saveCaps.tag_fields||[]).length}개 필드 / 파일명 ${saveCaps.rename?'ON':'OFF'}`:'NAS 저장 경로·검증 확인 필요';$('#sourceBadge').textContent=saveCaps.tags?'NAS 실제 음원 · 저장 가능':'NAS 저장 연결 확인 필요';saveButtonState();
 }
 $('#saveTags').onclick=async()=>{
  if(!S.album)return;if(activeTool==='to'){await saveRenames();return;}if(!saveCaps.tags)return;
@@ -166,7 +166,7 @@ $('#saveTags').onclick=async()=>{
 async function saveRenames(){
  if(!S.album||!saveCaps.rename){toast('파일명 저장 OFF · NAS 정식 색인 연결 확인 필요');return;}
  const id=S.album.id,rows=S.original.filter(e=>S.selected.has(e.file)&&S.renames[e.file]);
- if(!rows.length)return;
+ if(!rows.length){toast('변경할 파일명을 먼저 만들고 트랙을 선택하세요.');return;}
  if(!window.confirm(`선택 ${rows.length}곡의 파일명을 화면의 초안대로 저장할까요? 원본 태그는 바꾸지 않으며 백업·Catalog 색인을 함께 확인합니다.`))return;
  $('#editor').inert=true;$('#saveTags').disabled=true;let completed=0,operations=[];
  try{
