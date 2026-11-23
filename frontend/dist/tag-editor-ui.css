@@ -239,3 +239,8 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
  .workspace .track-panel th,.workspace .track-panel td{min-width:0;overflow:hidden}
  .workspace .track-panel td input:not([type=checkbox]){width:100%;min-width:0;max-width:100%;text-overflow:ellipsis}
 }
+
+
+/* CD1/CD2 aggregate selector lives on the album parent row, without altering the tree hierarchy. */
+.tree-row .disc-group-open{flex:none;font-size:11px;color:#405f63;border:1px solid #cddadd;border-radius:4px;background:#fff;min-height:24px;padding:2px 6px;margin:0 5px 0 3px;white-space:nowrap}
+.tree-row .disc-group-open:hover{background:#eef4f4}
