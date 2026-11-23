@@ -72,7 +72,7 @@ function openLinkedAlbum(a){
  renderTree();
  void selectAlbum(id);
 }
-function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
+function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><img data-tag-cover="${esc(a.discs[0].id)}" alt="앨범 대표 커버"><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
  return `<button class="cover-button" id="coverOpen" aria-label="내장 커버 편집 열기"><span>◎</span><img data-tag-cover="${esc(a.id)}" alt="앨범 색인 커버"><span>커버 편집</span></button><div><h2>${esc(a.title)}</h2><p>${esc(a.artist)} · ${esc(a.date||'연도 없음')}</p><div class="folder-path" title="${esc(a.path||a.relative_path||'')}">${esc(a.path||a.relative_path||'')}</div></div>`;}
 async function selectAlbum(id){if(tagSaveBusy){toast('NAS 저장 중에는 앨범을 변경하지 마세요.');return;}if(S.active===id&&S.album)return;const info=[...S.nodes.values()].find(n=>n.album?.id===id)?.album;if(!info)return;
  saveDraft();const ticket=gate.next(),started=performance.now();if(currentTrackRequest)currentTrackRequest.cancel();S.active=id;S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();$('#albumHeader').innerHTML=summary(info);$('#loadStatus').textContent='트랙 태그를 불러오는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;renderTree();renderTracks('트랙 태그를 불러오는 중…');
@@ -114,7 +114,7 @@ async function selectDiscGroup(path){
   S.album=album;S.original=clone(entries);
   const saved=S.drafts.get(groupId+'|shared'),valid=saved?.original===JSON.stringify(S.original);
   S.draft=clone(valid?saved.draft:entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};
-  $('#albumHeader').innerHTML=summary(album);$('#loadStatus').textContent='CD 통합 · 선택한 트랙을 원래 디스크별로 확인·저장합니다.';
+  $('#albumHeader').innerHTML=summary(album);parent.postMessage({type:'vr-tag-covers',channel},location.origin);$('#loadStatus').textContent='CD 통합 · 선택한 트랙을 원래 디스크별로 확인·저장합니다.';
   $('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();syncMultiTags();
   const measurement={album_id:groupId,discs:discs.length,display_ms:performance.now()-started};
   $('#albumHeader').dataset.readMetrics=JSON.stringify(measurement);
@@ -188,7 +188,6 @@ $('#multiTagSave').onclick=async()=>{
   if(!changed.length){
    $('#multiTagStatus').textContent='선택 트랙에 미저장 변경이 없습니다. 빈칸은 기존 태그를 유지합니다.';return;
   }
-  if(!window.confirm(`선택한 ${changed.length}곡의 태그 변경을 실제 NAS 파일에 저장할까요?`))return;
   for(const row of selected)for(const field of activeFields)row.tags[field]=clone(modifications[field]);
   saveDraft();renderTracks();
   $('#multiTagStatus').textContent='선택 항목 NAS 저장 중 · '+changed.length+'곡';
@@ -374,7 +373,6 @@ async function persistDiscGroupTags(rows,{automatic=false,onlyFields=null}={}){
   const error=Error('NAS에서 승인되지 않은 파일 형식 또는 태그 필드입니다.');
   $('#multiTagStatus').textContent=error.message;return {completed:0,total:jobs.length,error};
  }
- if(!automatic&&!window.confirm('CD 통합 '+jobs.length+'곡의 태그를 실제 NAS에 디스크별로 저장할까요?'))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#multiTagSave').disabled=true;$('#bulkApply').disabled=true;
  let completed=0,failed=null;
  try{
@@ -427,7 +425,6 @@ async function persistTagRows(rows,{automatic=false,onlyFields=null}={}){
   $('#saveStatus').textContent='저장 실패 · NAS에서 승인되지 않은 파일 형식 또는 태그 필드입니다.';
   return;
  }
- if(!automatic&&!window.confirm(`선택한 ${jobs.length}곡의 태그를 실제 NAS 파일에 저장할까요?`))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#bulkApply').disabled=true;
  // Keep the screen scrollable and responsive while the NAS responds.
  let completed=0,failed=null;
