@@ -2,7 +2,7 @@ import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?
 import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261123-save-queue';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),clone=v=>structuredClone(v),base=f=>f.split('/').pop();
 const S={album:null,original:[],draft:[],selected:new Set(),renames:{},warnings:{},drafts:new Map(),nodes:new Map(),active:'',search:[],metrics:[],anchor:null,visible:[]};
-let saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};let activeTool='tags';const toolInputs={};
+let saveCaps={tags:false,cover:false,rename:false,cd_rename:false,tag_fields:[]};let activeTool='tags';const toolInputs={};
 let tagSaveBusy=false;const justSaved=new Set();
 const REFRESH_VIEW_KEY='vinyl-tag-editor-refresh-view-v1';
 function readRefreshView(){try{const v=JSON.parse(sessionStorage.getItem(REFRESH_VIEW_KEY)||'null');return v&&typeof v==='object'&&!Array.isArray(v)?v:null;}catch{return null;}}
@@ -307,7 +307,7 @@ document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[d
 $('#artistScroll').addEventListener('scroll',rememberEditorView,{passive:true});
 
 function saveButtonState(){
- const renameMode=activeTool==='to',cdRenameHold=renameMode&&!!S.album?.disc_group,enabled=renameMode?(saveCaps.rename&&!cdRenameHold):saveCaps.tags;
+ const renameMode=activeTool==='to',cdRenameHold=renameMode&&!!S.album?.disc_group&&!saveCaps.cd_rename,enabled=renameMode?(saveCaps.rename&&!cdRenameHold):saveCaps.tags;
  const count=S.draft.filter(e=>S.selected.has(e.file)&&(renameMode?S.renames[e.file]:changedFields(e).length)).length;
  // The multi-field panel is the only save action in Tag Edit mode.
  // Keep this existing button for filename/number/other tools, whose save paths differ.
@@ -317,8 +317,8 @@ function saveButtonState(){
  $('#saveTags').title=cdRenameHold?'CD 통합 파일명 저장 보류: 디스크별 UUID를 보존하는 재색인 경로가 확인되지 않았습니다.':enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
 }
 async function readSaveCaps(){
- try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:r.rename===true};}
- catch{saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};}
+ try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:r.rename===true,cd_rename:r.rename===true&&r.cd_rename===true};}
+ catch{saveCaps={tags:false,cover:false,rename:false,cd_rename:false,tag_fields:[]};}
  $('#saveStatus').textContent=saveCaps.tags?`실제 저장 ON · 태그 ${(saveCaps.tag_formats||['flac']).join('·').toUpperCase()} · ${(saveCaps.tag_fields||[]).length}개 필드 / 파일명 ${saveCaps.rename?'ON':'OFF'}`:'NAS 저장 경로·검증 확인 필요';$('#sourceBadge').textContent=saveCaps.tags?'NAS 실제 음원 · 저장 가능':'NAS 저장 연결 확인 필요';saveButtonState();syncMultiTags();
 }
 
@@ -526,9 +526,8 @@ async function reconcileDiscRenames(jobs,viewId){
 }
 async function saveDiscGroupRenames({files=null,automatic=false}={}){
  if(tagSaveBusy||!S.album?.disc_group||!saveCaps.rename)return;
- // Hold CD aggregate rename writes until native reindex preserves independent disc UUIDs.
- const cdGroupRenameQualified=false;
- if(!cdGroupRenameQualified){toast('CD 통합 파일명 저장은 안전한 재색인 경로가 마련될 때까지 중단합니다. 태그 저장은 이용할 수 있습니다.');return;}
+ // Require an explicit NAS capability that is OFF until CD native reindex is qualified.
+ if(!saveCaps.cd_rename){toast('CD 통합 파일명 저장은 안전한 재색인 경로가 마련될 때까지 중단합니다. 태그 저장은 이용할 수 있습니다.');return;}
  const viewId=S.album.id,scope=new Set(files||[...S.selected]);
  const jobs=S.original.filter(e=>scope.has(e.file)&&S.renames[e.file]&&S.renames[e.file]!==base(e.file))
   .map(e=>{const disc=discWriteOwner(e.file);return {album_id:disc.id,file:e.file,new_name:S.renames[e.file],label:disc.label,path:disc.path};});
