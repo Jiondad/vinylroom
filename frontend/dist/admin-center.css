@@ -335,3 +335,6 @@ body .vinyl-admin-page.vr-tag-editor-active .vr-admin-header,
 body .vinyl-admin-page.vr-tag-editor-active .vr-admin-tabs,
 body .vinyl-admin-page.vr-tag-editor-active > .vr-admin-inner > .vr-admin-status{display:none!important}
 body .vinyl-admin-page.vr-tag-editor-active .vr-admin-inner{padding-top:0}
+
+/* Tag Editor has its own page title; do not repeat parent 'Admin' heading. */
+.vinyl-admin-page.vr-tag-editor-active .vr-admin-header .vr-admin-heading h1{display:none}
