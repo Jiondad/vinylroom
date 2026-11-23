@@ -493,7 +493,7 @@ function acceptDiscRename(job,newFile,tags=null){
  const old=job.file;
  if(newFile===old||!newFile.startsWith(job.path+'/')||newFile.split('/').slice(0,-1).join('/')!==old.split('/').slice(0,-1).join('/'))
   throw Error('파일명 변경 결과의 원래 디스크 경로가 일치하지 않습니다.');
- for(const list of [S.original,S.draft]){
+ for(const list of [S.original,S.draft,S.album.entries]){
   const row=list.find(x=>x.file===old);
   if(row){row.file=newFile;row.relative_file=newFile;
    if(list===S.original&&tags)row.tags=clone(tags);}
