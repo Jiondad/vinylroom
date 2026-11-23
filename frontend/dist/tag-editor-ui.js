@@ -308,14 +308,14 @@ document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[d
 $('#artistScroll').addEventListener('scroll',rememberEditorView,{passive:true});
 
 function saveButtonState(){
- const renameMode=activeTool==='to',enabled=renameMode?saveCaps.rename:saveCaps.tags;
+ const renameMode=activeTool==='to',cdRenameHold=renameMode&&!!S.album?.disc_group,enabled=renameMode?(saveCaps.rename&&!cdRenameHold):saveCaps.tags;
  const count=S.draft.filter(e=>S.selected.has(e.file)&&(renameMode?S.renames[e.file]:changedFields(e).length)).length;
  // The multi-field panel is the only save action in Tag Edit mode.
  // Keep this existing button for filename/number/other tools, whose save paths differ.
  $('#saveTags').hidden=activeTool==='tags';
  $('#saveTags').disabled=tagSaveBusy||!enabled||!S.album;
  $('#saveTags').textContent=renameMode?'파일명 변경 저장':activeTool==='number'?'기타 태그 저장':'태그 변경 저장';
- $('#saveTags').title=enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
+ $('#saveTags').title=cdRenameHold?'CD 통합 파일명 저장 보류: 디스크별 UUID를 보존하는 재색인 경로가 확인되지 않았습니다.':enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
 }
 async function readSaveCaps(){
  try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:r.rename===true};}
@@ -528,7 +528,10 @@ async function reconcileDiscRenames(jobs,viewId){
  return [...new Set(unknown)].length;
 }
 async function saveDiscGroupRenames({files=null,automatic=false}={}){
- if(tagSaveBusy||!S.album?.disc_group||!saveCaps.rename)return;
+ if(!S.album?.disc_group)return;
+ toast('CD 통합 파일명 저장은 안전한 재색인 경로가 마련될 때까지 중단합니다. 태그 저장은 이용할 수 있습니다.');return;
+ // No CD aggregate Rename plan/apply is allowed while native reindex cannot preserve both disc UUIDs.
+ if(tagSaveBusy||!saveCaps.rename)return;
  const viewId=S.album.id,scope=new Set(files||[...S.selected]);
  const jobs=S.original.filter(e=>scope.has(e.file)&&S.renames[e.file]&&S.renames[e.file]!==base(e.file))
   .map(e=>{const disc=discWriteOwner(e.file);return {album_id:disc.id,file:e.file,new_name:S.renames[e.file],label:disc.label,path:disc.path};});
