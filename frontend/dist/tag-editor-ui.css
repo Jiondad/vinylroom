@@ -167,3 +167,27 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
 #multiTagSave{font-size:12px}
 @media(max-width:900px){.multi-tag-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.multi-tag-panel{padding:9px}.multi-tag-heading{align-items:flex-start;flex-direction:column;gap:3px}.multi-tag-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}.multi-tag-actions{flex-wrap:wrap}#multiTagStatus{flex-basis:100%}}
+
+
+/* Two-row multi-tag editor: wider text metadata, compact two-digit numbers. */
+@media(min-width:901px){
+ .multi-tag-grid{
+  grid-template-columns:repeat(24,minmax(0,1fr));
+  column-gap:8px;
+  row-gap:7px;
+ }
+ .multi-tag-album,.multi-tag-title,.multi-tag-artist,.multi-tag-album-artist{grid-column:span 6}
+ .multi-tag-date{grid-column:span 5}
+ .multi-tag-genre{grid-column:span 6}
+ .multi-tag-track-number,.multi-tag-disc-number{grid-column:span 2}
+ .multi-tag-featuring{grid-column:span 9}
+ .multi-tag-track-number input,.multi-tag-disc-number input{text-align:center;padding-inline:3px;font-variant-numeric:tabular-nums}
+ .multi-tag-track-number input::placeholder,.multi-tag-disc-number input::placeholder{font-size:11px}
+}
+@media(min-width:651px) and (max-width:900px){
+ .multi-tag-grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:7px}
+ .multi-tag-album,.multi-tag-title,.multi-tag-artist,.multi-tag-album-artist{grid-column:span 6}
+ .multi-tag-date,.multi-tag-genre,.multi-tag-featuring{grid-column:span 4}
+ .multi-tag-track-number,.multi-tag-disc-number{grid-column:span 2}
+ .multi-tag-track-number input,.multi-tag-disc-number input{text-align:center;padding-inline:3px}
+}
