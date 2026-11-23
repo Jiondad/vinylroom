@@ -27,7 +27,7 @@ function read(url,body){const key=body===undefined?url:null;if(key&&inflight.has
 }
 async function api(url,body){if(!channel)throw Error('관리자 인증이 필요합니다.');return (await read(url,body)).result;}
 window.addEventListener('message',event=>{if(event.source!==parent||event.origin!==location.origin)return;const m=event.data;
- if(m?.type==='vr-tag-init'&&!channel&&typeof m.channel==='string'){channel=m.channel;document.body.hidden=false;document.body.classList.remove('locked');if(m.preview)$('#sourceBadge').textContent='DEMO · NAS 미연결';void expand('');void readSaveCaps();if(m.initialAlbum)openLinkedAlbum(m.initialAlbum);}
+ if(m?.type==='vr-tag-init'&&!channel&&typeof m.channel==='string'){channel=m.channel;document.body.hidden=false;document.body.classList.remove('locked');if(m.preview)$('#sourceBadge').textContent='DEMO · NAS 미연결';void expand('');void readSaveCaps();if(m.initialAlbum)openLinkedAlbum(m.initialAlbum);else void restoreLastEditorAlbum();}
  if(m?.type==='vr-tag-viewport'&&m.channel===channel&&Number.isFinite(m.top)&&Number.isFinite(m.height)&&m.top>=0&&m.height>=240){document.documentElement.style.setProperty('--tag-visible-top',m.top+'px');document.documentElement.style.setProperty('--tag-visible-height',m.height+'px');}
  if(m?.type==='vr-tag-revoke'){channel=null;for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('관리자 인증이 필요합니다.'));}pending.clear();inflight.clear();S.drafts.clear();S.original=[];S.draft=[];coverEditor.close();document.body.classList.add('locked');}
  if(m?.type==='vr-tag-result'&&m.channel===channel){const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error)):p.resolve({result:m.result,metrics:m.metrics});}}
@@ -72,6 +72,37 @@ function openLinkedAlbum(a){
  renderTree();
  void selectAlbum(id);
 }
+// Only restore a previously viewed album, never a pending save or old draft.
+// Re-fetch CD members and tags from NAS so F5 reflects the actual saved filenames.
+async function restoreLastEditorAlbum(){
+ const saved=refreshView?.album;
+ if(!saved||!channel||tagSaveBusy)return;
+ const id=String(saved.id||''),path=String(saved.relative_path||'');
+ const safePath=path&&!path.startsWith('/')&&!path.includes('\\')&&
+  path.split('/').every(p=>p&&p!=='.'&&p!=='..');
+ if(!safePath)return;
+ if(!id.startsWith('disc-group:')){
+  openLinkedAlbum(saved);
+  return;
+ }
+ if(id!=='disc-group:'+path)return;
+ try{
+  // Populate the original NAS album listing; no synthetic IDs are sent to the Writer.
+  const parent=addPath(path);
+  let current=path;
+  while(current){node(current).expanded=true;current=current.split('/').slice(0,-1).join('/');}
+  node('').expanded=true;
+  const response=await api('/api/albums?artist='+encodeURIComponent('folder:'+path));
+  if(!channel)return;
+  addAlbums(response.items||[],path);
+  parent.expanded=true;
+  renderTree();
+  if(discChildAlbums(path).length>=2)await selectDiscGroup(path);
+  else $('#loadStatus').textContent='이전 CD 통합 앨범을 복원하지 못했습니다. 왼쪽 폴더에서 다시 선택하세요.';
+ }catch(e){
+  if(channel)$('#loadStatus').textContent='이전 앨범 재조회 실패 · 왼쪽 폴더에서 다시 선택하세요.';
+ }
+}
 function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><img data-tag-cover="${esc(a.discs[0].id)}" alt="앨범 대표 커버"><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
  return `<button class="cover-button" id="coverOpen" aria-label="내장 커버 편집 열기"><span>◎</span><img data-tag-cover="${esc(a.id)}" alt="앨범 색인 커버"><span>커버 편집</span></button><div><h2>${esc(a.title)}</h2><p>${esc(a.artist)} · ${esc(a.date||'연도 없음')}</p><div class="folder-path" title="${esc(a.path||a.relative_path||'')}">${esc(a.path||a.relative_path||'')}</div></div>`;}
 async function selectAlbum(id){if(tagSaveBusy){toast('NAS 저장 중에는 앨범을 변경하지 마세요.');return;}if(S.active===id&&S.album)return;const info=[...S.nodes.values()].find(n=>n.album?.id===id)?.album;if(!info)return;
@@ -115,7 +146,8 @@ async function selectDiscGroup(path){
   const saved=S.drafts.get(groupId+'|shared'),valid=saved?.original===JSON.stringify(S.original);
   S.draft=clone(valid?saved.draft:entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};
   $('#albumHeader').innerHTML=summary(album);parent.postMessage({type:'vr-tag-covers',channel},location.origin);$('#loadStatus').textContent='CD 통합 · 선택한 트랙을 원래 디스크별로 확인·저장합니다.';
-  $('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();syncMultiTags();
+  $('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();syncMultiTags();rememberEditorView();
+  if(refreshView?.album?.id===groupId&&Number.isFinite(refreshView.scrollTop))requestAnimationFrame(()=>{$('#artistScroll').scrollTop=refreshView.scrollTop;});
   const measurement={album_id:groupId,discs:discs.length,display_ms:performance.now()-started};
   $('#albumHeader').dataset.readMetrics=JSON.stringify(measurement);
  }catch(e){if(gate.current(ticket)){$('#loadStatus').textContent='통합 조회 중단 · '+e.message;renderTracks('디스크를 개별 선택해 조회하세요.');}}
