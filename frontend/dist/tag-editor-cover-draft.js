@@ -66,7 +66,7 @@ export function installTagCoverDraft({getAlbum,getSelectedFiles,api,getSaveCapab
   q('#coverCurrentSummary').textContent=known.length?`조회 ${known.length}곡 · 앞표지 있음 ${withFront.length}곡 · 없음 ${known.length-withFront.length}곡`:'내장 커버 미조회';
   if(variants.size>1)q('#coverCurrentSummary').textContent+=' · 커버 혼재, 대표 이미지';
   const representative=withFront.find(r=>r.preview_data_url?.startsWith('data:image/jpeg;base64,'));if(representative){const img=document.createElement('img');img.src=representative.preview_data_url;img.alt='현재 내장 앞표지 대표 이미지';current.append(img);}
-  const holds=chosen.filter(f=>plans.get(f)&&plans.get(f).state!=='READ_ONLY_COVER_PLAN');if(holds.length)files.append(text('p',`계획 보류 ${holds.length}곡 · `+[...new Set(holds.map(f=>explainHold(plans.get(f).reason))].join(', ')));
+  const holds=chosen.filter(f=>plans.get(f)&&plans.get(f).state!=='READ_ONLY_COVER_PLAN');if(holds.length)files.append(text('p',`계획 보류 ${holds.length}곡 · `+[...new Set(holds.map(f=>explainHold(plans.get(f).reason)))].join(', ')));
  }
  async function saveChosen(){const chosen=[...selected()],id=albumId,ticket=version;if(busy||!getSaveCapabilities().cover)return;
   if(!chosen.length){status.textContent='저장할 곡을 선택하세요.';return;}
