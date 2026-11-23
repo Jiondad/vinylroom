@@ -50,7 +50,12 @@ function compareTreeFolders(a,b){
  return treeFolderSortKey(a).localeCompare(treeFolderSortKey(b),'ko',{numeric:true,sensitivity:'base'})||
   a.localeCompare(b,'ko',{numeric:true,sensitivity:'base'});
 }
-function renderTree(){const render=(path,depth=0)=>{const n=node(path),isAlbum=!!n.album,open=n.expanded;return `<li><div class="tree-row ${isAlbum?'album ':''}${isAlbum&&S.active===n.album.id?'active':''}" style="padding-left:${depth*13+4}px"><button class="tree-toggle" data-expand="${esc(path)}" aria-label="${esc(n.name)} ${open?'접기':'펼치기'}" aria-expanded="${open}" ${isAlbum&&!n.children.size?'disabled':''}>${isAlbum&&!n.children.size?'·':open?'▾':'▸'}</button><button class="tree-label" ${isAlbum?'data-album="'+esc(n.album.id)+'"':'data-folder="'+esc(path)+'"'} title="${esc(path||'/music')}"><span class="tree-icon">${isAlbum?'♫':'▱'}</span>${esc(n.name)}${isAlbum?'<small>'+esc(n.album.date||'')+'</small>':''}</button></div>${open?`<ul class="tree-branch">${[...n.children].sort(compareTreeFolders).map(p=>render(p,depth+1)).join('')}</ul>`:''}${n.loading?'<p class="tree-feedback">불러오는 중…</p>':''}${n.error?`<p class="tree-feedback">${esc(n.error)} <button data-retry="${esc(path)}">다시 조회</button></p>`:''}</li>`;};$('#artistList').innerHTML='<ul class="tree-branch">'+render('')+'</ul>';}
+function discChildAlbums(path){
+ const parent=node(path);
+ const children=[...parent.children].map(p=>node(p)).filter(n=>n.album&&n.path.startsWith(path+'/')&&n.path.slice(path.length+1).indexOf('/')<0&&/^(?:CD|DISC)[\s_-]*0*[1-9]\d*$/i.test(n.path.split('/').pop()));
+ return children.sort((a,b)=>a.path.localeCompare(b.path,'ko',{numeric:true}));
+}
+function renderTree(){const render=(path,depth=0)=>{const n=node(path),isAlbum=!!n.album,open=n.expanded;return `<li><div class="tree-row ${isAlbum?'album ':''}${isAlbum&&S.active===n.album.id?'active':''}" style="padding-left:${depth*13+4}px"><button class="tree-toggle" data-expand="${esc(path)}" aria-label="${esc(n.name)} ${open?'접기':'펼치기'}" aria-expanded="${open}" ${isAlbum&&!n.children.size?'disabled':''}>${isAlbum&&!n.children.size?'·':open?'▾':'▸'}</button><button class="tree-label" ${isAlbum?'data-album="'+esc(n.album.id)+'"':'data-folder="'+esc(path)+'"'} title="${esc(path||'/music')}"><span class="tree-icon">${isAlbum?'♫':'▱'}</span>${esc(n.name)}${isAlbum?'<small>'+esc(n.album.date||'')+'</small>':''}</button>${!isAlbum&&n.albumsLoaded&&discChildAlbums(path).length>=2?'<button type="button" class="disc-group-open" data-disc-group="'+esc(path)+'" title="CD1·CD2 등 하위 디스크 통합 조회">CD 통합</button>':''}</div>${open?`<ul class="tree-branch">${[...n.children].sort(compareTreeFolders).map(p=>render(p,depth+1)).join('')}</ul>`:''}${n.loading?'<p class="tree-feedback">불러오는 중…</p>':''}${n.error?`<p class="tree-feedback">${esc(n.error)} <button data-retry="${esc(path)}">다시 조회</button></p>`:''}</li>`;};$('#artistList').innerHTML='<ul class="tree-branch">'+render('')+'</ul>';}
 async function expand(path,{retry=false}={}){const n=node(path);if(n.album&&!n.children.size)return;const opening=!n.expanded||!n.loaded||retry;n.expanded=opening;if(!opening){renderTree();return;}if(n.loading){renderTree();return;}n.loading=true;n.error='';renderTree();try{
  if(!n.loaded||retry){const r=await api('/api/folders?path='+encodeURIComponent(path));for(const a of r.items||[]) {n.children.add(a.id);node(a.id,a.name);}n.loaded=true;}
  if(path.split('/').length>=2&&!n.albumsLoaded){const r=await api('/api/albums?artist='+encodeURIComponent('folder:'+path));addAlbums(r.items||[],path);if(r.truncated)n.error='조회 범위 일부만 표시';}
@@ -67,7 +72,8 @@ function openLinkedAlbum(a){
  renderTree();
  void selectAlbum(id);
 }
-function summary(a){return `<button class="cover-button" id="coverOpen" aria-label="내장 커버 편집 열기"><span>◎</span><img data-tag-cover="${esc(a.id)}" alt="앨범 색인 커버"><span>커버 편집</span></button><div><h2>${esc(a.title)}</h2><p>${esc(a.artist)} · ${esc(a.date||'연도 없음')}</p><div class="folder-path" title="${esc(a.path||a.relative_path||'')}">${esc(a.path||a.relative_path||'')}</div></div>`;}
+function summary(a){if(a.disc_group)return `<div class="cover-placeholder" aria-hidden="true">♫</div><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 브라우저 초안 전용</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
+ return `<button class="cover-button" id="coverOpen" aria-label="내장 커버 편집 열기"><span>◎</span><img data-tag-cover="${esc(a.id)}" alt="앨범 색인 커버"><span>커버 편집</span></button><div><h2>${esc(a.title)}</h2><p>${esc(a.artist)} · ${esc(a.date||'연도 없음')}</p><div class="folder-path" title="${esc(a.path||a.relative_path||'')}">${esc(a.path||a.relative_path||'')}</div></div>`;}
 async function selectAlbum(id){if(S.active===id&&S.album)return;const info=[...S.nodes.values()].find(n=>n.album?.id===id)?.album;if(!info)return;
  saveDraft();const ticket=gate.next(),started=performance.now();if(currentTrackRequest)currentTrackRequest.cancel();S.active=id;S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();$('#albumHeader').innerHTML=summary(info);$('#loadStatus').textContent='트랙 태그를 불러오는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;renderTree();renderTracks('트랙 태그를 불러오는 중…');
  $('#albumHeader').setAttribute('aria-busy','true');parent.postMessage({type:'vr-tag-covers',channel},location.origin);
@@ -77,6 +83,43 @@ async function selectAlbum(id){if(S.active===id&&S.album)return;const info=[...S
  if(matchMedia('(max-width:650px)').matches){$('.browser').classList.add('collapsed');$('#browseToggle').textContent='펼치기';$('#browseToggle').setAttribute('aria-expanded','false');}
  }catch(e){if(gate.current(ticket)&&e.message!=='selection_superseded'){$('#loadStatus').textContent=e.message;renderTracks('조회 실패 · 왼쪽 앨범을 다시 선택하세요.');}}
  finally{if(gate.current(ticket)){$('#albumHeader').removeAttribute('aria-busy');currentTrackRequest=null;}}
+}
+async function selectDiscGroup(path){
+ const child=discChildAlbums(path);if(child.length<2||child.length>8){toast('CD1·CD2 등 디스크 폴더 2~8개를 먼저 펼치세요.');return;}
+ if(tagSaveBusy){toast('저장 중에는 앨범을 변경할 수 없습니다.');return;}
+ saveDraft();const ticket=gate.next(),started=performance.now();
+ if(currentTrackRequest)currentTrackRequest.cancel();
+ const groupId='disc-group:'+path,requests=child.map(n=>read('/api/tracks?album='+encodeURIComponent(n.album.id)));
+ currentTrackRequest={cancel:()=>requests.forEach(r=>r.cancel?.())};
+ S.active=groupId;S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();
+ $('#albumHeader').innerHTML='<div class="cover-placeholder">♫</div><div><h2>CD 통합 조회 중…</h2><p>'+esc(path)+'</p></div>';
+ $('#loadStatus').textContent='각 디스크를 읽기 전용으로 조회하는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;
+ renderTree();renderTracks('디스크 조회 중…');
+ try{
+  const results=await Promise.all(requests);if(!gate.current(ticket))return;
+  const discs=[],entries=[],files=new Set();
+  for(let i=0;i<results.length;i++){
+   const a=results[i]?.result?.album, expected=child[i].album;
+   if(!a||a.id!==expected.id||a.path!==expected.relative_path||!Array.isArray(a.entries))throw Error('디스크 앨범 식별이 일치하지 않습니다.');
+   const label=child[i].path.split('/').pop();
+   discs.push({id:a.id,path:a.path,label,count:a.entries.length});
+   for(const e of a.entries){
+    if(typeof e.file!=='string'||files.has(e.file)||!e.file.startsWith(a.path+'/'))throw Error('중복 또는 범위 외 트랙이 발견되었습니다.');
+    files.add(e.file);entries.push({...e,source_album_id:a.id,disc_label:label});
+   }
+  }
+  if(!entries.length||entries.length>120)throw Error('통합 편집 지원 범위는 1~120곡입니다. 디스크별로 편집하세요.');
+  const first=results[0].result.album;
+  const album={id:groupId,disc_group:true,discs,artist:first.artist,title:first.title,date:first.date,path,count:entries.length,entries};
+  S.album=album;S.original=clone(entries);
+  const saved=S.drafts.get(groupId+'|shared'),valid=saved?.original===JSON.stringify(S.original);
+  S.draft=clone(valid?saved.draft:entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};
+  $('#albumHeader').innerHTML=summary(album);$('#loadStatus').textContent='통합 편집 초안 · NAS 저장은 디스크별 보호 연결 전까지 차단됩니다.';
+  $('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();syncMultiTags();
+  const measurement={album_id:groupId,discs:discs.length,display_ms:performance.now()-started};
+  $('#albumHeader').dataset.readMetrics=JSON.stringify(measurement);
+ }catch(e){if(gate.current(ticket)){$('#loadStatus').textContent='통합 조회 중단 · '+e.message;renderTracks('디스크를 개별 선택해 조회하세요.');}}
+ finally{if(gate.current(ticket))currentTrackRequest=null;}
 }
 const reasons={existing_value_preserved:'기존값 보존',joint_artist_backslash_protected:'공동 아티스트 보호',filename_does_not_match_format:'변환 형식 불일치',ambiguous_filename_format:'구분자 모호',duplicate_track_number_on_disc:'디스크 내 번호 중복',destination_currently_exists:'파일명 충돌',missing_or_invalid_tracknumber:'번호 확인 필요'};
 const MULTI_FIELDS=['title','artist','album','album_artist','date','tracknumber','discnumber','genre','featuring'];
@@ -176,7 +219,7 @@ function renderTracks(empty='선택한 앨범의 트랙이 여기에 표시됩�
  $('#draftCount').textContent='변경 '+unsaved+'곡';$('#commonSummary').textContent=S.album?['album','album_artist','date'].map(f=>{const v=[...new Set(S.draft.map(e=>values(e,f)))];return fields[f]+': '+(v.length>1?'파일별 값 다름':v[0]||'빈 값');}).join(' · '):'';
  saveButtonState();
 }
-$('#artistList').onclick=e=>{const a=e.target.closest('[data-album]'),folder=e.target.closest('[data-folder]'),toggle=e.target.closest('[data-expand]'),retry=e.target.closest('[data-retry]');if(a)void selectAlbum(a.dataset.album);else if(retry)void expand(retry.dataset.retry,{retry:true});else if(toggle||folder)void expand((toggle||folder).dataset[toggle?'expand':'folder']);};
+$('#artistList').onclick=e=>{const group=e.target.closest('[data-disc-group]'),a=e.target.closest('[data-album]'),folder=e.target.closest('[data-folder]'),toggle=e.target.closest('[data-expand]'),retry=e.target.closest('[data-retry]');if(group)void selectDiscGroup(group.dataset.discGroup);else if(a)void selectAlbum(a.dataset.album);else if(retry)void expand(retry.dataset.retry,{retry:true});else if(toggle||folder)void expand((toggle||folder).dataset[toggle?'expand':'folder']);};
 $('#artistForm').onsubmit=async e=>{e.preventDefault();const query=$('#artistSearch').value.trim(),ticket=++searchVersion;if(!query){$('#searchResults').replaceChildren();return;}$('#searchResults').textContent='검색 중…';try{const r=await api('/api/artists?q='+encodeURIComponent(query));if(ticket!==searchVersion)return;S.search=r.items||[];$('#searchResults').innerHTML='<p class="search-title">검색 결과</p>'+S.search.map((a,i)=>`<button class="search-result" data-search-artist="${i}">${esc(a.name)}</button>`).join('')+(r.truncated?'<p class="tree-feedback">검색어를 좁혀 주세요.</p>':'');if(!S.search.length)$('#searchResults').textContent='검색 결과 없음';}catch(e){if(ticket===searchVersion)$('#searchResults').textContent=e.message;}};
 $('#searchResults').onclick=async e=>{const button=e.target.closest('[data-search-artist]');if(!button||button.disabled)return;const a=S.search[+button.dataset.searchArtist];button.disabled=true;try{const r=await api('/api/albums?artist='+encodeURIComponent(a.id));const path='검색 결과/'+a.name;node('').children.add('검색 결과');addPath(path);node('검색 결과').expanded=true;node('검색 결과').loaded=true;node('검색 결과').albumsLoaded=true;node(path).expanded=true;node(path).loaded=true;addAlbums((r.items||[]).map(a=>({...a,tree_path:path+'/@'+a.id})),path);renderTree();}catch(e){toast(e.message);}finally{button.disabled=false;}};
 function discDraft(entries){
