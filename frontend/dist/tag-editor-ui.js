@@ -488,6 +488,94 @@ $('#saveTags').onclick=async()=>{
  await persistTagRows(rows);
 };
 
+
+function acceptDiscRename(job,newFile,tags=null){
+ const old=job.file;
+ if(newFile===old||!newFile.startsWith(job.path+'/')||newFile.split('/').slice(0,-1).join('/')!==old.split('/').slice(0,-1).join('/'))
+  throw Error('파일명 변경 결과의 원래 디스크 경로가 일치하지 않습니다.');
+ for(const list of [S.original,S.draft]){
+  const row=list.find(x=>x.file===old);
+  if(row){row.file=newFile;row.relative_file=newFile;
+   if(list===S.original&&tags)row.tags=clone(tags);}
+ }
+ if(S.selected.delete(old))S.selected.add(newFile);
+ if(S.anchor===old)S.anchor=newFile;
+ delete S.renames[old];delete S.warnings[old];justSaved.delete(old);justSaved.add(newFile);
+}
+async function reconcileDiscRenames(jobs,viewId){
+ const ids=[...new Set(jobs.map(j=>j.album_id))],unknown=[];
+ for(const id of ids){
+  try{
+   const response=await api('/api/tracks?album='+encodeURIComponent(id)),album=response?.album;
+   const disc=S.album?.discs.find(d=>d.id===id);
+   if(S.album?.id!==viewId||album?.id!==id||album?.path!==disc?.path||!Array.isArray(album?.entries))
+    throw Error('디스크 파일 목록 재조회 신원 불일치');
+   const files=new Map(album.entries.map(e=>[e.file,e]));
+   for(const job of jobs.filter(j=>j.album_id===id)){
+    // Completed jobs were already moved in browser state. Others are reconciled.
+    const current=S.original.find(e=>e.file===job.file);
+    if(!current)continue;
+    const newFile=job.file.split('/').slice(0,-1).concat(job.new_name).join('/');
+    if(files.has(newFile)&&!files.has(job.file)){
+     acceptDiscRename(job,newFile,files.get(newFile).tags);
+    }else if(!files.has(job.file)||files.has(newFile))unknown.push(job.file);
+   }
+  }catch{unknown.push(...jobs.filter(j=>j.album_id===id).map(j=>j.file));}
+ }
+ saveDraft();renderTracks();
+ return [...new Set(unknown)].length;
+}
+async function saveDiscGroupRenames({files=null,automatic=false}={}){
+ if(tagSaveBusy||!S.album?.disc_group||!saveCaps.rename)return;
+ const viewId=S.album.id,scope=new Set(files||[...S.selected]);
+ const jobs=S.original.filter(e=>scope.has(e.file)&&S.renames[e.file]&&S.renames[e.file]!==base(e.file))
+  .map(e=>{const disc=discWriteOwner(e.file);return {album_id:disc.id,file:e.file,new_name:S.renames[e.file],label:disc.label,path:disc.path};});
+ if(!jobs.length){toast('변경할 파일명이 없습니다.');return;}
+ if(!automatic&&!window.confirm('CD 통합 '+jobs.length+'곡의 실제 파일명을 디스크별로 변경할까요?'))return;
+ tagSaveBusy=true;$('#saveTags').disabled=true;$('#bulkApply').disabled=true;
+ let completed=0,failed=null,phase='preflight',firstPlan=null;
+ const start=performance.now(),spent={preflight:0,plan:0,apply:0};
+ const fmt=t=>(t/1000).toFixed(1)+'초';
+ try{
+  // Retain the existing all-jobs preflight and the server-side CAS + reindex.
+  for(const job of jobs){
+   if(S.album?.id!==viewId||discWriteOwner(job.file).id!==job.album_id)throw Error('디스크 식별 변경');
+   const tick=performance.now();
+   try{
+    const plan=await api('/api/rename/plan',{album_id:job.album_id,file:job.file,new_name:job.new_name});
+    if(plan?.state!=='READ_ONLY_RENAME_PLAN')throw Error(plan?.reason||plan?.state||'계획 실패');
+    if(job===jobs[0])firstPlan=plan;
+   }finally{spent.preflight+=performance.now()-tick;}
+  }
+  for(const job of jobs){
+   if(S.album?.id!==viewId)throw Error('통합 앨범 변경');
+   phase='plan';
+   let plan,tick=performance.now();
+   if(job===jobs[0]&&firstPlan){plan=firstPlan;firstPlan=null;}
+   else{try{plan=await api('/api/rename/plan',{album_id:job.album_id,file:job.file,new_name:job.new_name});}
+    finally{spent.plan+=performance.now()-tick;}}
+   if(plan?.state!=='READ_ONLY_RENAME_PLAN')throw Error(plan?.reason||plan?.state||'계획 오류');
+   $('#saveStatus').textContent=job.label+' 파일명 저장 중 · '+completed+'/'+jobs.length+'곡';
+   phase='apply';tick=performance.now();let result;
+   try{result=await api('/api/rename/apply',{album_id:job.album_id,file:job.file,new_name:job.new_name,expected_plan_id:plan.plan_id,confirm_write:true});}
+   finally{spent.apply+=performance.now()-tick;}
+   if(result?.state!=='RENAME_WRITE_COMPLETED'||typeof result.new_file!=='string')
+    throw Error(result?.reason||result?.state||'NAS Rename 응답 불확실 · 자동 재시도 금지');
+   acceptDiscRename(job,result.new_file);
+   completed++;saveDraft();renderTracks();
+  }
+  $('#saveStatus').textContent='CD 통합 파일명 변경 완료 · '+completed+'/'+jobs.length+'곡';
+  $('#bulkStatus').textContent='파일명 NAS 저장 완료 · '+completed+'곡 · 전체 '+fmt(performance.now()-start)+' · 검사 '+fmt(spent.preflight)+' · 계획 '+fmt(spent.plan)+' · 적용·색인 '+fmt(spent.apply);
+ }catch(e){
+  failed=e;
+  $('#saveStatus').textContent='CD 통합 파일명 저장 중단 ('+phase+') · '+completed+'/'+jobs.length+'곡 · '+e.message;
+  $('#bulkStatus').textContent='파일명 부분 저장 · 자동 재시도 없음 · '+e.message;
+  const unknown=await reconcileDiscRenames(jobs,viewId);
+  $('#bulkStatus').textContent+=' · 디스크별 재조회'+(unknown?' · 확인 불가 '+unknown+'곡':' 완료');
+ }finally{tagSaveBusy=false;saveDraft();renderTracks();$('#bulkApply').disabled=!S.album;}
+ return {completed,total:jobs.length,error:failed};
+}
+
 async function saveRenames({files=null,automatic=false}={}){
  if(S.album?.disc_group)return saveDiscGroupRenames({files,automatic});
  if(tagSaveBusy||!S.album||!saveCaps.rename){toast('NAS 파일명 저장 기능을 사용할 수 없습니다.');return;}
