@@ -39,7 +39,7 @@ def hold(msg): raise SystemExit('HOLD: '+msg)
 def sha(b):return hashlib.sha256(b).hexdigest()
 def owner_mode(path, mode):
     info=path.stat()
-    return not path.is_symlink() and info.st_uid==os.geteuid() and stat.S_IMODE(info.st_mode)==mode
+    return not path.is_symlink() and info.st_uid==1026 and info.st_gid==100 and stat.S_IMODE(info.st_mode)==mode
 
 if not LIVE.is_file() or not STAGED.is_file() or not RECEIPT.is_file():
     hold('one or more files missing')
