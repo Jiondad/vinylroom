@@ -1,0 +1,23 @@
+name: Tag Editor lease preflight repair
+on:
+  push:
+    branches: [fix/tag-editor-leasebusy-409-20261123]
+jobs:
+  repaired-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check repaired NAS qualification and deployment script only
+        run: |
+          python3 -m py_compile nas/tag-editor-cover/qualify_leasebusy_409_nas.py nas/tag-editor-cover/deploy_leasebusy_409_nas.py
+          python3 - <<'PY'
+          from pathlib import Path
+          q=Path('nas/tag-editor-cover/qualify_leasebusy_409_nas.py').read_text()
+          d=Path('nas/tag-editor-cover/deploy_leasebusy_409_nas.py').read_text()
+          assert 'base=types.SimpleNamespace(sqlite3=sqlite3)' in q
+          assert 'import ast,hashlib,json,os,sqlite3,' in q
+          assert 'if len(chain)!=12 or len(set(chain))!=12' in d
+          assert 'compose.http400-diagnostic-qualified.json' in d
+          assert 'atomic_receipt(root,receipt,original)' in d
+          print('SCOPED_PREDEPLOY_REPAIR_PASS')
+          PY
