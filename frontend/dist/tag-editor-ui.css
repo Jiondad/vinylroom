@@ -216,3 +216,15 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
 .toolbar-note #saveTags{background:#34484e;color:#fff;border:1px solid #34484e;border-radius:5px;padding:5px 10px;min-height:33px;font-size:12px;white-space:nowrap}
 .toolbar-note #saveTags:hover:not(:disabled){background:#263a40}
 .toolbar-note #saveTags:disabled{background:#f7f8f9;color:#8c979d;border-color:#d9e0e3}
+
+
+/* 2026-11-23: reduce the current artist sidebar to 80% on desktop.
+   Let the track columns fit the available editor width instead of forcing
+   a 1260px horizontal scrollbar. Keep narrow-screen scrolling unchanged. */
+@media(min-width:901px){
+ .workspace{grid-template-columns:minmax(0,18.304%) minmax(0,1fr)}
+ .workspace .track-panel table{min-width:0;width:100%;max-width:100%}
+}
+@media(min-width:651px) and (max-width:900px){
+ .workspace{grid-template-columns:minmax(0,19.136%) minmax(0,1fr)}
+}
