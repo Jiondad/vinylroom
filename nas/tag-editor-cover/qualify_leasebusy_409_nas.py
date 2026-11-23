@@ -63,7 +63,7 @@ def main():
  if len(handles)<2:raise RuntimeError("HOLD handler_not_found")
  scope={"urlsplit":urllib.parse.urlsplit,"_SAVE_ROUTES":{"/v2/admin/tag-cover/tag-apply"},
         "_READONLY_HANDLE":lambda *args:None,
-        "cover":types.SimpleNamespace(hold=lambda reason:{"state":"HOLD","reason":reason}),
+        "cover":types.SimpleNamespace(hold=lambda reason:{"state":"HOLD","reason":reason},base=types.SimpleNamespace(sqlite3=sqlite3)),
         "_safe_apply_error_log":lambda route,exc:None}
  exec(compile(ast.Module(body=[handles[-1]],type_ignores=[]),"tag_cover_http.py","exec"),scope)
  class FakeHandler:
