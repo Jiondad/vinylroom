@@ -55,7 +55,7 @@ def inspect():
     service=labels["com.docker.compose.service"]
     if not chain or not chain[-1].endswith("compose.http400-diagnostic-qualified.json"):
         hold("expected_existing_fullsave_overlay_missing")
-    if len(chain)!=12 or len(set(chain))!=11:hold("unexpected_compose_chain_length")
+    if len(chain)!=12 or len(set(chain))!=12:hold("unexpected_compose_chain_length")
     if mounts.get("/tag-editor-backups",{}).get("Type")!="bind":hold("qualification_backup_mount_not_bind")
     for name in EIGHT:
         m=mounts.get("/app/"+name)
