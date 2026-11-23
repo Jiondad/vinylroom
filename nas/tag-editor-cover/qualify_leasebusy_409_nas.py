@@ -2,7 +2,7 @@
 """Scoped qualification: reuse prior audio/restore evidence; check only changed lease behavior.
 No running NAS service, music, catalog, receipt, or Docker changes.
 """
-import ast,hashlib,json,os,subprocess,sys,tempfile,threading,time,types,urllib.parse
+import ast,hashlib,json,os,sqlite3,subprocess,sys,tempfile,threading,time,types,urllib.parse
 from pathlib import Path
 BASE=Path("/volume1/docker/music-gateway")
 STAGE=BASE/"tag-editor-leasebusy-409-stage-20261123"
