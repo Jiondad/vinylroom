@@ -136,7 +136,7 @@ with tempfile.TemporaryDirectory(prefix='vr_cd_rename_isolated_',dir='/data') as
                       'operating_media_writes':0,'operating_catalog_writes':0,
                       'fixture_removed_on_exit':True},ensure_ascii=False))
 '''
-payload="__CANDIDATE_B64__="+repr(encoded_candidate)+"\\n"+TEST
+payload="__CANDIDATE_B64__="+repr(encoded_candidate)+"\n"+TEST
 result=subprocess.run(['docker','exec','-i',C,'python3','-'],input=payload,
                       text=True,capture_output=True,timeout=240)
 if result.stdout:print(result.stdout.strip())
