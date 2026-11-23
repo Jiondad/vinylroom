@@ -344,12 +344,14 @@ async function reconcileDiscTags(jobs,viewId){
    for(const job of jobs.filter(j=>j.album_id===id)){
     const now=actual.get(job.file),old=S.original.find(e=>e.file===job.file),draft=S.draft.find(e=>e.file===job.file);
     if(!now||!old||!draft){unknown.push(job.file);continue;}
+    let matches=true;
     for(const field of job.fields){
      const received=clone(now.tags?.[field]||[]);
      old.tags[field]=received;
      // Preserve the unsaved intended draft on mismatch.
-     if(JSON.stringify(received)===JSON.stringify(draft.tags[field]||[]))seen.add(job.file);
+     if(JSON.stringify(received)!==JSON.stringify(draft.tags[field]||[]))matches=false;
     }
+    if(matches)seen.add(job.file);else unknown.push(job.file);
    }
   }catch{unknown.push(...jobs.filter(j=>j.album_id===id).map(j=>j.file));}
  }
