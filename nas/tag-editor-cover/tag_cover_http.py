@@ -221,7 +221,11 @@ def handle(h,index,music_root,origin,post=False):
         if index is None:return h.reply(503,cover.hold('catalog_unavailable'))
         length=int(h.headers.get('Content-Length','0'))
         if h.headers.get_content_type()!='application/json' or not 0<length<=MAX_JSON:raise ValueError('invalid_save_request')
-        if not SLOTS.acquire(blocking=False):return h.reply(409,cover.hold('tag_editor_busy'))
+        # Album-cover writes wait briefly for an in-flight Tag Editor inspect/plan/save
+        # instead of failing immediately with HTTP 409. File CAS and the existing
+        # runtime maintenance lease remain the authoritative write guards.
+        acquired = SLOTS.acquire(timeout=30) if route == PREFIX+'/apply' else SLOTS.acquire(blocking=False)
+        if not acquired:return h.reply(409,cover.hold('tag_editor_busy'))
         try:return h.reply(200,save_request(index.dbpath,music_root,route,json.loads(h.rfile.read(length))))
         finally:SLOTS.release()
     except PermissionError:return h.reply(403,cover.hold('administrator_required_or_runtime_not_idle'))
