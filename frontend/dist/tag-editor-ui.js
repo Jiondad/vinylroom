@@ -364,7 +364,7 @@ async function saveRenames({files=null,automatic=false}={}){
  if(!jobs.length){toast('변경할 파일명이 없습니다.');return;}
  if(!automatic&&!window.confirm(`선택한 ${jobs.length}곡의 파일명을 NAS에 저장할까요?`))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#bulkApply').disabled=true;
- let completed=0,failed=null,stage='preflight';
+ let completed=0,failed=null,stage='preflight',firstPlan=null;
  const started=performance.now(),durations={preflight:0,plan:0,apply:0,reread:0};
  const seconds=ms=>(ms/1000).toFixed(1)+'초';
  const summary=()=>`전체 ${seconds(performance.now()-started)} · 사전검사 ${seconds(durations.preflight)} · 계획 ${seconds(durations.plan)} · 적용·색인 ${seconds(durations.apply)}${durations.reread?' · 재조회 '+seconds(durations.reread):''}`;
@@ -374,7 +374,8 @@ async function saveRenames({files=null,automatic=false}={}){
    if(S.album?.id!==id)throw Error('앨범이 변경됐습니다.');
    const tick=performance.now();
    try{const p=await api('/api/rename/plan',{album_id:id,...job});
-    if(p.state!=='READ_ONLY_RENAME_PLAN')throw Error(p.reason||p.state);}
+    if(p.state!=='READ_ONLY_RENAME_PLAN')throw Error(p.reason||p.state);
+    if(job===jobs[0])firstPlan=p;}
    finally{durations.preflight+=performance.now()-tick;}
   }
   for(const job of jobs){
@@ -382,8 +383,11 @@ async function saveRenames({files=null,automatic=false}={}){
    $('#saveStatus').textContent=`파일명 NAS 저장 중 · ${completed}/${jobs.length}곡`;
    const body={album_id:id,...job};
    stage='plan';let tick=performance.now(),p;
-   try{p=await api('/api/rename/plan',body);}
-   finally{durations.plan+=performance.now()-tick;}
+   // No previous write can invalidate the first preflight plan. The NAS Writer
+   // still re-plans and checks expected_plan_id under its exclusive lease.
+   if(job===jobs[0]&&firstPlan){p=firstPlan;firstPlan=null;}
+   else{try{p=await api('/api/rename/plan',body);}
+    finally{durations.plan+=performance.now()-tick;}}
    if(p.state!=='READ_ONLY_RENAME_PLAN')throw Error(p.reason||p.state);
    stage='apply';tick=performance.now();let result;
    try{result=await api('/api/rename/apply',{...body,expected_plan_id:p.plan_id,confirm_write:true});}
