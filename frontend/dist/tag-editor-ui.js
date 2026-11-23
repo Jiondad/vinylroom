@@ -364,39 +364,52 @@ async function saveRenames({files=null,automatic=false}={}){
  if(!jobs.length){toast('변경할 파일명이 없습니다.');return;}
  if(!automatic&&!window.confirm(`선택한 ${jobs.length}곡의 파일명을 NAS에 저장할까요?`))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#bulkApply').disabled=true;
- let completed=0,failed=null;
+ let completed=0,failed=null,stage='preflight';
+ const started=performance.now(),durations={preflight:0,plan:0,apply:0,reread:0};
+ const seconds=ms=>(ms/1000).toFixed(1)+'초';
+ const summary=()=>`전체 ${seconds(performance.now()-started)} · 사전검사 ${seconds(durations.preflight)} · 계획 ${seconds(durations.plan)} · 적용·색인 ${seconds(durations.apply)}${durations.reread?' · 재조회 '+seconds(durations.reread):''}`;
  try{
   // Validate every proposed rename before writing any file; do not re-run old fixture checks.
   for(const job of jobs){
    if(S.album?.id!==id)throw Error('앨범이 변경됐습니다.');
-   const p=await api('/api/rename/plan',{album_id:id,...job});
-   if(p.state!=='READ_ONLY_RENAME_PLAN')throw Error(p.reason||p.state);
+   const tick=performance.now();
+   try{const p=await api('/api/rename/plan',{album_id:id,...job});
+    if(p.state!=='READ_ONLY_RENAME_PLAN')throw Error(p.reason||p.state);}
+   finally{durations.preflight+=performance.now()-tick;}
   }
   for(const job of jobs){
    if(S.album?.id!==id)throw Error('앨범이 변경됐습니다.');
    $('#saveStatus').textContent=`파일명 NAS 저장 중 · ${completed}/${jobs.length}곡`;
-   const body={album_id:id,...job},p=await api('/api/rename/plan',body);
+   const body={album_id:id,...job};
+   stage='plan';let tick=performance.now(),p;
+   try{p=await api('/api/rename/plan',body);}
+   finally{durations.plan+=performance.now()-tick;}
    if(p.state!=='READ_ONLY_RENAME_PLAN')throw Error(p.reason||p.state);
-   const result=await api('/api/rename/apply',{...body,expected_plan_id:p.plan_id,confirm_write:true});
-   if(result.state!=='RENAME_WRITE_COMPLETED'||!result.new_file||!result.saved_tags)
+   stage='apply';tick=performance.now();let result;
+   try{result=await api('/api/rename/apply',{...body,expected_plan_id:p.plan_id,confirm_write:true});}
+   finally{durations.apply+=performance.now()-tick;}
+   // Rename Writer returns a verified new_file, not saved_tags.
+   // File rename preserves embedded tags; native synchronous reindex verifies Catalog.
+   if(result.state!=='RENAME_WRITE_COMPLETED'||!result.new_file)
     throw Error([result.reason||result.state,'파일명 저장 응답 확인 필요'].filter(Boolean).join(' · '));
    const old=job.file,newFile=result.new_file;
    for(const list of [S.original,S.draft]){
     const entry=list.find(x=>x.file===old);
-    if(entry){entry.file=newFile;entry.relative_file=newFile;if(list===S.original)entry.tags=clone(result.saved_tags);}
+    if(entry){entry.file=newFile;entry.relative_file=newFile;}
    }
    if(S.selected.delete(old))S.selected.add(newFile);
    if(S.anchor===old)S.anchor=newFile;
    delete S.renames[old];delete S.warnings[old];justSaved.delete(old);justSaved.add(newFile);
    completed++;saveDraft();renderTracks();
-   $('#saveStatus').textContent=`파일명 NAS 저장 완료 · ${completed}/${jobs.length}곡`;
+   $('#saveStatus').textContent=`파일명 NAS 저장 완료 · ${completed}/${jobs.length}곡 · ${seconds(performance.now()-started)}`;
   }
-  $('#bulkStatus').textContent=`파일명 NAS 저장 완료 · ${completed}곡`;
+  $('#bulkStatus').textContent=`파일명 NAS 저장 완료 · ${completed}곡 · ${summary()}`;
  }catch(e){
   failed=e;
-  $('#saveStatus').textContent=`파일명 저장 중단 · ${completed}/${jobs.length}곡 완료 · ${e.message}`;
-  $('#bulkStatus').textContent=`파일명 저장 실패 · ${completed}곡 응답 확인 · 남은 파일 미저장 · ${e.message}`;
+  $('#saveStatus').textContent=`파일명 저장 중단 (${stage}) · ${completed}/${jobs.length}곡 완료 · ${e.message}`;
+  $('#bulkStatus').textContent=`파일명 저장 중단 · ${completed}곡 응답 확인 · ${e.message} · ${summary()}`;
   // Actual Catalog is authoritative after a partial rename, including a lost HTTP response.
+  stage='reread';const rereadTick=performance.now();
   try{
    const fresh=await api('/api/tracks?album='+encodeURIComponent(id));
    if(S.album?.id===id&&Array.isArray(fresh?.album?.entries)){
@@ -418,6 +431,7 @@ async function saveRenames({files=null,automatic=false}={}){
     $('#bulkStatus').textContent+=' · NAS 파일명 재조회 완료';
    }
   }catch{$('#bulkStatus').textContent+=' · NAS 재조회 실패 (다시 저장하지 마세요)';}
+  finally{durations.reread+=performance.now()-rereadTick;}
  }finally{
   saveDraft();tagSaveBusy=false;$('#bulkApply').disabled=!S.album;renderTracks();
  }
