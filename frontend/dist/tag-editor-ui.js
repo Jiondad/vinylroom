@@ -1,5 +1,5 @@
 import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?v=20261122-default-rename';
-import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261123-replace-ux';
+import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261123-album-cover-simple';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),clone=v=>structuredClone(v),base=f=>f.split('/').pop();
 const S={album:null,original:[],draft:[],selected:new Set(),renames:{},warnings:{},drafts:new Map(),nodes:new Map(),active:'',search:[],metrics:[],anchor:null,visible:[]};
 let saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};let activeTool='tags';const toolInputs={};
@@ -72,7 +72,7 @@ function openLinkedAlbum(a){
  renderTree();
  void selectAlbum(id);
 }
-function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="CD 통합 내장 커버 편집 열기"><span>♫</span><span>커버 편집</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
+function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
  return `<button class="cover-button" id="coverOpen" aria-label="내장 커버 편집 열기"><span>◎</span><img data-tag-cover="${esc(a.id)}" alt="앨범 색인 커버"><span>커버 편집</span></button><div><h2>${esc(a.title)}</h2><p>${esc(a.artist)} · ${esc(a.date||'연도 없음')}</p><div class="folder-path" title="${esc(a.path||a.relative_path||'')}">${esc(a.path||a.relative_path||'')}</div></div>`;}
 async function selectAlbum(id){if(tagSaveBusy){toast('NAS 저장 중에는 앨범을 변경하지 마세요.');return;}if(S.active===id&&S.album)return;const info=[...S.nodes.values()].find(n=>n.album?.id===id)?.album;if(!info)return;
  saveDraft();const ticket=gate.next(),started=performance.now();if(currentTrackRequest)currentTrackRequest.cancel();S.active=id;S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();$('#albumHeader').innerHTML=summary(info);$('#loadStatus').textContent='트랙 태그를 불러오는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;renderTree();renderTracks('트랙 태그를 불러오는 중…');
@@ -287,7 +287,7 @@ $('#missingOnly').onchange=()=>{S.selected.clear();S.anchor=null;renderTracks();
 $('#resetBtn').onclick=()=>{if(!S.album)return;S.draft=clone(S.original);S.renames={};S.warnings={};saveDraft();renderTracks();syncMultiTags();$('#bulkStatus').textContent='초안을 초기화했습니다.';};
 $('#browseToggle').onclick=()=>{const collapsed=$('.browser').classList.toggle('collapsed');$('#browseToggle').textContent=collapsed?'펼치기':'접기';$('#browseToggle').setAttribute('aria-expanded',String(!collapsed));};
 const pathDialog=$('#pathDialog');$('#closePath').onclick=()=>pathDialog.close();pathDialog.addEventListener('click',e=>{if(e.target===pathDialog)pathDialog.close();});
-const coverEditor=installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected],api,getSaveCapabilities:()=>saveCaps});$('#albumHeader').onclick=e=>{if(e.target.closest('#coverOpen')){if(S.album)coverEditor.open();else toast('먼저 앨범을 선택하세요.');}};
+const coverEditor=installTagCoverDraft({getAlbum:()=>S.album,api,getSaveCapabilities:()=>saveCaps});$('#albumHeader').onclick=e=>{if(e.target.closest('#coverOpen')){if(S.album)coverEditor.open();else toast('먼저 앨범을 선택하세요.');}};
 renderTree();parent.postMessage({type:'vr-tag-ready'},location.origin);
 
 const toolGroups={tags:['artist','album_artist','album','date','genre','featuring','discnumber','title'],from:['from'],to:['to'],number:['number','normalize']};
