@@ -210,3 +210,9 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
 }
 #tagStatusSummary{font-size:11px;color:#7d898f;flex-basis:100%;text-align:right;overflow-wrap:anywhere}
 @media(max-width:650px){#tagStatusSummary{font-size:10px}}
+
+/* Existing NAS save action now sits beside the toolbar reset control. */
+.toolbar-note #bulkStatus{flex:1;min-width:0}
+.toolbar-note #saveTags{background:#34484e;color:#fff;border:1px solid #34484e;border-radius:5px;padding:5px 10px;min-height:33px;font-size:12px;white-space:nowrap}
+.toolbar-note #saveTags:hover:not(:disabled){background:#263a40}
+.toolbar-note #saveTags:disabled{background:#f7f8f9;color:#8c979d;border-color:#d9e0e3}
