@@ -105,7 +105,18 @@ with tempfile.TemporaryDirectory(prefix='vr_cd_rename_isolated_',dir='/data') as
             other_before=db.execute('SELECT id,path,missing,hidden,data FROM albums WHERE id=?',(album_ids[other],)).fetchone()
             other_before=tuple(other_before)
         planned=writer.plan(i.dbpath,music,album_ids[disc],old,new_name)
-        if planned.get('state')!='READ_ONLY_RENAME_PLAN':fail('rename plan '+disc+': '+str(planned))
+        if planned.get('state')!='READ_ONLY_RENAME_PLAN':
+            import tag_phase2c as base
+            album,entries,issues=base.inventory(i.dbpath,i.root,album_ids[disc])
+            with i.db() as db:
+                row=db.execute('SELECT path,data FROM albums WHERE id=?',(album_ids[disc],)).fetchone()
+            data=json.loads(row['data']) if row else {}
+            print(json.dumps({'diagnostic':'CD_PLAN_INVENTORY_HOLD','disc':disc,
+                'plan':planned,'issues':issues,'catalog_path':row['path'] if row else None,
+                'catalog_track_sample':data.get('tracks',[])[:1],
+                'catalog_physical_sample':data.get('physical_files',[])[:1],
+                'inventory_entries':str(entries)[:1200]},ensure_ascii=False,default=str),flush=True)
+            fail('rename plan '+disc+': '+str(planned))
         with i.whole_job_lease(blocking=True):
             applied=writer.apply(i.dbpath,music,backup,album_ids[disc],old,new_name,
                                  planned['plan_id'],cb,True)
