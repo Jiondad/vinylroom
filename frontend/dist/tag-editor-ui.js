@@ -237,7 +237,7 @@ function cell(e,f){const old=S.original.find(x=>x.file===e.file),diff=values(e,f
 function displayedDiscNumber(e){
  // For a CD aggregate, the parent folder is the authoritative disc identity.
  const label=String(e.disc_label||'');
- const match=label.match(/^(?:cd|disc|disk|디스크)[\\s._-]*0*([1-9]\\d*)$/i);
+ const match=label.match(/^(?:cd|disc|disk|디스크)[\s._-]*0*([1-9]\d*)$/i);
  if(match)return String(+match[1]).padStart(2,'0');
  const tag=String(e.tags?.discnumber?.[0]||'').split('/')[0];
  return /^[0-9]+$/.test(tag)&&+tag>0?String(+tag).padStart(2,'0'):'—';
