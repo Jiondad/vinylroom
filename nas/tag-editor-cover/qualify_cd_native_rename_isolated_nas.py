@@ -77,7 +77,25 @@ with tempfile.TemporaryDirectory(prefix='vr_cd_rename_isolated_',dir='/data') as
         hashes[disc]=digest(dst)
         if digest(original)!=hashes[disc]:fail('copy checksum '+disc)
     backup.mkdir(mode=0o700)
-    i=index_engine.Index(music,data,lambda *args,**kwargs:[],index_scanner,track_search=False)
+    # The production writer only accepts physical_files paths rooted at
+    # /music/. Our isolated root is /data/.../music/, so normalize the
+    # scanner's returned *Catalog metadata* (not the actual file paths).
+    # Keep the installed scanner's scan() function and all media reads intact.
+    class FixtureScanner:
+        def __getattr__(self, name):
+            return getattr(index_scanner,name)
+        def scan(self,folder,*args,**kwargs):
+            result=index_scanner.scan(folder,*args,**kwargs)
+            prefix=str(music.resolve())+'/'
+            for album in result.get('albums',[]):
+                for key in ('tracks','physical_files'):
+                    for item in album.get(key,[]):
+                        path=item.get('path')
+                        if isinstance(path,str) and path.startswith(prefix):
+                            item['path']='/music/'+path[len(prefix):]
+            return result
+    scanner=FixtureScanner()
+    i=index_engine.Index(music,data,lambda *args,**kwargs:[],scanner,track_search=False)
     i.setmeta('seed_complete','1')
     album_ids={}
     paths={}
