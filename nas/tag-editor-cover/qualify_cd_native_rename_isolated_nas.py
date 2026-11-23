@@ -22,14 +22,15 @@ def hold(msg):raise SystemExit('HOLD: '+msg)
 for path,expected in ((NATIVE,EXPECTED_NATIVE),(HTTP,EXPECTED_HTTP),(LIVE_NATIVE,OLD_NATIVE),(LIVE_HTTP,OLD_HTTP)):
     if not path.is_file() or path.is_symlink() or sha(path)!=expected:hold('source SHA mismatch '+str(path))
 
-# Test-only candidate module in the container's /tmp. This is NOT an /app mount.
-remote='/tmp/vr_cd_native_isolated_candidate_20261124.py'
-cp=subprocess.run(['docker','cp',str(NATIVE),C+':'+remote],capture_output=True,text=True)
-if cp.returncode:hold('docker cp: '+cp.stderr.strip())
+# Container rootfs is read-only. Stream the candidate directly via stdin;
+# both temporary media and the cloned Catalog live only under writable /data.
+import base64
+encoded_candidate=base64.b64encode(NATIVE.read_bytes()).decode('ascii')
 
 TEST=r'''
+import base64
 import hashlib
-import importlib.util
+import types
 import json
 import os
 from pathlib import Path
@@ -42,10 +43,8 @@ import index_engine
 import index_scanner
 import tag_rename_writer as writer
 
-path=Path('/tmp/vr_cd_native_isolated_candidate_20261124.py')
-spec=importlib.util.spec_from_file_location('vr_cd_native_fixture',path)
-mod=importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
+mod=types.ModuleType('vr_cd_native_fixture')
+exec(compile(base64.b64decode(__CANDIDATE_B64__), '<candidate NativeIndex>', 'exec'),mod.__dict__)
 
 SOURCE=Path('/music/KPOP/김종서 (Kim Jong Sheo)/김종서 - 2007.04.18 名作(명작) - 20th Anniversary Greatest Hits [FLAC-16bit-44.1kHz]')
 NAMES={'CD1':'01. I Love You.flac','CD2':'11. Free Style 2.flac'}
@@ -63,7 +62,7 @@ def make_job(path):
 
 def fail(message):raise RuntimeError(message)
 
-with tempfile.TemporaryDirectory(prefix='vr_cd_rename_isolated_') as td:
+with tempfile.TemporaryDirectory(prefix='vr_cd_rename_isolated_',dir='/data') as td:
     base=Path(td)
     music=base/'music'
     data=base/'db'
@@ -137,13 +136,11 @@ with tempfile.TemporaryDirectory(prefix='vr_cd_rename_isolated_') as td:
                       'operating_media_writes':0,'operating_catalog_writes':0,
                       'fixture_removed_on_exit':True},ensure_ascii=False))
 '''
-try:
-    result=subprocess.run(['docker','exec','-i',C,'python3','-'],input=TEST,
-                          text=True,capture_output=True,timeout=240)
-    if result.stdout:print(result.stdout.strip())
-    if result.returncode:
-        print('HOLD: isolated trial failed',file=sys.stderr)
-        print(result.stderr[-4500:],file=sys.stderr)
-        raise SystemExit(2)
-finally:
-    subprocess.run(['docker','exec',C,'rm','-f',remote],capture_output=True)
+payload="__CANDIDATE_B64__="+repr(encoded_candidate)+"\\n"+TEST
+result=subprocess.run(['docker','exec','-i',C,'python3','-'],input=payload,
+                      text=True,capture_output=True,timeout=240)
+if result.stdout:print(result.stdout.strip())
+if result.returncode:
+    print('HOLD: isolated trial failed',file=sys.stderr)
+    print(result.stderr[-4500:],file=sys.stderr)
+    raise SystemExit(2)
