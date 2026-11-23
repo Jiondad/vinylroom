@@ -136,11 +136,11 @@ function syncMultiTags(){
   const vals=[...new Set(entries.map(e=>values(e,field)))];
   el.value=entries.length&&vals.length===1?vals[0]:'';
   el.placeholder=entries.length&&vals.length>1?'여러 값 · 입력하면 선택 곡에 적용':field==='date'?'YYYY-MM-DD':'값 입력 (빈칸은 유지)';
-  el.disabled=!entries.length||tagSaveBusy||!saveCaps.tags||!saveCaps.tag_fields?.includes(field);
+  el.disabled=!entries.length||tagSaveBusy||(!S.album?.disc_group&&(!saveCaps.tags||!saveCaps.tag_fields?.includes(field)));
   delete el.dataset.edited;
  }
  $('#multiTagStatus').textContent=entries.length?'변경할 값을 입력한 필드만 저장합니다. 빈칸은 기존값 유지.':'수정할 트랙을 먼저 선택하세요.';
- $('#multiTagSave').disabled=!entries.length||tagSaveBusy||!saveCaps.tags;
+ $('#multiTagSave').disabled=!entries.length||tagSaveBusy||(!S.album?.disc_group&&!saveCaps.tags);$('#multiTagSave').textContent=S.album?.disc_group?'선택 항목 초안 반영':'선택 항목 NAS 저장';
 }
 function multiTagValues(field,raw){
  const value=raw.trim();
@@ -162,12 +162,12 @@ $('#multiTagPanel').addEventListener('input',event=>{
 });
 $('#multiTagReset').onclick=()=>syncMultiTags();
 $('#multiTagSave').onclick=async()=>{
- if(tagSaveBusy||!S.album||!S.selected.size||!saveCaps.tags)return;
+ if(tagSaveBusy||!S.album||!S.selected.size||(!S.album.disc_group&&!saveCaps.tags))return;
  const selected=S.draft.filter(e=>S.selected.has(e.file));
  const modifications={};
  try{
   for(const field of editedMulti){
-   if(!saveCaps.tag_fields.includes(field))throw Error(fields[field]+' 저장 미지원');
+   if(!S.album.disc_group&&!saveCaps.tag_fields.includes(field))throw Error(fields[field]+' 저장 미지원');
    const input=$('#multiTagPanel').querySelector('[data-multi-field="'+field+'"]');
    const value=multiTagValues(field,input.value);
    if(value!==null)modifications[field]=value;
@@ -188,9 +188,14 @@ $('#multiTagSave').onclick=async()=>{
   if(!changed.length){
    $('#multiTagStatus').textContent='선택 트랙에 미저장 변경이 없습니다. 빈칸은 기존 태그를 유지합니다.';return;
   }
-  if(!window.confirm(`선택한 ${changed.length}곡의 태그 변경을 실제 NAS 파일에 저장할까요?`))return;
+  if(!S.album.disc_group&&!window.confirm(`선택한 ${changed.length}곡의 태그 변경을 실제 NAS 파일에 저장할까요?`))return;
   for(const row of selected)for(const field of activeFields)row.tags[field]=clone(modifications[field]);
   saveDraft();renderTracks();
+  if(S.album.disc_group){
+   editedMulti.clear();syncMultiTags();
+   $('#multiTagStatus').textContent='CD 통합 초안에 '+changed.length+'곡 반영 · NAS 파일 미변경';
+   return;
+  }
   $('#multiTagStatus').textContent='선택 항목 NAS 저장 중 · '+changed.length+'곡';
   // Preserve existing NAS plan/apply, post-write verification, and error re-read.
   const outcome=await persistTagRows(changed,{automatic:true});
@@ -206,7 +211,7 @@ function cell(e,f){const old=S.original.find(x=>x.file===e.file),diff=values(e,f
 function renderTracks(empty='선택한 앨범의 트랙이 여기에 표시됩니다.'){
  let lastDisc=null;const entries=S.draft.filter(e=>!$('#missingOnly').checked||changedFields(e).length||S.renames[e.file]||!e.tags.title?.length||!e.tags.tracknumber?.length),parts=[];
  S.visible=entries.map(e=>e.file);
- for(const e of entries){const disc=+(e.tags.discnumber?.[0]?.split('/')[0]||1);if(disc!==lastDisc){parts.push(`<tr class="disc-row"><td colspan="8">DISC ${String(disc).padStart(2,'0')}</td></tr>`);lastDisc=disc;}
+ for(const e of entries){const disc=e.disc_label||(+(e.tags.discnumber?.[0]?.split('/')[0]||1));if(disc!==lastDisc){parts.push(`<tr class="disc-row"><td colspan="8">${typeof disc==='string'?esc(disc):'DISC '+String(disc).padStart(2,'0')}</td></tr>`);lastDisc=disc;}
  const changed=changedFields(e),common=changed.filter(f=>['album','album_artist','date','discnumber'].includes(f)),old=S.original.find(x=>x.file===e.file),missing=!e.tags.title?.length||!e.tags.tracknumber?.length;
  parts.push(`<tr data-track="${esc(e.file)}" tabindex="0" aria-selected="${S.selected.has(e.file)}" class="${S.selected.has(e.file)?'selected':''}"><td class="row-marker" aria-hidden="true">${S.selected.has(e.file)?'●':'·'}</td><td class="${S.renames[e.file]?'changed':''}"><div class="file-cell"><span class="filename" title="${esc(S.renames[e.file]||e.file)}">${esc(S.renames[e.file]||base(e.file))}</span><button class="path-open" data-path="${esc(e.file)}" aria-label="${esc(base(e.file))} 파일 경로" title="전체 파일 경로">↗</button></div>${common.map(f=>'<small class="file-proposal">'+fields[f]+': '+esc(values(old,f)||'빈 값')+' → '+esc(values(e,f)||'빈 값')+'</small>').join('')}${S.warnings[e.file]?'<small class="row-warning">'+esc(reasons[S.warnings[e.file]]||S.warnings[e.file])+'</small>':''}</td>${['tracknumber','title','artist','album_artist','featuring','genre'].map(f=>cell(e,f)).join('')}</tr>`);
  }
@@ -236,6 +241,7 @@ $('#bulkApply').onclick=async()=>{if(!S.album||tagSaveBusy)return;try{
  const r=applyBulkDraft({entries:disc?.entries||S.draft,selected:[...S.selected],scope:$('#bulkScope').value,field:mode,value:$('#bulkValue').value,replace:$('#bulkPolicy').value==='replace',format:$('#format').value,start:Number($('#numberStart').value),order:mode==='number'?'display':'filename'});
  if(mode!=='to')S.draft=r.entries;if(mode==='to'){const targets=$('#bulkScope').value==='album'?S.draft.map(e=>e.file):[...S.selected];for(const file of targets)delete S.renames[file];Object.assign(S.renames,r.renames);}else Object.assign(S.renames,r.renames);
  S.warnings={...disc?.warnings,...r.warnings};saveDraft();renderTracks();
+ if(S.album?.disc_group&&(mode==='to'||mode==='number'||mode==='normalize')){$('#bulkStatus').textContent='CD 통합 초안 변경 · NAS 파일은 변경하지 않았습니다.';return;}
  if(mode==='to'){
   const files=$('#bulkScope').value==='album'?S.draft.map(e=>e.file):[...S.selected];
   const proposed=files.filter(file=>S.renames[file]&&S.renames[file]!==base(file));
@@ -287,7 +293,7 @@ $('#missingOnly').onchange=()=>{S.selected.clear();S.anchor=null;renderTracks();
 $('#resetBtn').onclick=()=>{if(!S.album)return;S.draft=clone(S.original);S.renames={};S.warnings={};saveDraft();renderTracks();syncMultiTags();$('#bulkStatus').textContent='초안을 초기화했습니다.';};
 $('#browseToggle').onclick=()=>{const collapsed=$('.browser').classList.toggle('collapsed');$('#browseToggle').textContent=collapsed?'펼치기':'접기';$('#browseToggle').setAttribute('aria-expanded',String(!collapsed));};
 const pathDialog=$('#pathDialog');$('#closePath').onclick=()=>pathDialog.close();pathDialog.addEventListener('click',e=>{if(e.target===pathDialog)pathDialog.close();});
-const coverEditor=installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected],api,getSaveCapabilities:()=>saveCaps});$('#albumHeader').onclick=e=>{if(e.target.closest('#coverOpen')){if(S.album)coverEditor.open();else toast('트랙 조회 후 커버를 선택하세요.');}};
+const coverEditor=installTagCoverDraft({getAlbum:()=>S.album,getSelectedFiles:()=>[...S.selected],api,getSaveCapabilities:()=>saveCaps});$('#albumHeader').onclick=e=>{if(e.target.closest('#coverOpen')){if(S.album&&!S.album.disc_group)coverEditor.open();else toast('커버는 디스크별 앨범에서 편집하세요.');}};
 renderTree();parent.postMessage({type:'vr-tag-ready'},location.origin);
 
 const toolGroups={tags:['artist','album_artist','album','date','genre','featuring','discnumber','title'],from:['from'],to:['to'],number:['number','normalize']};
@@ -308,13 +314,13 @@ document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[d
 $('#artistScroll').addEventListener('scroll',rememberEditorView,{passive:true});
 
 function saveButtonState(){
- const renameMode=activeTool==='to',enabled=renameMode?saveCaps.rename:saveCaps.tags;
+ const renameMode=activeTool==='to',enabled=!S.album?.disc_group&&(renameMode?saveCaps.rename:saveCaps.tags);
  const count=S.draft.filter(e=>S.selected.has(e.file)&&(renameMode?S.renames[e.file]:changedFields(e).length)).length;
  // The multi-field panel is the only save action in Tag Edit mode.
  // Keep this existing button for filename/number/other tools, whose save paths differ.
  $('#saveTags').hidden=activeTool==='tags';
  $('#saveTags').disabled=tagSaveBusy||!enabled||!S.album;
- $('#saveTags').textContent=renameMode?'파일명 변경 저장':activeTool==='number'?'기타 태그 저장':'태그 변경 저장';
+ $('#saveTags').textContent=S.album?.disc_group?'NAS 저장 보호 중':renameMode?'파일명 변경 저장':activeTool==='number'?'기타 태그 저장':'태그 변경 저장';
  $('#saveTags').title=enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
 }
 async function readSaveCaps(){
@@ -323,6 +329,7 @@ async function readSaveCaps(){
  $('#saveStatus').textContent=saveCaps.tags?`실제 저장 ON · 태그 ${(saveCaps.tag_formats||['flac']).join('·').toUpperCase()} · ${(saveCaps.tag_fields||[]).length}개 필드 / 파일명 ${saveCaps.rename?'ON':'OFF'}`:'NAS 저장 경로·검증 확인 필요';$('#sourceBadge').textContent=saveCaps.tags?'NAS 실제 음원 · 저장 가능':'NAS 저장 연결 확인 필요';saveButtonState();syncMultiTags();
 }
 async function persistTagRows(rows,{automatic=false,onlyFields=null}={}){
+ if(S.album?.disc_group){toast('통합 초안은 NAS에 저장하지 않습니다. 디스크를 개별 선택하세요.');return;}
  if(tagSaveBusy||!S.album||!saveCaps.tags)return;
  const id=S.album.id;
  const jobs=rows.map(e=>{
@@ -400,6 +407,7 @@ $('#saveTags').onclick=async()=>{
 };
 
 async function saveRenames({files=null,automatic=false}={}){
+ if(S.album?.disc_group){toast('파일명 변경 저장은 디스크별 앨범에서 실행하세요.');return;}
  if(tagSaveBusy||!S.album||!saveCaps.rename){toast('NAS 파일명 저장 기능을 사용할 수 없습니다.');return;}
  const id=S.album.id,scope=files||[...S.selected],wanted=new Set(scope);
  const jobs=S.original.filter(e=>wanted.has(e.file)&&S.renames[e.file]&&S.renames[e.file]!==base(e.file))
