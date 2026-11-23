@@ -322,6 +322,94 @@ async function readSaveCaps(){
  catch{saveCaps={tags:false,cover:false,rename:false,tag_fields:[]};}
  $('#saveStatus').textContent=saveCaps.tags?`실제 저장 ON · 태그 ${(saveCaps.tag_formats||['flac']).join('·').toUpperCase()} · ${(saveCaps.tag_fields||[]).length}개 필드 / 파일명 ${saveCaps.rename?'ON':'OFF'}`:'NAS 저장 경로·검증 확인 필요';$('#sourceBadge').textContent=saveCaps.tags?'NAS 실제 음원 · 저장 가능':'NAS 저장 연결 확인 필요';saveButtonState();syncMultiTags();
 }
+
+// CD aggregate synthetic ID is never sent to the NAS Writer.
+function discWriteOwner(file){
+ const album=S.album,entry=S.original.find(e=>e.file===file);
+ if(!album?.disc_group)throw Error('CD 통합 보기가 아닙니다.');
+ const disc=album.discs.find(d=>d.id===entry?.source_album_id);
+ if(!disc||!file.startsWith(disc.path+'/')||!album.entries.some(e=>e.file===file&&e.source_album_id===disc.id))
+  throw Error('CD 파일의 원본 앨범 소속을 검증하지 못했습니다.');
+ return disc;
+}
+async function reconcileDiscTags(jobs,viewId){
+ const ids=[...new Set(jobs.map(j=>j.album_id))],seen=new Set(),unknown=[];
+ for(const id of ids){
+  try{
+   const response=await api('/api/tracks?album='+encodeURIComponent(id)),album=response?.album;
+   const disc=S.album?.discs.find(d=>d.id===id);
+   if(S.album?.id!==viewId||album?.id!==id||album?.path!==disc?.path||!Array.isArray(album?.entries))
+    throw Error('디스크 재조회 신원 불일치');
+   const actual=new Map(album.entries.map(e=>[e.file,e]));
+   for(const job of jobs.filter(j=>j.album_id===id)){
+    const now=actual.get(job.file),old=S.original.find(e=>e.file===job.file),draft=S.draft.find(e=>e.file===job.file);
+    if(!now||!old||!draft){unknown.push(job.file);continue;}
+    for(const field of job.fields){
+     const received=clone(now.tags?.[field]||[]);
+     old.tags[field]=received;
+     // Preserve the unsaved intended draft on mismatch.
+     if(JSON.stringify(received)===JSON.stringify(draft.tags[field]||[]))seen.add(job.file);
+    }
+   }
+  }catch{unknown.push(...jobs.filter(j=>j.album_id===id).map(j=>j.file));}
+ }
+ saveDraft();renderTracks();
+ return {confirmed:seen.size,unknown:[...new Set(unknown)].length};
+}
+async function persistDiscGroupTags(rows,{automatic=false,onlyFields=null}={}){
+ if(tagSaveBusy||!S.album?.disc_group||!saveCaps.tags)return;
+ const viewId=S.album.id;
+ const jobs=rows.map(e=>{
+  const old=S.original.find(x=>x.file===e.file);
+  if(!old)return null;
+  const changed=changedFields(e).filter(f=>!onlyFields||onlyFields.includes(f));
+  if(!changed.length)return null;
+  const owner=discWriteOwner(e.file);
+  return {album_id:owner.id,file:e.file,fields:changed,label:owner.label};
+ }).filter(Boolean);
+ if(!jobs.length)return {completed:0,total:0,error:null};
+ if(jobs.some(j=>!(saveCaps.tag_formats||['flac']).includes(j.file.split('.').pop().toLowerCase())||j.fields.some(f=>!saveCaps.tag_fields?.includes(f)))){
+  const error=Error('NAS에서 승인되지 않은 파일 형식 또는 태그 필드입니다.');
+  $('#multiTagStatus').textContent=error.message;return {completed:0,total:jobs.length,error};
+ }
+ if(!automatic&&!window.confirm('CD 통합 '+jobs.length+'곡의 태그를 실제 NAS에 디스크별로 저장할까요?'))return;
+ tagSaveBusy=true;$('#saveTags').disabled=true;$('#multiTagSave').disabled=true;$('#bulkApply').disabled=true;
+ let completed=0,failed=null;
+ try{
+  for(const job of jobs){
+   if(S.album?.id!==viewId)throw Error('통합 앨범이 변경되었습니다.');
+   const old=S.original.find(e=>e.file===job.file),draft=S.draft.find(e=>e.file===job.file);
+   if(!old||!draft||discWriteOwner(job.file).id!==job.album_id)throw Error('원본 디스크 식별 불일치');
+   const fs=job.fields.filter(f=>JSON.stringify(old.tags[f]||[])!==JSON.stringify(draft.tags[f]||[]));
+   if(!fs.length)continue;
+   const body={album_id:job.album_id,file:job.file,
+    edits:Object.fromEntries(fs.map(f=>[f,clone(draft.tags[f]||[])])),
+    before_tags:Object.fromEntries(fs.map(f=>[f,clone(old.tags[f]||[])]))};
+   $('#saveStatus').textContent=job.label+' NAS 태그 저장 중 · '+completed+'/'+jobs.length+'곡';
+   const plan=await api('/api/tag/plan',body);
+   if(plan?.state!=='READ_ONLY_TRACK_WRITE_PLAN'||typeof plan.plan_id!=='string')throw Error(plan?.reason||plan?.state||'계획 조회 실패');
+   const result=await api('/api/tag/apply',{...body,expected_plan_id:plan.plan_id,confirm_write:true});
+   if(result?.state!=='TAG_TRACK_WRITE_COMPLETED'||!result.saved_tags||
+    fs.some(f=>JSON.stringify(result.saved_tags[f]||[])!==JSON.stringify(body.edits[f]||[])))
+    throw Error(result?.reason||'NAS 저장 결과 확인 불가 · 자동 재시도 금지');
+   for(const field of fs){old.tags[field]=clone(result.saved_tags[field]);draft.tags[field]=clone(result.saved_tags[field]);}
+   justSaved.add(job.file);completed++;saveDraft();renderTracks();
+  }
+  $('#saveStatus').textContent='CD 통합 태그 NAS 저장 완료 · '+completed+'/'+jobs.length+'곡';
+  $('#multiTagStatus').textContent='CD 통합 NAS 저장 완료 · '+completed+'곡';
+ }catch(e){
+  failed=e;
+  $('#saveStatus').textContent='CD 통합 저장 중단 · '+completed+'/'+jobs.length+'곡 응답 확인 · '+e.message;
+  $('#multiTagStatus').textContent='부분 저장/확인 필요 · '+completed+'/'+jobs.length+'곡 · '+e.message;
+  // Never replay an uncertain apply; only reread each original disk.
+  const result=await reconcileDiscTags(jobs,viewId);
+  $('#saveStatus').textContent+=' · 재조회 일치 '+result.confirmed+'곡, 확인 불가 '+result.unknown+'곡';
+ }finally{
+  tagSaveBusy=false;saveDraft();renderTracks();syncMultiTags();$('#bulkApply').disabled=!S.album;
+ }
+ return {completed,total:jobs.length,error:failed};
+}
+
 async function persistTagRows(rows,{automatic=false,onlyFields=null}={}){
  if(S.album?.disc_group)return persistDiscGroupTags(rows,{automatic,onlyFields});
  if(tagSaveBusy||!S.album||!saveCaps.tags)return;
