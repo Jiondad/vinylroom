@@ -126,27 +126,36 @@ $('#multiTagSave').onclick=async()=>{
   for(const field of editedMulti){
    if(!saveCaps.tag_fields.includes(field))throw Error(fields[field]+' 저장 미지원');
    const input=$('#multiTagPanel').querySelector('[data-multi-field="'+field+'"]');
-   const values=multiTagValues(field,input.value);
-   if(values!==null)modifications[field]=values;
+   const value=multiTagValues(field,input.value);
+   if(value!==null)modifications[field]=value;
   }
   const activeFields=Object.keys(modifications);
-  if(!activeFields.length){$('#multiTagStatus').textContent='실제로 입력한 변경값이 없습니다. 빈칸은 기존 태그를 유지합니다.';return;}
-  for(const row of selected){
-   for(const field of activeFields){
-    if(['artist','album_artist'].includes(field)&&row.tags[field]?.some(v=>v.includes('\\'))&&
-     JSON.stringify(row.tags[field])!==JSON.stringify(modifications[field]))
-      throw Error('공동 아티스트 태그는 보호됩니다: '+base(row.file));
-   }
+  for(const row of selected)for(const field of activeFields){
+   if(['artist','album_artist'].includes(field)&&row.tags[field]?.some(v=>v.includes('\\'))&&
+    JSON.stringify(row.tags[field])!==JSON.stringify(modifications[field]))
+    throw Error('공동 아티스트 태그는 보호됩니다: '+base(row.file));
   }
-  const changed=selected.filter(row=>activeFields.some(f=>JSON.stringify(row.tags[f]||[])!==JSON.stringify(modifications[f])));
-  if(!changed.length){$('#multiTagStatus').textContent='선택한 곡에 이미 동일한 값이 있습니다.';return;}
+  // One save handles both edited multi-field inputs and existing track-table drafts.
+  // Explicit multi-field inputs win for those fields; untouched values are preserved.
+  const changed=selected.filter(row=>{
+   const old=S.original.find(e=>e.file===row.file);
+   return old&&Object.keys(fields).some(f=>
+    JSON.stringify((f in modifications?modifications[f]:row.tags[f])||[])!==JSON.stringify(old.tags[f]||[]));
+  });
+  if(!changed.length){
+   $('#multiTagStatus').textContent='선택 트랙에 미저장 변경이 없습니다. 빈칸은 기존 태그를 유지합니다.';return;
+  }
+  if(!window.confirm(`선택한 ${changed.length}곡의 태그 변경을 실제 NAS 파일에 저장할까요?`))return;
   for(const row of selected)for(const field of activeFields)row.tags[field]=clone(modifications[field]);
   saveDraft();renderTracks();
-  $('#multiTagStatus').textContent='선택 항목 NAS 저장 중 · '+changed.length+'곡 · '+activeFields.length+'개 필드';
-  const outcome=await persistTagRows(changed,{automatic:true,onlyFields:activeFields});
-  if(outcome?.error){$('#multiTagStatus').textContent='부분 저장 또는 실패 · '+outcome.completed+'/'+outcome.total+'곡 · NAS 실제 태그 확인 필요';}
-  else{$('#multiTagStatus').textContent='NAS 저장 완료 · '+(outcome?.completed||0)+'곡 · '+activeFields.length+'개 필드';}
-  editedMulti.clear();for(const input of $('#multiTagPanel').querySelectorAll('[data-multi-field]'))delete input.dataset.edited;
+  $('#multiTagStatus').textContent='선택 항목 NAS 저장 중 · '+changed.length+'곡';
+  // Preserve existing NAS plan/apply, post-write verification, and error re-read.
+  const outcome=await persistTagRows(changed,{automatic:true});
+  if(!outcome){$('#multiTagStatus').textContent='NAS 저장 결과를 확인하지 못했습니다. 실제 태그를 확인하세요.';return;}
+  if(outcome.error){$('#multiTagStatus').textContent='부분 저장 또는 실패 · '+outcome.completed+'/'+outcome.total+'곡 · NAS 실제 태그 확인 필요';return;}
+  $('#multiTagStatus').textContent='NAS 저장 완료 · '+outcome.completed+'곡';
+  editedMulti.clear();
+  for(const input of $('#multiTagPanel').querySelectorAll('[data-multi-field]'))delete input.dataset.edited;
  }catch(error){$('#multiTagStatus').textContent='저장 중단 · '+error.message;toast(error.message);}
 };
 function changedFields(e){const old=S.original.find(x=>x.file===e.file);return Object.keys(fields).filter(f=>values(e,f)!==values(old,f));}
@@ -258,6 +267,9 @@ $('#artistScroll').addEventListener('scroll',rememberEditorView,{passive:true});
 function saveButtonState(){
  const renameMode=activeTool==='to',enabled=renameMode?saveCaps.rename:saveCaps.tags;
  const count=S.draft.filter(e=>S.selected.has(e.file)&&(renameMode?S.renames[e.file]:changedFields(e).length)).length;
+ // The multi-field panel is the only save action in Tag Edit mode.
+ // Keep this existing button for filename/number/other tools, whose save paths differ.
+ $('#saveTags').hidden=activeTool==='tags';
  $('#saveTags').disabled=tagSaveBusy||!enabled||!S.album;
  $('#saveTags').textContent=renameMode?'파일명 변경 저장':activeTool==='number'?'기타 태그 저장':'태그 변경 저장';
  $('#saveTags').title=enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
