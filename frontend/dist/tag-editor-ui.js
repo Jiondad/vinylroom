@@ -188,7 +188,6 @@ $('#multiTagSave').onclick=async()=>{
   if(!changed.length){
    $('#multiTagStatus').textContent='선택 트랙에 미저장 변경이 없습니다. 빈칸은 기존 태그를 유지합니다.';return;
   }
-  if(!window.confirm(`선택한 ${changed.length}곡의 태그 변경을 실제 NAS 파일에 저장할까요?`))return;
   for(const row of selected)for(const field of activeFields)row.tags[field]=clone(modifications[field]);
   saveDraft();renderTracks();
   $('#multiTagStatus').textContent='선택 항목 NAS 저장 중 · '+changed.length+'곡';
@@ -374,7 +373,6 @@ async function persistDiscGroupTags(rows,{automatic=false,onlyFields=null}={}){
   const error=Error('NAS에서 승인되지 않은 파일 형식 또는 태그 필드입니다.');
   $('#multiTagStatus').textContent=error.message;return {completed:0,total:jobs.length,error};
  }
- if(!automatic&&!window.confirm('CD 통합 '+jobs.length+'곡의 태그를 실제 NAS에 디스크별로 저장할까요?'))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#multiTagSave').disabled=true;$('#bulkApply').disabled=true;
  let completed=0,failed=null;
  try{
@@ -427,7 +425,6 @@ async function persistTagRows(rows,{automatic=false,onlyFields=null}={}){
   $('#saveStatus').textContent='저장 실패 · NAS에서 승인되지 않은 파일 형식 또는 태그 필드입니다.';
   return;
  }
- if(!automatic&&!window.confirm(`선택한 ${jobs.length}곡의 태그를 실제 NAS 파일에 저장할까요?`))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#bulkApply').disabled=true;
  // Keep the screen scrollable and responsive while the NAS responds.
  let completed=0,failed=null;
