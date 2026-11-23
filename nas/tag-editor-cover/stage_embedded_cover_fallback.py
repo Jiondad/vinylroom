@@ -51,11 +51,10 @@ def _safe_children(folder):
         if folder.is_symlink() or not folder.is_dir():
             return []
         children=[]
-        with folder.iterdir() as entries:
-            for item in entries:
-                children.append(item)
-                if len(children)>MAX_FOLDER_ITEMS:
-                    return []
+        for item in folder.iterdir():
+            children.append(item)
+            if len(children)>MAX_FOLDER_ITEMS:
+                return []
         return sorted(children,key=lambda x:x.name.casefold())
     except (OSError,ValueError):
         return []
