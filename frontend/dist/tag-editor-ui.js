@@ -72,7 +72,7 @@ function openLinkedAlbum(a){
  renderTree();
  void selectAlbum(id);
 }
-function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
+function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><img data-tag-cover="${esc(a.discs[0].id)}" alt="앨범 대표 커버"><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
  return `<button class="cover-button" id="coverOpen" aria-label="내장 커버 편집 열기"><span>◎</span><img data-tag-cover="${esc(a.id)}" alt="앨범 색인 커버"><span>커버 편집</span></button><div><h2>${esc(a.title)}</h2><p>${esc(a.artist)} · ${esc(a.date||'연도 없음')}</p><div class="folder-path" title="${esc(a.path||a.relative_path||'')}">${esc(a.path||a.relative_path||'')}</div></div>`;}
 async function selectAlbum(id){if(tagSaveBusy){toast('NAS 저장 중에는 앨범을 변경하지 마세요.');return;}if(S.active===id&&S.album)return;const info=[...S.nodes.values()].find(n=>n.album?.id===id)?.album;if(!info)return;
  saveDraft();const ticket=gate.next(),started=performance.now();if(currentTrackRequest)currentTrackRequest.cancel();S.active=id;S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();$('#albumHeader').innerHTML=summary(info);$('#loadStatus').textContent='트랙 태그를 불러오는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;renderTree();renderTracks('트랙 태그를 불러오는 중…');
@@ -114,7 +114,7 @@ async function selectDiscGroup(path){
   S.album=album;S.original=clone(entries);
   const saved=S.drafts.get(groupId+'|shared'),valid=saved?.original===JSON.stringify(S.original);
   S.draft=clone(valid?saved.draft:entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};
-  $('#albumHeader').innerHTML=summary(album);$('#loadStatus').textContent='CD 통합 · 선택한 트랙을 원래 디스크별로 확인·저장합니다.';
+  $('#albumHeader').innerHTML=summary(album);parent.postMessage({type:'vr-tag-covers',channel},location.origin);$('#loadStatus').textContent='CD 통합 · 선택한 트랙을 원래 디스크별로 확인·저장합니다.';
   $('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();syncMultiTags();
   const measurement={album_id:groupId,discs:discs.length,display_ms:performance.now()-started};
   $('#albumHeader').dataset.readMetrics=JSON.stringify(measurement);
@@ -188,7 +188,6 @@ $('#multiTagSave').onclick=async()=>{
   if(!changed.length){
    $('#multiTagStatus').textContent='선택 트랙에 미저장 변경이 없습니다. 빈칸은 기존 태그를 유지합니다.';return;
   }
-  if(!window.confirm(`선택한 ${changed.length}곡의 태그 변경을 실제 NAS 파일에 저장할까요?`))return;
   for(const row of selected)for(const field of activeFields)row.tags[field]=clone(modifications[field]);
   saveDraft();renderTracks();
   $('#multiTagStatus').textContent='선택 항목 NAS 저장 중 · '+changed.length+'곡';
@@ -308,14 +307,14 @@ document.querySelector('.editor-tools').onclick=e=>{const b=e.target.closest('[d
 $('#artistScroll').addEventListener('scroll',rememberEditorView,{passive:true});
 
 function saveButtonState(){
- const renameMode=activeTool==='to',enabled=renameMode?saveCaps.rename:saveCaps.tags;
+ const renameMode=activeTool==='to',cdRenameHold=renameMode&&!!S.album?.disc_group,enabled=renameMode?(saveCaps.rename&&!cdRenameHold):saveCaps.tags;
  const count=S.draft.filter(e=>S.selected.has(e.file)&&(renameMode?S.renames[e.file]:changedFields(e).length)).length;
  // The multi-field panel is the only save action in Tag Edit mode.
  // Keep this existing button for filename/number/other tools, whose save paths differ.
  $('#saveTags').hidden=activeTool==='tags';
  $('#saveTags').disabled=tagSaveBusy||!enabled||!S.album;
  $('#saveTags').textContent=renameMode?'파일명 변경 저장':activeTool==='number'?'기타 태그 저장':'태그 변경 저장';
- $('#saveTags').title=enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
+ $('#saveTags').title=cdRenameHold?'CD 통합 파일명 저장 보류: 디스크별 UUID를 보존하는 재색인 경로가 확인되지 않았습니다.':enabled?(count?`선택 변경 ${count}곡 실제 파일 저장`:'저장할 변경 초안을 만든 후 누르세요'):(renameMode?'NAS 정식 색인 연결 및 자격 검증 필요':'NAS 태그 저장 기능 확인 필요');
 }
 async function readSaveCaps(){
  try{const r=await api('/api/save-capabilities');if(r.state==='TAG_EDITOR_SAVE_CAPABILITIES'&&r.version==='tag-editor-save-v1')saveCaps={...r,tags:r.tags===true&&Array.isArray(r.tag_fields),cover:r.cover===true,rename:r.rename===true};}
@@ -374,7 +373,6 @@ async function persistDiscGroupTags(rows,{automatic=false,onlyFields=null}={}){
   const error=Error('NAS에서 승인되지 않은 파일 형식 또는 태그 필드입니다.');
   $('#multiTagStatus').textContent=error.message;return {completed:0,total:jobs.length,error};
  }
- if(!automatic&&!window.confirm('CD 통합 '+jobs.length+'곡의 태그를 실제 NAS에 디스크별로 저장할까요?'))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#multiTagSave').disabled=true;$('#bulkApply').disabled=true;
  let completed=0,failed=null;
  try{
@@ -427,7 +425,6 @@ async function persistTagRows(rows,{automatic=false,onlyFields=null}={}){
   $('#saveStatus').textContent='저장 실패 · NAS에서 승인되지 않은 파일 형식 또는 태그 필드입니다.';
   return;
  }
- if(!automatic&&!window.confirm(`선택한 ${jobs.length}곡의 태그를 실제 NAS 파일에 저장할까요?`))return;
  tagSaveBusy=true;$('#saveTags').disabled=true;$('#bulkApply').disabled=true;
  // Keep the screen scrollable and responsive while the NAS responds.
  let completed=0,failed=null;
@@ -529,6 +526,9 @@ async function reconcileDiscRenames(jobs,viewId){
 }
 async function saveDiscGroupRenames({files=null,automatic=false}={}){
  if(tagSaveBusy||!S.album?.disc_group||!saveCaps.rename)return;
+ // Hold CD aggregate rename writes until native reindex preserves independent disc UUIDs.
+ const cdGroupRenameQualified=false;
+ if(!cdGroupRenameQualified){toast('CD 통합 파일명 저장은 안전한 재색인 경로가 마련될 때까지 중단합니다. 태그 저장은 이용할 수 있습니다.');return;}
  const viewId=S.album.id,scope=new Set(files||[...S.selected]);
  const jobs=S.original.filter(e=>scope.has(e.file)&&S.renames[e.file]&&S.renames[e.file]!==base(e.file))
   .map(e=>{const disc=discWriteOwner(e.file);return {album_id:disc.id,file:e.file,new_name:S.renames[e.file],label:disc.label,path:disc.path};});
