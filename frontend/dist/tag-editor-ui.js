@@ -528,10 +528,10 @@ async function reconcileDiscRenames(jobs,viewId){
  return [...new Set(unknown)].length;
 }
 async function saveDiscGroupRenames({files=null,automatic=false}={}){
- if(!S.album?.disc_group)return;
- toast('CD 통합 파일명 저장은 안전한 재색인 경로가 마련될 때까지 중단합니다. 태그 저장은 이용할 수 있습니다.');return;
- // No CD aggregate Rename plan/apply is allowed while native reindex cannot preserve both disc UUIDs.
- if(tagSaveBusy||!saveCaps.rename)return;
+ if(tagSaveBusy||!S.album?.disc_group||!saveCaps.rename)return;
+ // Hold CD aggregate rename writes until native reindex preserves independent disc UUIDs.
+ const cdGroupRenameQualified=false;
+ if(!cdGroupRenameQualified){toast('CD 통합 파일명 저장은 안전한 재색인 경로가 마련될 때까지 중단합니다. 태그 저장은 이용할 수 있습니다.');return;}
  const viewId=S.album.id,scope=new Set(files||[...S.selected]);
  const jobs=S.original.filter(e=>scope.has(e.file)&&S.renames[e.file]&&S.renames[e.file]!==base(e.file))
   .map(e=>{const disc=discWriteOwner(e.file);return {album_id:disc.id,file:e.file,new_name:S.renames[e.file],label:disc.label,path:disc.path};});
