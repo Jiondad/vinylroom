@@ -78,29 +78,40 @@ async function restoreLastEditorAlbum(){
  const saved=refreshView?.album;
  if(!saved||!channel||tagSaveBusy)return;
  const id=String(saved.id||''),path=String(saved.relative_path||'');
- const safePath=path&&!path.startsWith('/')&&!path.includes('\\')&&
-  path.split('/').every(p=>p&&p!=='.'&&p!=='..');
- if(!safePath)return;
- if(!id.startsWith('disc-group:')){
-  openLinkedAlbum(saved);
-  return;
- }
- if(id!=='disc-group:'+path)return;
+ if(!path||path.startsWith('/')||path.includes('\\')||path.split('/').some(p=>!p||p==='.'||p==='..'))return;
+ const grouped=id==='disc-group:'+path;
+ if(!grouped&&!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id))return;
+ const folder=grouped?path:path.split('/').slice(0,-1).join('/');
+ if(!folder)return;
+ const originalChannel=channel;
+ const stillCurrent=()=>channel===originalChannel&&!S.active&&!tagSaveBusy;
  try{
-  // Populate the original NAS album listing; no synthetic IDs are sent to the Writer.
-  const parent=addPath(path);
-  let current=path;
-  while(current){node(current).expanded=true;current=current.split('/').slice(0,-1).join('/');}
-  node('').expanded=true;
-  const response=await api('/api/albums?artist='+encodeURIComponent('folder:'+path));
-  if(!channel)return;
-  addAlbums(response.items||[],path);
-  parent.expanded=true;
+  // Each folder must be discovered through its real parent before the host
+  // authorizes its next read. Never register an unverified path or album ID.
+  let current='';
+  for(const segment of folder.split('/')){
+   const result=await api('/api/folders?path='+encodeURIComponent(current));
+   if(!stillCurrent())return;
+   const parent=node(current),next=current?current+'/'+segment:segment;
+   for(const item of result.items||[]){parent.children.add(item.id);node(item.id,item.name);}
+   parent.loaded=true;parent.expanded=true;parent.error='';
+   if(!(result.items||[]).some(item=>item.id===next))throw Error('이전 폴더를 찾을 수 없습니다.');
+   current=next;
+  }
+  const response=await api('/api/albums?artist='+encodeURIComponent('folder:'+folder));
+  if(!stillCurrent())return;
+  addAlbums(response.items||[],folder);
+  node(folder).expanded=true;node(folder).error='';
   renderTree();
-  if(discChildAlbums(path).length>=2)await selectDiscGroup(path);
-  else $('#loadStatus').textContent='이전 CD 통합 앨범을 복원하지 못했습니다. 왼쪽 폴더에서 다시 선택하세요.';
+  if(grouped){
+   if(discChildAlbums(path).length<2)throw Error('이전 CD 통합 앨범을 찾을 수 없습니다.');
+   await selectDiscGroup(path);
+  }else{
+   if(!(response.items||[]).some(a=>a.id===id&&a.relative_path===path))throw Error('이전 앨범을 찾을 수 없습니다.');
+   await selectAlbum(id);
+  }
  }catch(e){
-  if(channel)$('#loadStatus').textContent='이전 앨범 재조회 실패 · 왼쪽 폴더에서 다시 선택하세요.';
+  if(stillCurrent())$('#loadStatus').textContent='이전 앨범 재조회 실패 · '+e.message;
  }
 }
 function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><img data-tag-cover="${esc(a.discs[0].id)}" alt="앨범 대표 커버"><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
