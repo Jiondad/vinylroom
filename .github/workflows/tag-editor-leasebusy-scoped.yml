@@ -1,0 +1,28 @@
+name: Tag Editor leasebusy scoped scripts
+on:
+  push:
+    branches: [fix/tag-editor-leasebusy-409-20261123]
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check staging and rollback script syntax only
+        run: |
+          python3 -m py_compile nas/tag-editor-cover/stage_leasebusy_409_nas.py nas/tag-editor-cover/qualify_leasebusy_409_nas.py nas/tag-editor-cover/deploy_leasebusy_409_nas.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('nas/tag-editor-cover')
+          stage=(p/'stage_leasebusy_409_nas.py').read_text()
+          q=(p/'qualify_leasebusy_409_nas.py').read_text()
+          d=(p/'deploy_leasebusy_409_nas.py').read_text()
+          assert "blocking=True, timeout=5" in stage
+          assert "catalog_lease_busy_retry_later" in stage
+          assert "leasebusy_maps_to_http409" in q
+          assert "new_audio_tests_executed" in q
+          assert 'len(chain)!=12' in d
+          assert 'compose.http400-diagnostic-qualified.json' in d
+          assert 'atomic_receipt(root,receipt,original)' in d
+          assert 'idle_check()' in d
+          print('LEASEBUSY_409_SCOPED_PACKAGE_SYNTAX_PASS')
+          PY
