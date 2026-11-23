@@ -1,5 +1,5 @@
-/* Phase H: reuse cover draft UI, authenticated parent bridge, NAS read/plan only.
- * No apply request is implemented. Indexed album artwork is NOT embedded cover proof. */
+/* Tag Editor embedded cover: authenticated inspect/plan/apply per original album.
+ * A catalog display cover is NOT proof of an embedded audio front cover. */
 export function coverTargets(album,scope,selected=[]){
  const files=[...new Set((album?.entries||[]).map(e=>e.file).filter(f=>typeof f==='string'&&/\.(flac|mp3)$/i.test(f)))];
  return scope==='__all__'?files:scope==='__selected__'?files.filter(f=>selected.includes(f)):files.filter(f=>f===scope);
