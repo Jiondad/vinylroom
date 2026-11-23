@@ -228,3 +228,14 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
 @media(min-width:651px) and (max-width:900px){
  .workspace{grid-template-columns:minmax(0,19.136%) minmax(0,1fr)}
 }
+
+
+/* Tag Editor desktop table: always fit inside the available editor width.
+   Previous 1260px minimum was still applied at some iframe viewport sizes. */
+@media(min-width:651px){
+ .workspace>.working,.workspace .track-panel,.workspace .track-panel .table-scroll{min-width:0;max-width:100%}
+ .workspace .track-panel table{width:100%;min-width:0;max-width:100%;table-layout:fixed}
+ .workspace .track-panel .table-scroll{overflow-x:hidden}
+ .workspace .track-panel th,.workspace .track-panel td{min-width:0;overflow:hidden}
+ .workspace .track-panel td input:not([type=checkbox]){width:100%;min-width:0;max-width:100%;text-overflow:ellipsis}
+}

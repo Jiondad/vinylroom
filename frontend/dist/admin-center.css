@@ -327,3 +327,11 @@ body .vinyl-admin-page.vr-tag-editor-active [data-tag-editor]{
   margin:0 6px;
  }
 }
+
+
+/* Tag Editor only: remove the duplicated parent Admin title, information bar,
+   and tab strip. Other Admin sections retain their navigation unchanged. */
+body .vinyl-admin-page.vr-tag-editor-active .vr-admin-header,
+body .vinyl-admin-page.vr-tag-editor-active .vr-admin-tabs,
+body .vinyl-admin-page.vr-tag-editor-active > .vr-admin-inner > .vr-admin-status{display:none!important}
+body .vinyl-admin-page.vr-tag-editor-active .vr-admin-inner{padding-top:0}
