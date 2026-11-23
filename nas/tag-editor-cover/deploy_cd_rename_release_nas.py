@@ -46,7 +46,8 @@ def secure_file(path,uid,mode):
     info=path.stat()
     return path.is_file() and not path.is_symlink() and info.st_uid==uid and stat.S_IMODE(info.st_mode)==mode
 
-for p in (STAGE,RECEIPT,NATIVE,HTTP,NATIVE_CAND,HTTP_CAND,MANIFEST):
+if not STAGE.is_dir() or STAGE.is_symlink():hold('stage directory missing or symlink')
+for p in (RECEIPT,NATIVE,HTTP,NATIVE_CAND,HTTP_CAND,MANIFEST):
     if not p.is_file() or p.is_symlink():hold('source missing or symlink '+str(p))
 if not secure_file(RECEIPT,1026,0o600):hold('receipt owner/mode changed')
 if RECEIPT.parent.is_symlink() or RECEIPT.parent.stat().st_uid!=1026 or stat.S_IMODE(RECEIPT.parent.stat().st_mode)!=0o700:hold('receipt directory changed')
