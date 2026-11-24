@@ -35,10 +35,17 @@ def hold(reason):
 def check(ok,reason):
     if not ok:hold(reason)
 with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
-    root=Path(tmp)/"music"
+    # Writer accepts absolute Catalog paths rooted at /music.
+    # This is a fresh container-private tmpfs, never the NAS music mount.
+    root=Path("/music")
     data=Path(tmp)/"data"
     parent=root/"KPOP"/ARTIST/REP_TITLE
-    root.mkdir();data.mkdir()
+    check(root.is_dir() and not root.is_symlink() and not any(root.iterdir()),
+          "isolated_music_mount_not_empty")
+    mounts=Path("/proc/self/mountinfo").read_text().splitlines()
+    check(any(line.split()[4]=="/music" and " - tmpfs " in line
+              for line in mounts),"isolated_music_not_tmpfs")
+    data.mkdir()
     # Generate a tiny genuine FLAC stream using only Python standard library.
     # Fixed-block mono 16-bit PCM, 44.1 kHz, eight constant-value frames.
     # No external encoder, production audio, or package installation needed.
@@ -259,6 +266,7 @@ def main():
               "--cap-drop","ALL","--security-opt","no-new-privileges",
               "--memory","768m",
               "--tmpfs","/tmp:rw,nosuid,nodev,size=256m",
+              "--tmpfs","/music:rw,nosuid,nodev,noexec,size=64m,mode=1777",
               "--mount","type=bind,source="+str(app)+",target=/app,readonly",
               "--workdir","/app","-e","PYTHONDONTWRITEBYTECODE=1",
               "-e","INDEX_AUTOMATIC_ENABLED=false",
