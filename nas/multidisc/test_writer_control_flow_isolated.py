@@ -149,33 +149,19 @@ with tempfile.TemporaryDirectory(prefix="vinyl_writer_27_synthetic_") as temp:
                 modified=0
                 for r in obj["physical_files"]:
                     file=music/r["path"]
-                    if not file.exists():
-                        # Rename happens within one disc directory.
-                        matches=sorted(file.parent.glob("* Renamed.flac"))
-                        if len(matches)!=1:raise ValueError("renamed_candidate_ambiguous")
-                        r["path"]=matches[0].relative_to(music).as_posix()
-                        r["filename"]=matches[0].name
-                        modified+=1
-                    elif r["filename"].endswith(" Renamed.flac"):
-                        # Reverse restore matches the original synthetic file number.
-                        restored=r["filename"].replace(" Renamed.flac"," Test.flac")
-                        candidate=file.with_name(restored)
-                        if candidate.exists():
-                            r["path"]=candidate.relative_to(music).as_posix()
-                            r["filename"]=restored
-                            modified+=1
-                if modified != 1:
-                    # For the restore run: the old " Renamed.flac" row no longer
-                    # exists and must be reconciled to its original filename.
-                    for r in obj["physical_files"]:
-                        p=music/r["path"]
-                        if p.exists():continue
-                        original=Path(r["path"]).name.replace(" Renamed.flac"," Test.flac")
-                        found=p.with_name(original)
-                        if not found.exists():raise ValueError("reindex_unmatched_file")
-                        r["path"]=found.relative_to(music).as_posix()
-                        r["filename"]=original
-                        modified+=1
+                    if file.exists():continue
+                    name=file.name
+                    if name.endswith(" Test.flac"):
+                        alternate=file.with_name(name.replace(" Test.flac"," Renamed.flac"))
+                    elif name.endswith(" Renamed.flac"):
+                        alternate=file.with_name(name.replace(" Renamed.flac"," Test.flac"))
+                    else:
+                        raise ValueError("unrecognized_test_filename")
+                    if not alternate.is_file():
+                        raise ValueError("reindex_unmatched_file")
+                    r["path"]=alternate.relative_to(music).as_posix()
+                    r["filename"]=alternate.name
+                    modified+=1
                 if modified!=1:raise ValueError("reindex_unexpected_change:"+str(modified))
                 db.execute("UPDATE albums SET data=? WHERE id=?",(json.dumps(obj),REP))
                 return {"state":"completed"}
