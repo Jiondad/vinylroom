@@ -32,13 +32,17 @@ cases=[]
 with TemporaryDirectory(prefix="vinyl_native_multidisc_") as tmp:
     parent=Path(tmp)/"album"
     parent.mkdir()
+    class Cursor:
+        def __init__(self,rows):self.rows=rows
+        def __iter__(self):return iter(self.rows)
+        def fetchall(self):return self.rows
     class FakeDB:
         def __init__(self,rows):self.rows=rows
         def __enter__(self):return self
         def __exit__(self,*args):return False
         def execute(self,sql,args=()):
-            if "FROM jobs" in sql:return []
-            if "FROM albums" in sql:return self.rows
+            if "FROM jobs" in sql:return Cursor([])
+            if "FROM albums" in sql:return Cursor(self.rows)
             raise AssertionError("Unexpected query")
     selected={"rows":[],"issues":[],"calls":[]}
     def inventory(dbpath,root,album_id,**kwargs):
