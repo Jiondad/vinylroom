@@ -41,3 +41,9 @@
 5. 이 단계는 실제 Rename Writer·API·Catalog·음원을 변경하지 않으며, 격리 테스트를 통과한 것도 아니다.
 
 **중요:** 이 후보는 완성된 통합 배포 패치가 아니다. Category/AI/플레이리스트 참조 관계 보존, 대표 UUID 전환 후 Tag Editor 선택 모델, 격리 통합/복원 검증을 완료해야 실제 NAS 설치 및 김종서 단건 운영 통합이 가능하다.
+
+## 대표 UUID 앨범의 DISC 표시 연결(개발 초안)
+- 프런트엔드 `frontend/dist/tag-editor-ui.js`에서 `displayedDiscNumber`가 `S.album.path` 아래 첫 번째 하위 폴더명(CD1/DISC2/DISK2)을 읽어 디스크 번호로 표시.
+- 이는 기존 `disc-group:...` 가상 통합 보기뿐 아니라 대표 UUID를 가진 **단일 부모 앨범**에도 적용.
+- 트랙별 파일명, UUID, 태그, Writer 저장 요청과 권한은 바꾸지 않음.
+- 아직 운영 UI에 게시하지 않았으며 실제 통합 후 조회 결과와 함께 검증 필요.
