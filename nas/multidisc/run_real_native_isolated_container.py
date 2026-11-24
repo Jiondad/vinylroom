@@ -106,7 +106,23 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
                 raise
         i.scan_job=traced_scan_job
         def scan(path,recursive):
-            result=i.enqueue(path,recursive=recursive,kind="manual",scan_mode="changes",synchronous=True)
+            # Capture exceptions even when native execute_job catches them
+            # before the scan_job wrapper is reached. Isolated process only.
+            captured=[]
+            def trace_native(frame,event,arg):
+                if event=="exception" and isinstance(arg[1],TypeError):
+                    filename=frame.f_code.co_filename
+                    if filename.startswith("/app/") and len(captured)<30:
+                        captured.append({"file":filename,"line":frame.f_lineno,
+                            "function":frame.f_code.co_name,"error":str(arg[1])})
+                return trace_native
+            previous_trace=sys.gettrace()
+            try:
+                sys.settrace(trace_native)
+                result=i.enqueue(path,recursive=recursive,kind="manual",scan_mode="changes",synchronous=True)
+            finally:
+                sys.settrace(previous_trace)
+                print("ISOLATED_NATIVE_TYPEERROR_EVENTS",json.dumps(captured,ensure_ascii=False),flush=True)
             print("ISOLATED_SCAN",json.dumps(result,default=str,ensure_ascii=False)[:1800],flush=True)
             if isinstance(result,dict) and result.get("state")!="completed":
                 hold("native_scan_failed:"+str(result.get("message",result.get("state"))))
