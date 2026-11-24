@@ -6,19 +6,15 @@ import ast,contextlib,inspect,json,sqlite3,sys,os
 from pathlib import Path
 sys.path.insert(0,"/app")
 from ai_metadata.delta_sync import DeltaCoordinator
-from ai_metadata import auto_sync
 C=Path("/data/catalog.sqlite3")
 A=Path("/data/ai-metadata/ai-metadata-v1.sqlite3")
 IDS={"5d7db58a-641f-42cd-84d4-15b77c396e76","3a18d47b-9263-4c72-b9db-9bdd71181e55","bfdadf5f-f513-4099-8de4-3ffef88cb49c"}
 def ro(p):return sqlite3.connect(p.as_uri()+"?mode=ro",uri=True,timeout=3)
 def hold(s,**extra):
     print(json.dumps({"state":"HOLD","reason":s,**extra},ensure_ascii=False));raise SystemExit(1)
-# Use the installed Observer's native coordinator and guard, not an invented lock.
-# Constructor must not start threads. Inspect the installed source contract first.
-src=inspect.getsource(auto_sync.Observer.__init__)
-if any(x in src for x in (".start(",".tick(",".run(",".ingest(")):hold("observer_constructor_not_passive")
-obs=auto_sync.Observer(C,A)
-co=getattr(obs,"coordinator",None)
+# Use the exact installed factory confirmed in Observer.__init__.
+# Do not enable automatic scheduling or alter persistent environment settings.
+co=DeltaCoordinator.with_catalog_lease(C,A,A.parent/"sync-backups")
 if not isinstance(co,DeltaCoordinator) or co.index_guard is None:hold("existing_delta_coordinator_unavailable")
 if Path(co.catalog)!=C or Path(co.ai)!=A:hold("unexpected_coordinator_database")
 def scope():
@@ -38,7 +34,7 @@ def guarded():
 co.index_guard=guarded
 try:
     before,pending=scope()
-    result=co.run(commit_guard=lambda:scope())
+    result=co.run()
 except (ValueError,sqlite3.Error,OSError) as e:hold(str(e))
 print(json.dumps({"state":"MULTIDISC_AI_DELTA_RESULT","before_cursor":before,"pending_ids":sorted(pending),"result":result},ensure_ascii=False,indent=2,default=str))
 if result.get("state")!="completed":raise SystemExit(1)
