@@ -26,3 +26,18 @@
 
 ## 현재 상태
 **READ_ONLY_DEVELOPMENT_ONLY** — 통합/색인/운영 DB/음원 쓰기 코드 미설치. 아직 운영 적용 불가.
+
+## 운영 함수 원문 검토 후 실제 개발 추가 (2026-11-24)
+- `tag_phase2c.inventory(...allow_auxiliary_disc_dirs=False)`는 옵션 `True`일 때 앨범 루트와 CD/DISC/DISK 하위 폴더의 오디오 파일을 읽는다. `tag_rename_writer.plan`은 **이미** `allow_auxiliary_disc_dirs=True`를 사용한다.
+- `_catalog_files`는 `physical_files` 안의 상대경로가 부모 앨범 path 아래인지 확인하고, `_references_match`는 그 목록에서 실제 변경 전후 파일명을 비교한다.
+- `NativeAlbumIndex.preflight`는 `base.inventory(i.dbpath,i.root,album_id)` 호출에 보조 디스크 옵션을 전달하지 않는 차이가 있다.
+- `index_scanner.scan_set`에는 서로 다른 디스크의 앨범명·아티스트가 일치하는지 검증하는 명시적 조건이 없다.
+
+따라서 신규 **NAS 실행을 하지 않는 후보 생성기** `stage_minimal_multidisc_patch_nas.py`를 추가:
+1. 운영 `/app/index_scanner.py`와 `/app/tag_native_index.py`의 정확한 기존 코드 블록을 1회씩 확인하고, 변경 후보를 `/tmp/vinyl-multidisc-candidate-20261124`에만 생성.
+2. `scan_set`은 부분 디스크 읽기 및 디스크 간 앨범명/아티스트 불일치일 때 원래 앨범을 유지하도록 HOLD 결과 반환.
+3. `NativeAlbumIndex.preflight`는 **직접 하위의 번호가 붙은 디스크 폴더가 2개 이상일 때만** 기존 inventory 보조 디스크 옵션 적용.
+4. 생성한 후보를 `ast.parse`로 검증하고 원본/후보 SHA256을 manifest에 기록.
+5. 이 단계는 실제 Rename Writer·API·Catalog·음원을 변경하지 않으며, 격리 테스트를 통과한 것도 아니다.
+
+**중요:** 이 후보는 완성된 통합 배포 패치가 아니다. Category/AI/플레이리스트 참조 관계 보존, 대표 UUID 전환 후 Tag Editor 선택 모델, 격리 통합/복원 검증을 완료해야 실제 NAS 설치 및 김종서 단건 운영 통합이 가능하다.
