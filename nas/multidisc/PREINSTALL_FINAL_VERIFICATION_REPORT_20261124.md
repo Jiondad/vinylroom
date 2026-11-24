@@ -113,3 +113,12 @@ User-supplied NAS receipt, runner commit `a9d9870401bebce1d01044c281c08175c14e9d
 - **Native index and actual Rename Writer integration gates are now PASS; do not rerun these qualified tests.**
 - Remaining: scoped category/AI identity and metadata preservation decision, durable backup/rollback readiness, approved single-album operating deployment, and actual frontend integration.
 - Current disposition: BACKEND_NATIVE_RENAME_ISOLATED_PASS / PRODUCTION_INSTALL_HOLD. This does not qualify unrelated tag/cover write paths or HTTP/UI authorization.
+
+## 2026-11-24 — Scoped production metadata and AI reference evidence
+User receipts MULTIDISC_METADATA_AI_READ_ONLY and MULTIDISC_AI_RECONCILIATION_READ_ONLY:
+- Both Catalog rows: Studio/folder, empty genre/label/manual_fields, no notes; two distinct category keys unmatched.
+- Expected AI DB /data/ai-metadata/ai-metadata-v1.sqlite3: both pending, active=1, protected=[], changed_fields=[], one ai_sync_sources row each.
+- Both IDs: proposals=0, research_revisions=0, ai_sync_items=0, field_selection_reviews=0, gemini_call_album_scope=0.
+- sync_source_locations=[]: native reconciliation behavior still unverified. No claim of cross-DB integration PASS. Discovery of historical DB copies does not authorize their modification; auto-sync-v1.sqlite3 discovery OperationalError remains unexplained.
+- Decision: retain original category keys/evidence and historical IDs. Use existing incremental AI sync only after verifying its targeted update/archive behavior. No direct AI SQL modification, Gemini calls or global sync authorization.
+- All operating writes=0. Native index and actual Rename Writer isolated PASS receipts remain accepted without retest.
