@@ -97,3 +97,19 @@ User-supplied NAS execution receipt, runner commit `5636c3029f21e6a1d5b4f49219c3
 - Previous real native integration HOLD is cleared. Do not rerun the already passed native-only integration as a separate test.
 - Remaining HOLD: real Writer apply/restore with actual native callback, actual category/AI reference handling, persistent backup and rollback readiness, frontend integration and explicit operational approval. 
 - The four production candidate hashes remain unchanged. No production deployment authorized.
+
+## 2026-11-24 — Actual Rename Writer + NativeAlbumIndex integration PASS
+
+User-supplied NAS receipt, runner commit `a9d9870401bebce1d01044c281c08175c14e9dc2`:
+- `MULTIDISC_REAL_WRITER_NATIVE_ISOLATED_PASS`
+- Actual generated FLAC 27 files in private /music tmpfs; production music and databases were not mounted.
+- Parent scan completed: processed=1, added=0, updated=1, errors=[].
+- Fixture representative UUID `4f4d0de6-5b23-4cb1-8f5a-32f868a58d0f`; archived UUID `c2ed6e6e-5ba5-4d36-b577-e19b85977379`.
+- Real plan `READ_ONLY_RENAME_PLAN`; real apply `RENAME_WRITE_COMPLETED` operation `372c89d866084e15a6c4433a1f609f08`; real restore `RENAME_RESTORE_COMPLETED` operation `b2de58d30a2f4068af17eee7f2cc564e`.
+- Each write in the isolated environment triggered real Native reindex; final tracks=27, active search=27, archived search=0.
+- Rename/restore file hashes PASS; all other media unchanged PASS.
+- Production writes=0, production deployment NOT_AUTHORIZED.
+- Existing four candidate source hashes unchanged. No Writer code modification was required; previous path HOLD was caused by fixture root not matching /music contract.
+- **Native index and actual Rename Writer integration gates are now PASS; do not rerun these qualified tests.**
+- Remaining: scoped category/AI identity and metadata preservation decision, durable backup/rollback readiness, approved single-album operating deployment, and actual frontend integration.
+- Current disposition: BACKEND_NATIVE_RENAME_ISOLATED_PASS / PRODUCTION_INSTALL_HOLD. This does not qualify unrelated tag/cover write paths or HTTP/UI authorization.
