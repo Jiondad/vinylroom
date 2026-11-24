@@ -129,7 +129,7 @@ def main():
         (app/"_multidisc_native_fixture.py").write_text(HARNESS,encoding="utf-8")
         args=["docker","run","--rm","--network","none","--read-only",
               "--cap-drop","ALL","--security-opt","no-new-privileges",
-              "--memory","768m","--cpus","1","--pids-limit","128",
+              "--memory","768m","--pids-limit","128",
               "--tmpfs","/tmp:rw,nosuid,nodev,size=256m",
               "--mount","type=bind,source="+str(app)+",target=/app,readonly",
               "--workdir","/app","-e","PYTHONDONTWRITEBYTECODE=1",
