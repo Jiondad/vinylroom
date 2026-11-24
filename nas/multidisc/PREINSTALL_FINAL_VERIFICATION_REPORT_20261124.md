@@ -122,3 +122,6 @@ User receipts MULTIDISC_METADATA_AI_READ_ONLY and MULTIDISC_AI_RECONCILIATION_RE
 - sync_source_locations=[]: native reconciliation behavior still unverified. No claim of cross-DB integration PASS. Discovery of historical DB copies does not authorize their modification; auto-sync-v1.sqlite3 discovery OperationalError remains unexplained.
 - Decision: retain original category keys/evidence and historical IDs. Use existing incremental AI sync only after verifying its targeted update/archive behavior. No direct AI SQL modification, Gemini calls or global sync authorization.
 - All operating writes=0. Native index and actual Rename Writer isolated PASS receipts remain accepted without retest.
+
+## Existing AI delta reconciliation source evidence
+User confirmed /app/ai_metadata/{sync,delta_sync,auto_sync}.py. DeltaCoordinator reads distinct changed album IDs from catalog_changes between cursor and end (line 113), reads current Catalog visibility (123–132), sets active=0 for deactivated IDs (180), advances cursor (202). Existing engine should be reused; no direct AI SQL writes or new sync engine. Actual run remains unverified, including backlog scope, policy limits and representative metadata update. Do not advance cursor manually or run an unrestricted sync under single-album approval. All production writes remain zero.
