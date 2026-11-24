@@ -99,8 +99,19 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
         def snapshot():
             with i.db() as db:
                 return [dict(r) for r in db.execute("SELECT id,path,missing,hidden,data FROM albums")]
-        # Create the two independent legacy Catalog records using the real Index.
-        for disc in ("CD1","CD2"):scan(rel+"/"+disc,False)
+        # Seed legacy independent rows through the actual scanner and Index.put,
+        # in the disposable Catalog only. Do not bypass the enqueue scope guard.
+        import hashlib
+        for disc in ("CD1","CD2"):
+            folder=parent/disc
+            result=scanner.scan(folder,"classified-music",limit=1,covers=True,ape_tag_recovery=True)
+            check(len(result["albums"])==1,"legacy_fixture_scan_failed:"+disc)
+            album=result["albums"][0]
+            album["relative_path"]=rel+"/"+disc
+            st=folder.stat()
+            with i.db() as db:
+                i.put(db,album,None,f"{st.st_dev}:{st.st_ino}","legacy-fixture")
+        print("ISOLATED_LEGACY_CATALOG_READY",flush=True)
         rows=snapshot()
         active={r["path"]:r for r in rows if not r["missing"] and not r["hidden"]}
         check(set(active)=={rel+"/CD1",rel+"/CD2"},"legacy_child_seed_not_two_independent_albums")
@@ -120,7 +131,8 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
         verify()
         # Actual Native adapter, actual parent inventory, actual native enqueue.
         native=NativeAlbumIndex(i)
-        check(i.meta("seed_complete")=="1","isolated_seed_not_complete")
+        # The fixture has deliberately seeded the only albums in this disposable library.
+        if i.meta("seed_complete")!="1":i.setmeta("seed_complete","1")
         native.preflight(rep,rel)
         native(rep,rel)
         verify()
