@@ -84,3 +84,16 @@
 읽는 대상은 고정 해시가 확인된 `/tmp/vinyl-multidisc-preinstall-final-20261124/candidates`의 후보 파일뿐이다. 운영 DB, 음악 파일, 서비스 또는 운영 소스를 수정하지 않는다. 추출기 자체의 실행 결과가 곧 Native E2E PASS를 의미하지는 않는다.
 
 운영 설치는 여전히 HOLD. 별도 승인 전 운영 Catalog 병합/소스 교체/음원 쓰기 금지.
+
+## 2026-11-24 — Real native index integration PASS
+User-supplied NAS execution receipt, runner commit `5636c3029f21e6a1d5b4f49219c394e48d7da0ec`:
+- `MULTIDISC_REAL_NATIVE_INDEX_ISOLATED_PASS`
+- 27 generated real FLAC files; two legacy disc rows seeded through actual scanner and Index.put in disposable Catalog.
+- Actual native parent enqueue completed, processed=1, added=0, updated=1, errors=[]; change_events=2; TypeError events=[].
+- Fixture representative UUID `04f14bae-a3d0-4973-8a99-876f10fc9eed`, archived UUID `1c5f819c-f98b-44a4-a9a5-0d865eef01a0`.
+- Representative 27 tracks, active search 27, archived search 0; real NativeAlbumIndex preflight and callback PASS.
+- These UUIDs are synthetic fixture identities, NOT production Kim Jong-seo UUIDs.
+- Real Writer apply/restore remains NOT_TESTED. Production writes=0; production deployment NOT_AUTHORIZED.
+- Previous real native integration HOLD is cleared. Do not rerun the already passed native-only integration as a separate test.
+- Remaining HOLD: real Writer apply/restore with actual native callback, actual category/AI reference handling, persistent backup and rollback readiness, frontend integration and explicit operational approval. 
+- The four production candidate hashes remain unchanged. No production deployment authorized.
