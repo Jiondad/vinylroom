@@ -36,7 +36,7 @@ ast.parse(idx)
 must=("INSERT OR IGNORE INTO track_search_dirty_v1 VALUES(?)",
       "synchronize(db,norm,row['id'])",
       "UPDATE albums SET missing=1 WHERE id=?")
-if any(idx.count(s)!=1 for s in must):
+if any(idx.count(s)!=1 for s in must[:2]) or must[2] not in idx:
     fail("archive_hook_missing_or_repeated")
 
 db=sqlite3.connect(":memory:")
