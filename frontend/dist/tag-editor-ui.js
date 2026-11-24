@@ -246,8 +246,15 @@ $('#multiTagSave').onclick=async()=>{
 function changedFields(e){const old=S.original.find(x=>x.file===e.file);return Object.keys(fields).filter(f=>values(e,f)!==values(old,f));}
 function cell(e,f){const old=S.original.find(x=>x.file===e.file),diff=values(e,f)!==values(old,f),number=f==='tracknumber',val=number?values(e,f).replace(/^([1-9])(?=\/|$)/,'0$1'):values(e,f);return `<td class="${diff?'changed':''}"><input data-field="${f}" data-file="${esc(e.file)}" aria-label="${fields[f]} ${esc(base(e.file))}" value="${esc(val)}" readonly placeholder="${f==='title'?'제목 없음':'—'}" title="${esc(val)}" ${number?'inputmode="numeric"':''}></td>`;}
 function displayedDiscNumber(e){
- // For a CD aggregate, the parent folder is the authoritative disc identity.
- const label=String(e.disc_label||'');
+ // The physical CD/DISC/DISK folder is authoritative for both virtual CD
+ // groups and albums whose Catalog UUID has been merged into the parent.
+ const albumPath=String(S.album?.path||'').replace(/\/$/,'');
+ const file=String(e.file||'');
+ let label=String(e.disc_label||'');
+ if(!label&&albumPath&&file.startsWith(albumPath+'/')){
+  const child=file.slice(albumPath.length+1).split('/')[0];
+  if(child!==file.slice(albumPath.length+1))label=child;
+ }
  const match=label.match(/^(?:cd|disc|disk|디스크)[\s._-]*0*([1-9]\d*)$/i);
  if(match)return String(+match[1]).padStart(2,'0');
  const tag=String(e.tags?.discnumber?.[0]||'').split('/')[0];
@@ -256,7 +263,7 @@ function displayedDiscNumber(e){
 function renderTracks(empty='선택한 앨범의 트랙이 여기에 표시됩니다.'){
  let lastDisc=null;const entries=S.draft.filter(e=>!$('#missingOnly').checked||changedFields(e).length||S.renames[e.file]||!e.tags.title?.length||!e.tags.tracknumber?.length),parts=[];
  S.visible=entries.map(e=>e.file);
- for(const e of entries){const disc=e.disc_label||(+(e.tags.discnumber?.[0]?.split('/')[0]||1));if(disc!==lastDisc){parts.push(`<tr class="disc-row"><td colspan="9">${typeof disc==='string'?esc(disc):'DISC '+String(disc).padStart(2,'0')}</td></tr>`);lastDisc=disc;}
+ for(const e of entries){const disc=displayedDiscNumber(e);if(disc!==lastDisc){parts.push(`<tr class="disc-row"><td colspan="9">${disc==='—'?'DISC —':'DISC '+esc(disc)}</td></tr>`);lastDisc=disc;}
  const changed=changedFields(e),common=changed.filter(f=>['album','album_artist','date','discnumber'].includes(f)),old=S.original.find(x=>x.file===e.file),missing=!e.tags.title?.length||!e.tags.tracknumber?.length;
  parts.push(`<tr data-track="${esc(e.file)}" tabindex="0" aria-selected="${S.selected.has(e.file)}" class="${S.selected.has(e.file)?'selected':''}"><td class="row-marker" aria-hidden="true">${S.selected.has(e.file)?'●':'·'}</td><td class="${S.renames[e.file]?'changed':''}"><div class="file-cell"><span class="filename" title="${esc(S.renames[e.file]||e.file)}">${esc(S.renames[e.file]||base(e.file))}</span><button class="path-open" data-path="${esc(e.file)}" aria-label="${esc(base(e.file))} 파일 경로" title="전체 파일 경로">↗</button></div>${common.map(f=>'<small class="file-proposal">'+fields[f]+': '+esc(values(old,f)||'빈 값')+' → '+esc(values(e,f)||'빈 값')+'</small>').join('')}${S.warnings[e.file]?'<small class="row-warning">'+esc(reasons[S.warnings[e.file]]||S.warnings[e.file])+'</small>':''}</td><td class="disc-number" title="디스크 번호">${esc(displayedDiscNumber(e))}</td>${['tracknumber','title','artist','album_artist','featuring','genre'].map(f=>cell(e,f)).join('')}</tr>`);
  }
