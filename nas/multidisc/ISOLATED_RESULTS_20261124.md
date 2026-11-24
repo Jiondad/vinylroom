@@ -48,3 +48,14 @@
 - 운영 프런트엔드 게시 및 운영 Catalog 병합은 하지 않았다.
 
 **남은 차단 조건:** `scan_set`의 부모 경로 저장 후 category/playlist/AI 참조 보존이 실제 단건 운영과 동등한 격리 Catalog에서 검증되지 않음; 종단간 Writer 통합 저장·복구 미검증. 운영 통합 승인 전까지 HOLD.
+
+## 2026-11-24: archived CD search native sync reproducer
+
+User's actual NAS output:
+- `MULTIDISC_SEARCH_PATCH_STAGED`: `index_engine.py` source `3bdf67de...` -> candidate `7057f502...`; `track_search.py` source `84401b47...` -> candidate `fb5e9bc5...`
+- `MULTIDISC_ARCHIVE_SEARCH_ISOLATED_PASS`: after archiving, representative 27; after repeated sync, representative 27; archived 0.
+- `actual_scan_job_integration=NOT_TESTED`, `production_install=NOT_AUTHORIZED`, Catalog/media writes 0.
+
+Next targeted test committed: `test_scan_job_archive_hook_isolated.py` parses the **staged index_engine.py candidate AST**, extracts its single `for row in disc_rows` archival loop, and executes that same loop with the staged `track_search.synchronize` functions in a synthetic `:memory:` DB. This is narrower than full `scan_job` and does not represent full production integration qualification.
+
+Still HOLD: actual disc directory merge/catalog put interplay, tag Writer end-to-end, AI reference policy, category reconciliation. No operating DB, media, source, or UI publication.
