@@ -92,9 +92,24 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
         check(Path(i.dbpath).resolve().is_relative_to(data.resolve()),"unexpected_index_db_path")
         check(Path(i.root).resolve()==root.resolve(),"unexpected_index_root")
         rel=parent.relative_to(root).as_posix()
+        # Diagnostic wrapper for the exact bound native scan_job. No change
+        # to its implementation, lease, enqueue or Catalog behavior.
+        import traceback
+        original_scan_job=i.scan_job
+        def traced_scan_job(*args,**kwargs):
+            try:
+                return original_scan_job(*args,**kwargs)
+            except Exception:
+                print("ISOLATED_NATIVE_SCAN_TRACEBACK_BEGIN",flush=True)
+                traceback.print_exc()
+                print("ISOLATED_NATIVE_SCAN_TRACEBACK_END",flush=True)
+                raise
+        i.scan_job=traced_scan_job
         def scan(path,recursive):
             result=i.enqueue(path,recursive=recursive,kind="manual",scan_mode="changes",synchronous=True)
-            print("ISOLATED_SCAN",json.dumps(result,default=str,ensure_ascii=False)[:1800])
+            print("ISOLATED_SCAN",json.dumps(result,default=str,ensure_ascii=False)[:1800],flush=True)
+            if isinstance(result,dict) and result.get("state")!="completed":
+                hold("native_scan_failed:"+str(result.get("message",result.get("state"))))
             return result
         def snapshot():
             with i.db() as db:
