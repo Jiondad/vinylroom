@@ -23,6 +23,13 @@ def sha(p):
     return h.hexdigest()
 def require(ok,msg):
     if not ok:raise RuntimeError(msg)
+def is_relative_to(path, parent):
+    # pathlib compatibility for Synology host Python older than 3.9.
+    try:
+        path.relative_to(parent)
+        return True
+    except ValueError:
+        return False
 def put(p,b):
     with p.open("r+b") as f:f.seek(0);f.write(b);f.truncate();f.flush();os.fsync(f.fileno())
 def health():
@@ -65,7 +72,7 @@ def main():
     for m in info["Mounts"]:
         if m.get("Type")!="bind":continue
         host=Path(m["Source"])
-        if receipt.parent==host or host.is_dir() and receipt.parent.is_relative_to(host):
+        if receipt.parent==host or host.is_dir() and is_relative_to(receipt.parent,host):
             possible.append((len(str(host)),str(Path(m["Destination"])/receipt.parent.relative_to(host))))
     require(bool(possible),"receipt_directory_mount_missing")
     backup_root=max(possible)[1]
