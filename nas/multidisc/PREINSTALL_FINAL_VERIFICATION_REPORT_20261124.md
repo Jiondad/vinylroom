@@ -55,3 +55,19 @@
 
 ## 결론
 현재 근거로는 **개별 신규 변경 지점에 대한 높은 수준의 격리 확증**이 있지만, 운영 설치 전 **최종 전체 통합 검증 PASS는 아직 부여할 수 없다**. 최종 검증 패키지는 읽기 전용으로 준비하되, 운영 게시 및 Catalog 통합은 하지 않는다.
+
+## 2026-11-24 NAS 실제 패키지 생성 결과
+
+**`MULTIDISC_PREINSTALL_FOUR_FILE_BUNDLE_READY` — 사용자 전달 실제 NAS 출력 확인**
+
+- `index_scanner.py`: original `329d3d32b892d7bd0cd1187ecc6fd6648c856c2b2f412b85d8f073947f42d173`, candidate `602b70816efe34b8ebfd26eabd98973928758d65d41edbcf93c84dae3d4b06b3`
+- `tag_native_index.py`: original `e6e6e6127223c1b01e57aea3400180b3c80b160f0544935515052b172fd4c30e`, candidate `699effa78701cd63aa775aea9a76ef264a42ace529449437bafb811d0a043373`
+- `index_engine.py`: original `3bdf67de2bb29315fad021c58300661c903bb9c5f2a6342f1d2bfc7a6a61998f`, candidate `7057f502aba53c3519f2df6ae28df6b838ef88bc43dc046d768728d2290ab2c5`
+- `track_search.py`: original `84401b47ce847ffd74181483d77f44a4bb2903819a1d7b8758af94179d4d33de`, candidate `fb5e9bc51bc3854c7ddee3b2e1d222c61a07bd078cd8d0beb02a3e23de19fc86`
+- `cross_file_static_contract`: **8/8 true**
+- Bundle: `/tmp/vinyl-multidisc-preinstall-final-20261124`
+- `deployment=NOT_AUTHORIZED`, `source_replacements=0`, `catalog_writes=0`, `media_writes=0`
+
+**판정 업데이트:** 4파일 패키지 준비 및 정적 호환성 PASS. 전체 Native 색인 실행, AI 연결, 최종 Category 결과, 원복 절차에 대한 검증은 별도로 남음. 원래 HOLD 판정은 유지.
+
+**중요:** `/tmp`의 소스 복사본은 지속 백업이 아니다. 컨테이너 재기동 및 삭제 시 사라질 수 있으므로 운영 설치·원복을 허용하는 백업으로 사용하면 안 된다.
