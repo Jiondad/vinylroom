@@ -112,7 +112,8 @@ def main():
     image=read(["docker","inspect","--format","{{.Image}}",LIVE]).decode().strip()
     if not image.startswith("sha256:"):hold("live_image_id_unavailable")
     with tempfile.TemporaryDirectory(prefix="vinyl_native_isolated_") as temp:
-        app=Path(temp)/"app";app.mkdir(mode=0o700)
+        app=Path(temp)/"app";app.mkdir(mode=0o755)
+        app.chmod(0o755)
         listing=read(["docker","exec",LIVE,"python3","-c",
             "import json,pathlib; print(json.dumps([p.name for p in pathlib.Path('/app').glob('*.py') if p.is_file() and not p.is_symlink()]))"])
         names=json.loads(listing)
@@ -127,9 +128,12 @@ def main():
             if hashlib.sha256(blob).hexdigest()!=expected:hold("candidate_hash_changed:"+name)
             (app/name).write_bytes(blob)
         (app/"_multidisc_native_fixture.py").write_text(HARNESS,encoding="utf-8")
+        # Image may run as a non-root UID. Expose only the disposable source copy.
+        for p in app.iterdir():
+            if p.is_file() and not p.is_symlink():p.chmod(0o644)
         args=["docker","run","--rm","--network","none","--read-only",
               "--cap-drop","ALL","--security-opt","no-new-privileges",
-              "--memory","768m","--pids-limit","128",
+              "--memory","768m",
               "--tmpfs","/tmp:rw,nosuid,nodev,size=256m",
               "--mount","type=bind,source="+str(app)+",target=/app,readonly",
               "--workdir","/app","-e","PYTHONDONTWRITEBYTECODE=1",
