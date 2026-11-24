@@ -181,7 +181,29 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
         check(len(before)==27,"writer_fixture_not_27")
         prepared=writer.plan(i.dbpath,root,rep,original,"03 Renamed.flac")
         print("REAL_WRITER_PLAN",json.dumps(prepared,default=str,ensure_ascii=False)[:2400],flush=True)
-        check(prepared.get("state")=="READ_ONLY_RENAME_PLAN","writer_plan_failed")
+        if prepared.get("state")!="READ_ONLY_RENAME_PLAN":
+            # Diagnose the actual scanner-to-Writer contract in this same
+            # disposable Catalog. No write attempt after a rejected plan.
+            import inspect
+            with i.db() as db:
+                row=db.execute("SELECT path,data FROM albums WHERE id=?",(rep,)).fetchone()
+                obj=json.loads(row["data"])
+            physical=obj.get("physical_files") or []
+            tracks=obj.get("tracks") or []
+            print("REAL_WRITER_PATH_DIAGNOSTIC",json.dumps({
+                "album_path":row["path"],
+                "physical_count":len(physical),
+                "track_count":len(tracks),
+                "physical_samples":[physical[n] for n in (0,13,14,16,26) if n<len(physical)],
+                "track_samples":[tracks[n] for n in (0,14,16) if n<len(tracks)],
+                "actual_relative_files":sorted(before),
+                "catalog_files_result":writer._catalog_files(i.dbpath,rep)
+            },default=str,ensure_ascii=False),flush=True)
+            print("REAL_WRITER_CATALOG_FILES_SOURCE",flush=True)
+            print(inspect.getsource(writer._catalog_files),flush=True)
+            print("REAL_WRITER_PLAN_SOURCE",flush=True)
+            print(inspect.getsource(writer.plan),flush=True)
+            hold("writer_plan_failed:"+str(prepared.get("reason")))
         # Preserve the existing whole-job lease; NativeAlbumIndex performs
         # the real callback, not a simulated SQL update.
         with i.whole_job_lease():
