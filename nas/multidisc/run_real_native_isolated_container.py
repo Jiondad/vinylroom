@@ -39,17 +39,42 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
     data=Path(tmp)/"data"
     parent=root/"KPOP"/ARTIST/REP_TITLE
     root.mkdir();data.mkdir()
-    encoder=shutil.which("ffmpeg") or shutil.which("flac")
-    if not encoder:hold("isolated_flac_encoder_unavailable")
-    wav=Path(tmp)/"fixture.wav"
-    with wave.open(str(wav),"wb") as w:
-        w.setnchannels(1);w.setsampwidth(2);w.setframerate(44100)
-        w.writeframes(b"\x00\x00"*4410)
+    # Generate a tiny genuine FLAC stream using only Python standard library.
+    # Fixed-block mono 16-bit PCM, 44.1 kHz, eight constant-value frames.
+    # No external encoder, production audio, or package installation needed.
+    def crc(blob,bits,poly):
+        reg=0; mask=(1<<bits)-1
+        for byte in blob:
+            reg ^= byte<<(bits-8)
+            for _ in range(8):
+                reg=((reg<<1)^poly)&mask if reg&(1<<(bits-1)) else (reg<<1)&mask
+        return reg
+    import hashlib
+    block=576; frame_count=8; total=block*frame_count
+    frames=[]
+    for number in range(frame_count):
+        # Sync, fixed blocking, block-size code 2 (576), sample-rate 9
+        # (44.1 kHz), mono channel assignment, 16-bit sample-size code 4.
+        header=bytes((0xff,0xf8,0x29,0x08,number))
+        header+=bytes((crc(header,8,0x07),))
+        # Constant subframe: zero padding/type/wasted bits, then 16-bit zero.
+        frame=header+b"\x00\x00\x00"
+        frame+=crc(frame,16,0x8005).to_bytes(2,"big")
+        frames.append(frame)
+    sizes=[len(f) for f in frames]
+    packed=(44100<<44)|(0<<41)|(15<<36)|total
+    streaminfo=(struct.pack(">HH",block,block)+min(sizes).to_bytes(3,"big")
+        +max(sizes).to_bytes(3,"big")+packed.to_bytes(8,"big")
+        +hashlib.md5(b"\x00\x00"*total).digest())
     seed=Path(tmp)/"fixture.flac"
-    if Path(encoder).name=="ffmpeg":
-        subprocess.run([encoder,"-nostdin","-loglevel","error","-i",str(wav),str(seed)],check=True)
-    else:
-        subprocess.run([encoder,"--silent","-o",str(seed),str(wav)],check=True)
+    seed.write_bytes(b"fLaC"+b"\x80\x00\x00\x22"+streaminfo+b"".join(frames))
+    # Real Mutagen metadata parsing and a tag write, not a disguised WAV file.
+    probe=FLAC(seed)
+    check(probe.info.sample_rate==44100 and probe.info.channels==1
+        and probe.info.bits_per_sample==16 and probe.info.total_samples==total,
+        "generated_flac_streaminfo_invalid")
+    probe["title"]="Synthetic silence";probe.save()
+    print("ISOLATED_FLAC_FIXTURE_READY",flush=True)
     for disc,count in ((1,14),(2,13)):
         folder=parent/("CD"+str(disc));folder.mkdir(parents=True)
         for n in range(1,count+1):
