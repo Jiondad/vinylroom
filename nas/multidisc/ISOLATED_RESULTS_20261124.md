@@ -72,3 +72,28 @@ Next development asset:
 `test_writer_control_flow_isolated.py` executes existing Writer `plan/apply/restore` AST with a synthetic two-disc, 27-file parent album and a synthetic callback on isolated SQLite. It intentionally substitutes supporting base safety helpers and does NOT qualify production media access or NativeAlbumIndex. At the time of this update, this new test has not run on NAS.
 
 No live source, production DB, media or frontend deployment authorized.
+
+## 2026-11-24 — Rename Writer control flow isolated PASS
+
+User's actual NAS result:
+- `MULTIDISC_WRITER_CONTROL_FLOW_ISOLATED_PASS`
+- Existing Writer AST functions: `plan`, `apply`, `restore`
+- Representative UUID: `5d7db58a-641f-42cd-84d4-15b77c396e76`
+- Physical file in CD2, total synthetic album 27
+- Reindex callback calls = **2** (rename and restore)
+- Post-restore filename verified
+- `native_reindex_callback=SYNTHETIC_ONLY`
+- `base_safety_helpers=SYNTHETIC_SHIMS`
+- `actual_scan_job_and_native_index=NOT_TESTED`
+- Operating Catalog/media writes 0; deployment unauthorized.
+
+**Interpretation:** Writer orchestration is viable without rewriting Writer. It does **not** qualify native full scan, physical FLAC tag save, operational DB transition, frontend publication, or AI DB linkage. Keep existing qualified general Writer tests as historical PASS; do not repeat.
+
+### Remaining deliverables before pilot
+1. Integrate the four staged candidates `index_scanner.py`, `tag_native_index.py`, `index_engine.py`, `track_search.py` against pinned NAS source hashes in a single reviewable, roll-backable deployment plan (no live install without separate approval).
+2. Exercise **actual** index path (not isolated fragments), including the 27-track parent scan, existing CD1 UUID retention, old CD2 archive, and search 27/0, on a **fully isolated, scope-limited** fixture with no operating source/data modification.
+3. Confirm remaining categories and AI cross-database identity handling; preserve audit events and metadata. No unreviewed direct SQL rewrite.
+4. Verify merged album Tag Editor real NativeAlbumIndex callback on isolated files only; do not repeat preexisting generic Writer acceptance tests.
+5. Prepare single-album backup and rollback/runbook, then request explicit approval for any operating Catalog write.
+
+**Current state:** Development and synthetic cases passed; operational integrated deployment is HOLD.
