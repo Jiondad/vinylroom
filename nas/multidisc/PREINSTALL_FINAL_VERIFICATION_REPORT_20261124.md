@@ -71,3 +71,16 @@
 **판정 업데이트:** 4파일 패키지 준비 및 정적 호환성 PASS. 전체 Native 색인 실행, AI 연결, 최종 Category 결과, 원복 절차에 대한 검증은 별도로 남음. 원래 HOLD 판정은 유지.
 
 **중요:** `/tmp`의 소스 복사본은 지속 백업이 아니다. 컨테이너 재기동 및 삭제 시 사라질 수 있으므로 운영 설치·원복을 허용하는 백업으로 사용하면 안 된다.
+
+## 다음 실행 단계 — 실제 Native 연결 구현 전 계약 추출
+
+4파일 패키지 준비 PASS 결과와 static 8/8 PASS는 확정되었으며 재검증하지 않는다.
+
+새 읽기 전용 추출기:
+`nas/multidisc/extract_final_native_integration_wiring.py`
+
+목적: **실제 NAS에서 준비된 후보 소스**의 `scan_set`, `Index.put`, `Index.scan_job`, `NativeAlbumIndex.preflight/__call__`에 필요한 외부 의존성과 실제 호출 지점을 선택적으로 추출하여, **전체 연결의 격리 실행 도구**를 정확히 구성한다. 코드를 임의 추정하거나 기존에 합격한 단위시험을 반복하지 않는다.
+
+읽는 대상은 고정 해시가 확인된 `/tmp/vinyl-multidisc-preinstall-final-20261124/candidates`의 후보 파일뿐이다. 운영 DB, 음악 파일, 서비스 또는 운영 소스를 수정하지 않는다. 추출기 자체의 실행 결과가 곧 Native E2E PASS를 의미하지는 않는다.
+
+운영 설치는 여전히 HOLD. 별도 승인 전 운영 Catalog 병합/소스 교체/음원 쓰기 금지.
