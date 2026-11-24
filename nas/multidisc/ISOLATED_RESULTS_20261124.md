@@ -59,3 +59,16 @@ User's actual NAS output:
 Next targeted test committed: `test_scan_job_archive_hook_isolated.py` parses the **staged index_engine.py candidate AST**, extracts its single `for row in disc_rows` archival loop, and executes that same loop with the staged `track_search.synchronize` functions in a synthetic `:memory:` DB. This is narrower than full `scan_job` and does not represent full production integration qualification.
 
 Still HOLD: actual disc directory merge/catalog put interplay, tag Writer end-to-end, AI reference policy, category reconciliation. No operating DB, media, source, or UI publication.
+
+## 2026-11-24 — actual archive hook targeted execution PASS
+
+User confirmed:
+- `MULTIDISC_SCAN_JOB_ARCHIVE_HOOK_ISOLATED_PASS`
+- CD1 missing=0, CD2 missing=1, active search CD1=27, CD2=0, dirty queue=0
+- Existing staged `scan_job` loop and `synchronize` AST used with isolated SQLite.
+- Actual full `scan_job`, native callback, and media-backed Writer remain NOT TESTED.
+
+Next development asset:
+`test_writer_control_flow_isolated.py` executes existing Writer `plan/apply/restore` AST with a synthetic two-disc, 27-file parent album and a synthetic callback on isolated SQLite. It intentionally substitutes supporting base safety helpers and does NOT qualify production media access or NativeAlbumIndex. At the time of this update, this new test has not run on NAS.
+
+No live source, production DB, media or frontend deployment authorized.
