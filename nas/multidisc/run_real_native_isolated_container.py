@@ -148,6 +148,12 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
         check(set(active)=={rel+"/CD1",rel+"/CD2"},"legacy_child_seed_not_two_independent_albums")
         rep=active[rel+"/CD1"]["id"];old=active[rel+"/CD2"]["id"]
         check([len(json.loads(active[rel+"/"+d]["data"])["tracks"]) for d in ("CD1","CD2")]==[14,13],"legacy_track_counts")
+        # Legacy fixture already contains the complete isolated library.
+        # Set the normal seed-complete marker BEFORE the first native enqueue.
+        # No production seed behavior is altered.
+        i.setmeta("seed_complete","1")
+        check(i.meta("seed_complete")=="1","isolated_seed_marker_not_set")
+        print("ISOLATED_SEED_COMPLETE",flush=True)
         scan(rel,True)
         def verify():
             rows={r["id"]:r for r in snapshot()}
@@ -162,8 +168,7 @@ with tempfile.TemporaryDirectory(prefix="native_integration_") as tmp:
         verify()
         # Actual Native adapter, actual parent inventory, actual native enqueue.
         native=NativeAlbumIndex(i)
-        # The fixture has deliberately seeded the only albums in this disposable library.
-        if i.meta("seed_complete")!="1":i.setmeta("seed_complete","1")
+        check(i.meta("seed_complete")=="1","isolated_seed_not_complete")
         native.preflight(rep,rel)
         native(rep,rel)
         verify()
