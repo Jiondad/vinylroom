@@ -1,0 +1,33 @@
+name: Qualify 015B admin UI candidate (no publish)
+on:
+  push:
+    branches: [feature/admin-review-015b-session-20261125]
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build existing production-format candidate
+        working-directory: frontend
+        run: |
+          node scripts/header-actions-release.mjs
+          node scripts/copy-artist-profiles.mjs
+      - name: Check new module in release and browser layout
+        working-directory: frontend
+        run: |
+          release=$(python3 -c "import re,pathlib;print(re.search(r'releases/([^/]+)/entry[.]js',pathlib.Path('out/index.html').read_text())[1])")
+          test -f "out/releases/$release/admin-type-approval-015b.js"
+          node --check "out/releases/$release/admin-type-approval-015b.js"
+          grep -Fq "./admin-type-approval-015b.js" "out/releases/$release/ai-proposal-review.js"
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+          RELEASE="$release" node tests/admin-type-approval-browser-015b.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 015b-candidate-not-published
+          path: |
+            frontend/out
+            frontend/qa-015b
