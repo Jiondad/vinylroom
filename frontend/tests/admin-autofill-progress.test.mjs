@@ -49,3 +49,9 @@ for(const s of ['75.0%','40.0%','90.0%','95.0%','73','55','20.0%','변동 감지
 assert.match(renderAutofillProgress({autofill_progress:{...sample.autofill_progress,state:'stale'}}),/오래된 집계/);
 assert.doesNotMatch(renderAutofillProgress({autofill_progress:{version:1,snapshot:{state:'ADMIN_AUTOFILL_PROGRESS_OBSERVED',totals:{catalog_active:0},fields:{type:{effective_empty:1}}}}}),/NaN/);
 console.log('PASS admin autofill progress');
+
+const originFixture={"autofill_progress":{"version":1,"state":"ready","snapshot":{"state":"ADMIN_AUTOFILL_PROGRESS_OBSERVED","totals":{"catalog_active":100},"fields":{"type":{"effective_empty":25,"provenance":{"default_studio":50,"reference_marker":10,"trusted_autofill_marker":5,"other_folder":8,"other_populated":2,"unregistered":25}}}}}};
+assert.match(renderAutofillProgress(originFixture),/Studio 기본값 · 미검증/);
+assert.match(renderAutofillProgress(originFixture),/50장/);
+originFixture.autofill_progress.snapshot.totals.catalog_active=101;
+assert.match(renderAutofillProgress(originFixture),/출처별 집계 미제공 또는 불일치/);
