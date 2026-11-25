@@ -287,7 +287,9 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
    if(closed||identity!==accountRevision)return;
    const state=summaryResponseState(data);if(state==='invalid')throw Error('AI 현황 응답 형식이 확인되지 않았습니다.');
    summarySeen=true;summaryLive=aiOperationStatus(data).running||data.autofill_progress?.version===1;
+   const openDetails=new Set(Array.from(host.querySelectorAll('details[data-vr-summary-detail][open]'),el=>el.dataset.vrSummaryDetail));
    host.innerHTML=state==='empty'?'<p>정상 응답 · 반환된 집계 항목이 없습니다. 0건으로 간주하지 않습니다.</p>':renderAutofillProgress(data)+renderAiOperationStatus(data);
+   for(const el of host.querySelectorAll('details[data-vr-summary-detail]'))el.open=openDetails.has(el.dataset.vrSummaryDetail);
    if(summaryLive&&!q('[data-pane="analysis"]').hidden&&!document.hidden)summaryTimer=setTimeout(()=>void readAiSummary(),aiOperationStatus(data).running||data.autofill_progress?.state==='refreshing'?15000:60000);
   }catch(error){
    if(closed||error?.name==='AbortError'||identity!==accountRevision)return;
