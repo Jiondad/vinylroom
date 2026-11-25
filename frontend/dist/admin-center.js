@@ -1,5 +1,5 @@
 import {mountTagEditor} from './tag-editor-host.js';
-import {aiOperationStatus,renderAiOperationStatus} from './ai-operation-status.js';
+import {aiOperationStatus,renderAiOperationStatus,renderAutofillProgress} from './ai-operation-status.js';
 import {attachReviewToAdminPanel} from './admin-ai-review-panel.js';
 import {REVIEW_ENDPOINT} from './admin-ai-review-report.js';
 import {mountProposalReview} from './ai-proposal-review.js';
@@ -286,9 +286,9 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
    const data=await api('/v2/ai-classification/summary',{admin:true,signal:controller.signal});check();
    if(closed||identity!==accountRevision)return;
    const state=summaryResponseState(data);if(state==='invalid')throw Error('AI 현황 응답 형식이 확인되지 않았습니다.');
-   summarySeen=true;summaryLive=aiOperationStatus(data).running;
-   host.innerHTML=state==='empty'?'<p>정상 응답 · 반환된 집계 항목이 없습니다. 0건으로 간주하지 않습니다.</p>':renderAiOperationStatus(data);
-   if(summaryLive&&!q('[data-pane="analysis"]').hidden&&!document.hidden)summaryTimer=setTimeout(()=>void readAiSummary(),15000);
+   summarySeen=true;summaryLive=aiOperationStatus(data).running||data.autofill_progress?.version===1;
+   host.innerHTML=state==='empty'?'<p>정상 응답 · 반환된 집계 항목이 없습니다. 0건으로 간주하지 않습니다.</p>':renderAutofillProgress(data)+renderAiOperationStatus(data);
+   if(summaryLive&&!q('[data-pane="analysis"]').hidden&&!document.hidden)summaryTimer=setTimeout(()=>void readAiSummary(),aiOperationStatus(data).running||data.autofill_progress?.state==='refreshing'?15000:60000);
   }catch(error){
    if(closed||error?.name==='AbortError'||identity!==accountRevision)return;
    summaryLive=false;const status=classifyAiApiError(error);
