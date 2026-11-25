@@ -1,6 +1,7 @@
 import {catalogLink} from './catalog-links.js';
+import {mountAdminTypeApproval} from './admin-type-approval-015b.js';
 import {mountFieldSelection,fieldMap,selectionRows,validateSelectionRead} from './ai-field-selection.js';
-/** NAS proposal review only. No catalog mutation, analysis enqueue or trial fallback. */
+/** NAS proposal review; only the dedicated 015B approval panel may explicitly request a Catalog mutation. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const reviewLabels={pending:'신규·보류',confirmed:'제안 승인',rejected:'반려'};
 const labels={artist:'아티스트',title:'앨범명',original_year:'원발매년도',original_date:'원발매일',release_year:'소장판 연도',release_date:'소장판 발매일',genre:'장르',secondary_genres:'보조 장르',styles:'스타일',album_type:'앨범 유형',category:'앨범 유형',label:'레이블',catalog_number:'카탈로그 번호',country:'국가',year:'발매년도',date:'발매일',attributes:'판본 속성',release_attributes:'발매 속성'};
@@ -55,9 +56,10 @@ export function mountProposalReview({container,api,canManage}){
  const doc=container.ownerDocument,abort=new AbortController();let disposed=false,loading=false,offset=0,items=[],selected=null,seq=0,detailSeq=0,detailKey='',exportRows=[];
  const selectionCache=new Map(),readCache=new Map(),confidencePages=new Map();let disposeSelection=null;
  const style=doc.createElement('link');style.rel='stylesheet';style.href=new URL('./ai-proposal-review.css',import.meta.url).href;doc.head.append(style);
- container.innerHTML=`<div class="nas-proposals"><div class="proposal-tools"><input type="search" data-find aria-label="앨범·아티스트 검색" placeholder="앨범·아티스트 검색"><select data-filter aria-label="제안 검토 상태"><option value="active">검토할 항목</option><option value="confirmed">승인 완료</option><option value="rejected">반려 완료</option><option value="">전체 이력</option></select><button type="button" data-refresh>새로고침</button></div><p data-message role="status" aria-live="polite"></p><div class="proposal-layout"><div><div data-list role="list" aria-label="AI 제안 목록"></div><div class="proposal-pager"><button type="button" data-prev>이전</button><small data-page></small><button type="button" data-next>다음</button></div></div><article data-detail aria-label="선택한 AI 앨범 분류 관리"></article></div></div>`;
+ container.innerHTML=`<div class="nas-proposals"><div data-admin-type-015b></div><div class="proposal-tools"><input type="search" data-find aria-label="앨범·아티스트 검색" placeholder="앨범·아티스트 검색"><select data-filter aria-label="제안 검토 상태"><option value="active">검토할 항목</option><option value="confirmed">승인 완료</option><option value="rejected">반려 완료</option><option value="">전체 이력</option></select><button type="button" data-refresh>새로고침</button></div><p data-message role="status" aria-live="polite"></p><div class="proposal-layout"><div><div data-list role="list" aria-label="AI 제안 목록"></div><div class="proposal-pager"><button type="button" data-prev>이전</button><small data-page></small><button type="button" data-next>다음</button></div></div><article data-detail aria-label="선택한 AI 앨범 분류 관리"></article></div></div>`;
  const q=s=>container.querySelector(s),message=s=>{if(!disposed)q('[data-message]').textContent=s;};
  function check(){if(disposed||!canManage())throw Error('관리자 권한을 다시 확인하세요.');}
+ mountAdminTypeApproval({host:q('[data-admin-type-015b]'),api,canManage:()=>!disposed&&canManage(),signal:abort.signal});
  const get=(path,opts={})=>{check();if(opts.body!==undefined||opts.method&&opts.method!=='GET')throw Error('운영 저장·확정은 차단되어 있습니다.');return api(path,{admin:true,signal:AbortSignal.any([abort.signal,AbortSignal.timeout(20000)])});};
  const cachedGet=(path,opts={})=>{check();if(opts.body!==undefined||opts.method&&opts.method!=='GET')throw Error('읽기 전용 화면입니다.');if(!readCache.has(path))readCache.set(path,get(path,opts));return readCache.get(path);};
  const selectionApi=(path,opts={})=>{
