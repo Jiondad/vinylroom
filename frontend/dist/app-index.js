@@ -21,7 +21,7 @@ import {createCatalogRequests} from './catalog-requests.js';
 import {initializeBrowse,publicBrowseEnabled,readRequest,installMemberPrompts} from './browse-access.js';
 import {renderTop100} from './top100-ui.js';
 import {bindRandomTrackActions} from './random-mobile-actions.js';
-import {loadMemberImage,clearMemberImage} from './member-images.js';
+import {loadMemberImage,clearMemberImage,albumCoverUrl} from './member-images.js';
 import {finishAccessInitialization} from './access-state.js';
 import {connectAccount,login as openAccount,signupRequest,currentMemberToken,isApprovedMember,invalidateMemberAccess,albumAccessSnapshot} from './playlists.js';
 import {attachArtwork} from './artwork-ui.js';
@@ -154,7 +154,7 @@ function bindCovers(root){root.querySelectorAll('.cover img').forEach(img=>{
  const failed=()=>{box.classList.remove('cover-loading');box.classList.add('cover-failed');img.hidden=true;img.nextElementSibling.hidden=false;};
  const ready=()=>{if(box.classList.contains('cover-failed'))return;img.hidden=false;box.classList.remove('cover-loading');box.classList.add('cover-ready');};
  img.onerror=failed;img.onload=()=>{if(img.decode)img.decode().then(ready,failed);else ready();};
- if(img.dataset.memberCover)loadMemberImage(img,NAS_URL+'/v2/cover?id='+encodeURIComponent(img.dataset.memberCover)+'&v='+encodeURIComponent(revision)).catch(failed);
+ if(img.dataset.memberCover)loadMemberImage(img,albumCoverUrl(img.dataset.memberCover,revision)).catch(failed);
  if(img.complete&&img.naturalWidth)img.onload();else box.classList.add('cover-loading');
 });}
 function navigationState(){return navigationSnapshot({view,page,artist,letter,category,search:$('#search').value,genre:$('#genre').value,format:$('#format').value,sort:$('#sort').value,seed:randomSeed,chart:top100Folder,album:activeAlbumId,panel:activePanel});}
@@ -494,6 +494,21 @@ async function openAdminCenter(albumToEdit=null){
   openMembers:async()=>openMemberManagement(await currentMemberToken()),
   openIndexing:async()=>{closeAdminCenter();await indexing();},openPlaybackDiagnostics:()=>{closeAdminCenter();openPlaybackDiagnostics();},api:(path,options)=>api(path,options),letters,toast});
 }
+const syncedAlbumIds=new Set();let catalogSyncObserver=null;
+function refreshAfterTagSync(){
+ if(catalogSyncObserver){catalogSyncObserver.disconnect();catalogSyncObserver=null;}
+ const ids=new Set(syncedAlbumIds);syncedAlbumIds.clear();
+ if(!repo.admin||!isApprovedMember()||!ids.size)return;
+ randomResults.clear();lastCatalogState=null;
+ if(albumPage&&ids.has(activeAlbumId))void detail(activeAlbumId,null,'play',true).catch(e=>toast(e.message));
+ else void render(false).catch(e=>toast(e.message));
+}
+window.addEventListener('vinyl-tag-catalog-synced',event=>{
+ const id=event.detail?.albumId;if(!repo.admin||!isApprovedMember()||typeof id!=='string')return;
+ syncedAlbumIds.add(id);
+ if(!document.body.classList.contains('vinyl-admin-page-open')){refreshAfterTagSync();return;}
+ if(!catalogSyncObserver){catalogSyncObserver=new MutationObserver(()=>{if(!document.body.classList.contains('vinyl-admin-page-open'))refreshAfterTagSync();});catalogSyncObserver.observe(document.body,{attributes:true,attributeFilter:['class']});}
+});
 adminNav.onclick=action(()=>openAdminCenter());
 $('#settings').onclick=openAccount;$('#import').onclick=action(indexing);$('#export').onclick=action(indexing);$('#random-redraw').onclick=()=>{randomSeed=crypto.randomUUID();randomResults.clear();try{sessionStorage.setItem('vinyl-random-seed',randomSeed);}catch{}navigationGeneration++;navigation?.record(navigationState());render();};
 const gate=document.getElementById('vinyl-auth-gate');

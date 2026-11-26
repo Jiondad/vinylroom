@@ -6,7 +6,7 @@ export function coverTargets(album,scope,selected=[],formats=['flac','mp3']){
  return scope==='__all__'?files:scope==='__selected__'?files.filter(f=>selected.includes(f)):files.filter(f=>f===scope);
 }
 export function coverImageError(file){return !file||!['image/jpeg','image/png'].includes(file.type)||!file.size||file.size>10*1024*1024?'JPG·PNG 10MB 이하 이미지 한 개를 선택하세요.':null;}
-export function installTagCoverDraft({getAlbum,api,getSaveCapabilities=()=>({cover:false})}){
+export function installTagCoverDraft({getAlbum,api,getSaveCapabilities=()=>({cover:false}),onCatalogSync=null}){
  if(typeof getAlbum!=='function'||typeof api!=='function')throw Error('tag_cover_requires_editor_context');
  if(document.getElementById('tagCoverDialog'))throw Error('tag_cover_already_mounted');
  const region=document.createElement('dialog');region.id='tagCoverDialog';region.className='tag-cover-draft';region.setAttribute('aria-labelledby','tagCoverTitle');
@@ -41,21 +41,24 @@ export function installTagCoverDraft({getAlbum,api,getSaveCapabilities=()=>({cov
   const pending=chosen.filter(file=>!(states.get(file)?.front_covers||[]).some(pic=>pic.sha256===draft.sha256));
   already=chosen.length-pending.length;
   if(ticket!==version||id!==albumId)return;
-  if(!pending.length){lastResult='선택한 대표 커버가 이미 앨범 전체에 적용되어 있습니다. 추가 저장은 필요하지 않습니다.';return;}
+  if(!pending.length){lastResult='선택한 대표 커버가 이미 앨범 전체에 적용되어 있습니다. 추가 저장은 필요하지 않습니다.';if(onCatalogSync)lastResult+=' · '+await onCatalogSync(chosen.map(ownerFor));return;}
   for(const file of pending){if(ticket!==version)break;uncertain=file;const state=states.get(file);if(state?.state!=='EMBEDDED_COVER_INSPECTED')throw Error('현재 파일 상태를 확인하지 못했습니다.');const owner=ownerFor(file),action=(state.front_covers||[]).length?'replace':'add';const p=await api('/api/cover/plan',{album_id:owner,file,action,expected_file_sha256:state.file_sha256,expected_catalog_digest:state.catalog_digest,image_base64:draft.base64});if(p?.state!=='READ_ONLY_COVER_PLAN'||!p.plan_id)throw Error(p?.reason||'변경 계획 확인 실패');
    let r,lastError;for(let attempt=0;attempt<5;attempt++){try{r=await api('/api/cover/apply',{album_id:owner,file,action,expected_file_sha256:state.file_sha256,expected_catalog_digest:state.catalog_digest,expected_plan_id:p.plan_id,image_base64:draft.base64,confirm_write:true});lastError=null;break;}catch(e){lastError=e;if(!/HTTP 409\b/.test(String(e?.message||e))||attempt===4)throw e;await new Promise(resolve=>setTimeout(resolve,[1000,2000,4000,8000][attempt]));if(ticket!==version||id!==albumId)throw Error('화면 선택이 변경되어 저장을 중단했습니다.');}}
    if(lastError)throw lastError;if(r?.state!=='COVER_WRITE_COMPLETED'||r.verification?.state!=='EMBEDDED_COVER_INSPECTED')throw Error(r?.reason||'저장 후 동일 파일 검증 실패');states.set(file,r.verification);completed++;uncertain=null;lastResult=`저장 및 검증 ${completed}/${pending.length}곡 · 기존 동일 커버 ${already}곡 건너뜀`;render();
   }
+  if(ticket!==version||id!==albumId||completed+already!==chosen.length)throw Error('저장 범위 변경 또는 중단 · 재조회 필요');
+  if(onCatalogSync){lastResult='내장 커버 저장 완료 · Catalog 갱신 중';render();const sync=await onCatalogSync(chosen.map(ownerFor));lastResult=`대표 커버 적용 및 동일 파일 재조회 완료: ${completed+already}/${chosen.length}곡 · ${sync}`;}
  }catch(e){error=e.message;if(uncertain){try{const actual=await api('/api/cover/inspect',{album_id:ownerFor(uncertain),file:uncertain});if(actual?.state==='EMBEDDED_COVER_INSPECTED')states.set(uncertain,actual);}catch{}}}
  finally{busy=false;render();}
- if(error){const total=completed+already;lastResult=`기존 동일 커버 ${already}곡 건너뜀 · 이번 저장 ${completed}곡 · 중단: ${error} · 완료 여부를 재조회하세요.`;}else{lastResult=`대표 커버 적용 및 동일 파일 재조회 완료: ${completed+already}/${chosen.length}곡 (기존 적용 ${already}곡 포함)`;revoke();draft=null;}render();
+ if(error){const total=completed+already;lastResult=`기존 동일 커버 ${already}곡 건너뜀 · 이번 저장 ${completed}곡 · 중단: ${error} · 완료 여부를 재조회하세요.`;}else{if(!onCatalogSync)lastResult=`대표 커버 적용 및 동일 파일 재조회 완료: ${completed+already}/${chosen.length}곡 (기존 적용 ${already}곡 포함)`;revoke();draft=null;}render();
  }
  function reset(){++version;revoke();draft=null;lastResult='이미지 선택을 취소했습니다.';fileInput.value='';render();}
- region.addEventListener('click',e=>{if(e.target===region||e.target.closest('[data-cover-close]')){region.close();return;}if(e.target.closest('[data-cover-save]')){void saveAlbumCover();return;}if(e.target.closest('[data-cover-pick]')){if(!busy&&selected().length)fileInput.click();return;}if(e.target.closest('[data-cover-reset]'))reset();});
+ region.addEventListener('click',e=>{if(e.target===region||e.target.closest('[data-cover-close]')){if(!busy)region.close();return;}if(e.target.closest('[data-cover-save]')){void saveAlbumCover();return;}if(e.target.closest('[data-cover-pick]')){if(!busy&&selected().length)fileInput.click();return;}if(e.target.closest('[data-cover-reset]'))reset();});
  fileInput.addEventListener('change',()=>{const file=fileInput.files?.[0];fileInput.value='';void choose(file);});
  const drop=q('[data-cover-drop]');drop.addEventListener('keydown',e=>{if(e.target===drop&&(e.key==='Enter'||e.key===' ')){e.preventDefault();q('[data-cover-pick]').click();}});for(const kind of ['dragenter','dragover'])drop.addEventListener(kind,e=>{e.preventDefault();drop.classList.add('drag-over');});drop.addEventListener('dragleave',e=>{if(!drop.contains(e.relatedTarget))drop.classList.remove('drag-over');});drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag-over');const images=[...(e.dataTransfer?.files||[])];if(images.length!==1){lastResult='이미지 한 개만 선택하세요.';render();return;}void choose(images[0]);});region.addEventListener('dragover',e=>e.preventDefault());region.addEventListener('drop',e=>e.preventDefault());
  async function open(){const album=getAlbum();if(!album)return;version++;albumId=album.id;states.clear();revoke();draft=null;lastResult='';region.showModal();busy=true;render();try{await inspectAll(version);}finally{busy=false;render();}}
  function close(){version++;busy=false;states.clear();revoke();draft=null;fileInput.value='';if(region.open)region.close();}
+ region.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
  region.addEventListener('close',()=>{version++;revoke();draft=null;});
  render();return {open,close,refresh:render,clear:reset};
 }

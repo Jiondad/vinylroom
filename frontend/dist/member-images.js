@@ -72,7 +72,10 @@ export function clearMemberImage(img){
  const old=imageUrls.get(img);if(old)URL.revokeObjectURL(old);
  imageUrls.delete(img);img.removeAttribute('src');
 }
-export function coverMemberImage(img,id){return loadMemberImage(img,NAS_URL+'/v2/cover?id='+encodeURIComponent(id));}
+const albumCoverVersions=new Map();let coverVersion=0;
+export function invalidateAlbumCover(id){albumCoverVersions.set(id,String(Date.now())+'-'+(++coverVersion));}
+export function albumCoverUrl(id,revision=''){const token=albumCoverVersions.get(id);return NAS_URL+'/v2/cover?id='+encodeURIComponent(id)+(revision?'&v='+encodeURIComponent(revision):'')+(token?'&refresh='+encodeURIComponent(token):'');}
+export function coverMemberImage(img,id){return loadMemberImage(img,albumCoverUrl(id));}
 
 
 globalThis.window?.addEventListener('vinyl-approval-change',async()=>{
