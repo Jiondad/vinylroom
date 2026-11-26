@@ -45,3 +45,20 @@ export function mountAdminTypeApproval({host,api,canManage,signal}){
  };
  paint();
 }
+
+/** W10: historical receipt only, for the exact original album and proposal. */
+export function isScopedTypeHistory(p){return p?.album_id===SCOPE.album&&p?.id===SCOPE.proposal;}
+export function mountAdminTypeHistory({host,api,canManage,signal}){
+ host.innerHTML='<section class="vr-admin-caution" aria-label="앨범 유형 승인 이력"><h3>앨범 유형 승인 이력</h3><div class="proposal-tools"><button type="button" data-history>승인 이력 조회</button></div><p role="status" aria-live="polite" data-history-status>기존 승인 기록을 조회할 수 있습니다.</p></section>';
+ const button=host.querySelector('[data-history]'),status=host.querySelector('[data-history-status]');
+ const allowed=()=>host.isConnected&&!signal?.aborted&&canManage();
+ button.disabled=!allowed();let busy=false;
+ button.onclick=async()=>{if(busy||!allowed())return;busy=true;button.disabled=true;status.textContent='승인 이력 조회 중…';
+ try{const d=await api(SCOPE.path,{admin:true,signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(20000)])});if(!allowed())return;
+ if(d?.ok===true&&d.already_applied===true&&validReceipt(d.receipt))status.textContent='Studio 반영 완료 · 서버 감사 기록 확인 · '+d.receipt.operation_id;
+ else if(d?.ok===true&&d.restored===true)status.textContent='서버에서 복구 상태를 반환했습니다.';
+ else status.textContent='확정된 승인 기록을 확인하지 못했습니다. 이 화면은 조회 전용입니다.';
+ }catch(e){if(allowed())status.textContent='승인 이력 조회 실패'+(Number.isInteger(e?.status)?' (HTTP '+e.status+')':'');}
+ finally{busy=false;if(host.isConnected)button.disabled=!allowed();}
+ };
+}
