@@ -1,5 +1,5 @@
 import {mountTagEditor} from './tag-editor-host.js';
-import {aiOperationStatus,renderAiOperationStatus,renderAutofillProgress} from './ai-operation-status.js';
+import {aiOperationStatus,renderAiOperationStatus,renderAutofillProgress,renderUnifiedClassification} from './ai-operation-status.js';
 import {attachReviewToAdminPanel} from './admin-ai-review-panel.js';
 import {REVIEW_ENDPOINT} from './admin-ai-review-report.js';
 import {mountProposalReview} from './ai-proposal-review.js';
@@ -105,15 +105,19 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  const analysisPane=page.querySelector('[data-pane="analysis"]');
  analysisPane.querySelector('.vr-ai-section-nav')?.remove();
  const analysisHead=analysisPane.querySelector(':scope > .vr-admin-section-head');
- analysisHead.querySelector('h2').textContent='AI 앨범 분석';
- analysisHead.querySelector('p').textContent='분석 현황과 검토할 항목을 확인합니다.';
+ analysisHead.querySelector('h2').textContent='자동 음반 분류';
+ analysisHead.querySelector('p').textContent='MusicBrainz · Discogs · Gemini — 자동 보완을 한곳에서 관리합니다.';
+ page.querySelector('[data-tab="analysis"] strong').textContent='자동 분류';
+ page.querySelector('[data-tab="analysis"] small').textContent='운영 현황 · 필수 예외';
+ page.querySelector('[data-tab="operations"]').remove();
+ analysisHead.insertAdjacentHTML('beforeend','<button type="button" data-action="unified-settings">고급 설정</button>');
  const overviewHead=analysisPane.querySelector('#vr-ai-overview .vr-admin-section-head');
- overviewHead.querySelector('h3').textContent='분석 현황';
+ overviewHead.querySelector('h3').textContent='운영 현황';
  overviewHead.querySelector('p').remove();
  overviewHead.querySelector('[data-action="ai-summary"]').textContent='새로고침';
  const reviewHead=analysisPane.querySelector('#vr-ai-review .vr-admin-section-head');
- reviewHead.querySelector('h3').textContent='AI 제안 검토';
- reviewHead.querySelector('p').textContent='분석 결과를 비교하고 검토 이력을 확인합니다.';
+ reviewHead.querySelector('h3').textContent='필수 관리자 확인';
+ reviewHead.querySelector('p').textContent='정말 판단이 필요한 항목만 처리하는 영역입니다. 통합 예외 목록은 아직 연결되지 않았습니다.';
  reviewHead.querySelector('[data-action="ai"]').textContent='검토 화면 열기';
  // Keep the analysis tab focused: summary and review only.
  const operationsPane=page.querySelector('[data-pane="operations"]');
@@ -122,6 +126,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  support.innerHTML='<h3>API 연결</h3>';
  support.append(analysisPane.querySelector('#vr-ai-connection'));
  operationsPane.append(support);
+ operationsPane.querySelector('.vr-admin-section-head').insertAdjacentHTML('beforeend','<button type="button" data-action="unified-overview">← 자동 분류</button>');
  const indexSection=analysisPane.querySelector('#vr-ai-index');
  const indexSupport=page.querySelector('[data-indexing-support]');
  if(indexSection){
@@ -134,7 +139,8 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  const report=analysisPane.querySelector('#vr-ai-review details');
  if(report)report.hidden=true;
  reviewHead.querySelector('[data-action="ai"]').remove();
- analysisPane.querySelector('#vr-ai-review [data-ai-review-result]').firstElementChild.textContent='분석 제안을 불러오는 중…';
+ const reviewHost=analysisPane.querySelector('#vr-ai-review [data-ai-review-result]');
+ const legacyReview=document.createElement('details');legacyReview.className='vr-unified-legacy';legacyReview.innerHTML='<summary>기존 제안·검토 이력 (필요할 때만)</summary><p>기존 제안 전체는 필수 예외 목록이 아닙니다.</p><button type="button" data-action="ai">기존 검토 화면 불러오기</button>';reviewHost.replaceWith(legacyReview);legacyReview.append(reviewHost);reviewHost.firstElementChild.textContent='아직 조회하지 않았습니다.';
 
  // VINYLROOM_ADMIN_UX_V2: compact page, actual read-only member snapshot, no writes.
  const mode='<div class="vr-preview-mode"><strong>회원 관리</strong><span>관리자와 일반 회원을 구분하여 조회합니다. 승인·권한 관리는 기존 회원관리 화면을 사용합니다.</span></div>';
@@ -169,7 +175,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  function onKey(e){if(e.key==='Escape'&&page.isConnected){e.preventDefault();close();}}
  function onSidebar(e){if(e.target.closest('.sidebar #nav button, .sidebar .brand'))close();}
  function check(){if(!canManage()){notice('관리자 인증을 확인해 주세요. 검토 화면은 유지됩니다.');throw Error('관리자 인증 확인 전 요청할 수 없습니다.');}}
- function tab(t){check();try{if(t==='tag-editor')sessionStorage.setItem(ADMIN_VIEW_KEY,'tag-editor');else{sessionStorage.removeItem(ADMIN_VIEW_KEY);sessionStorage.removeItem(TAG_VIEW_KEY);}}catch{}if(t!=='tag-editor'){tagEditor?.dispose();tagEditor=null;}if(t==='tag-editor'&&!tagEditor)tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage(),initialAlbum:initialTagAlbum||refreshAlbumSnapshot()});clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}if(t!=='indexing'){indexingPanelInstance?.dispose();indexingPanelInstance=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String(b.dataset.tab===t?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='analysis'&&!disposeProposals)void readAiReview();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='indexing'&&!indexingPanelInstance)void openInlineIndexing().catch(error=>notice(error?.message||'색인 관리 화면을 불러오지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
+ function tab(t){check();try{if(t==='tag-editor')sessionStorage.setItem(ADMIN_VIEW_KEY,'tag-editor');else{sessionStorage.removeItem(ADMIN_VIEW_KEY);sessionStorage.removeItem(TAG_VIEW_KEY);}}catch{}if(t!=='tag-editor'){tagEditor?.dispose();tagEditor=null;}if(t==='tag-editor'&&!tagEditor)tagEditor=mountTagEditor({container:q('[data-tag-editor]'),api,canManage:()=>!closed&&canManage(),initialAlbum:initialTagAlbum||refreshAlbumSnapshot()});clearTimeout(summaryTimer);if(t!=='analysis'){disposePilotReport?.();disposePilotReport=null;}if(t!=='operations'){operationsPanel?.close();operationsPanel=null;}if(t!=='indexing'){indexingPanelInstance?.dispose();indexingPanelInstance=null;}for(const el of page.querySelectorAll('[data-pane]'))el.hidden=el.dataset.pane!==t;for(const b of page.querySelectorAll('[data-tab]'))b.setAttribute('aria-current',String((b.dataset.tab===t||(t==='operations'&&b.dataset.tab==='analysis'))?'page':'false'));notice('');if(t==='analysis'&&!summarySeen)void readAiSummary();else if(t==='analysis'&&summaryLive)void readAiSummary();if(t==='operations'&&!operationsPanel)void openInlineOperations().catch(error=>notice(error?.message||'AI 작업 상태를 조회하지 못했습니다.'));if(t==='indexing'&&!indexingPanelInstance)void openInlineIndexing().catch(error=>notice(error?.message||'색인 관리 화면을 불러오지 못했습니다.'));if(t==='catalog')void catalog().catch(error=>{if(!closed)notice(error?.message||'카탈로그 상태를 조회하지 못했습니다.');});}
  function openPilotReport(){
   check();if(disposePilotReport)return;
   disposePilotReport=attachReviewToAdminPanel({adminRoot:q('[data-ai-pilot-report]'),isAdminVerified:true,
@@ -286,9 +292,9 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
    const data=await api('/v2/ai-classification/summary',{admin:true,signal:controller.signal});check();
    if(closed||identity!==accountRevision)return;
    const state=summaryResponseState(data);if(state==='invalid')throw Error('AI 현황 응답 형식이 확인되지 않았습니다.');
-   summarySeen=true;summaryLive=aiOperationStatus(data).running||data.autofill_progress?.version===1;
+   summarySeen=true;summaryLive=data.unified_classification?.version===1||aiOperationStatus(data).running||data.autofill_progress?.version===1;
    const openDetails=new Set(Array.from(host.querySelectorAll('details[data-vr-summary-detail][open]'),el=>el.dataset.vrSummaryDetail));
-   host.innerHTML=state==='empty'?'<p>정상 응답 · 반환된 집계 항목이 없습니다. 0건으로 간주하지 않습니다.</p>':renderAutofillProgress(data)+renderAiOperationStatus(data);
+   host.innerHTML=state==='empty'?'<p>정상 응답 · 반환된 집계 항목이 없습니다. 0건으로 간주하지 않습니다.</p>':renderUnifiedClassification(data);
    for(const el of host.querySelectorAll('details[data-vr-summary-detail]'))el.open=openDetails.has(el.dataset.vrSummaryDetail);
    if(summaryLive&&!q('[data-pane="analysis"]').hidden&&!document.hidden)summaryTimer=setTimeout(()=>void readAiSummary(),aiOperationStatus(data).running||data.autofill_progress?.state==='refreshing'?15000:60000);
   }catch(error){
@@ -375,7 +381,7 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  page.addEventListener('click',async e=>{
   const btn=e.target.closest('[data-action]');if(!btn||btn.disabled)return;
   btn.disabled=true;
-  try{check();if(btn.dataset.action==='members')await openMembers();else if(btn.dataset.action==='indexing')await openIndexing();else if(btn.dataset.action==='stats')await access();else if(btn.dataset.action==='ai')await readAiReview();else if(btn.dataset.action==='ai-operations')await openInlineOperations();else if(btn.dataset.action==='ai-summary')await readAiSummary();else if(btn.dataset.action==='ai-api')await checkAiApis();else if(btn.dataset.action==='catalog')await catalog();else if(btn.dataset.action==='playback-diagnostics')openPlaybackDiagnostics?.();}
+  try{check();if(btn.dataset.action==='members')await openMembers();else if(btn.dataset.action==='indexing')await openIndexing();else if(btn.dataset.action==='stats')await access();else if(btn.dataset.action==='ai')await readAiReview();else if(btn.dataset.action==='unified-settings')tab('operations');else if(btn.dataset.action==='unified-overview')tab('analysis');else if(btn.dataset.action==='ai-operations')await openInlineOperations();else if(btn.dataset.action==='ai-summary')await readAiSummary();else if(btn.dataset.action==='ai-api')await checkAiApis();else if(btn.dataset.action==='catalog')await catalog();else if(btn.dataset.action==='playback-diagnostics')openPlaybackDiagnostics?.();}
   catch(err){if(!closed)notice(err?.message||'요청을 완료하지 못했습니다.');}
   finally{if(btn.isConnected)btn.disabled=false;}
  });
