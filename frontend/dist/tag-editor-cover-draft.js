@@ -1,7 +1,8 @@
 /* Tag Editor embedded cover: authenticated inspect/plan/apply per original album.
  * A catalog display cover is NOT proof of an embedded audio front cover. */
-export function coverTargets(album,scope,selected=[]){
- const files=[...new Set((album?.entries||[]).map(e=>e.file).filter(f=>typeof f==='string'&&/\.(flac|mp3)$/i.test(f)))];
+export function coverTargets(album,scope,selected=[],formats=['flac','mp3']){
+ const allowed=new Set(Array.isArray(formats)?formats.filter(f=>typeof f==='string').map(f=>f.toLowerCase()):[]);
+ const files=[...new Set((album?.entries||[]).map(e=>e.file).filter(f=>typeof f==='string'&&/\.[a-z0-9]+$/i.test(f)&&allowed.has(f.split('.').pop().toLowerCase())))];
  return scope==='__all__'?files:scope==='__selected__'?files.filter(f=>selected.includes(f)):files.filter(f=>f===scope);
 }
 export function coverImageError(file){return !file||!['image/jpeg','image/png'].includes(file.type)||!file.size||file.size>10*1024*1024?'JPG·PNG 10MB 이하 이미지 한 개를 선택하세요.':null;}
@@ -18,12 +19,13 @@ export function installTagCoverDraft({getAlbum,api,getSaveCapabilities=()=>({cov
  document.body.append(region);
  const q=s=>region.querySelector(s),fileInput=q('#tagCoverFile'),art=q('#tagCoverArt'),status=q('#tagCoverStatus'),files=q('#tagCoverFiles'),current=q('.tag-cover-current');
  let albumId='',draft=null,objectUrl=null,version=0,busy=false,states=new Map(),lastResult='';
- const selected=()=>coverTargets(getAlbum(),'__all__',[]);
+ const selected=()=>{const caps=getSaveCapabilities();return coverTargets(getAlbum(),'__all__',[],caps.cover===true&&Array.isArray(caps.tag_formats)?caps.tag_formats:[]);};
  function ownerFor(file){const album=getAlbum(),entry=album?.entries?.find(e=>e.file===file);if(!album||!entry)throw Error('현재 앨범 파일이 아닙니다.');if(!album.disc_group)return album.id;const disc=album.discs?.find(d=>d.id===entry.source_album_id);if(!disc||!disc.path||!file.startsWith(disc.path+'/')||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(disc.id))throw Error('커버 대상 CD의 원본 UUID/경로 불일치');return disc.id;}
  const revoke=()=>{if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}};
  function text(tag,value,cls){const el=document.createElement(tag);el.textContent=value;if(cls)el.className=cls;return el;}
  function render(){const chosen=selected(),known=chosen.map(f=>states.get(f)).filter(r=>r?.state==='EMBEDDED_COVER_INSPECTED'),withFront=known.filter(r=>r.front_covers?.length),unique=new Set(known.map(r=>JSON.stringify(r.front_covers?.map(p=>p.sha256)||[])));
   files.replaceChildren(text('p',`앨범 전체 · ${chosen.length}곡 · 상태 확인 ${known.length}/${chosen.length}`));
+  const excluded=(getAlbum()?.entries||[]).length-chosen.length;if(excluded>0)files.append(text('p',`저장 지원 대상 외 ${excluded}곡 제외 · NAS 승인 형식만 적용합니다.`,'tag-cover-warning'));
   if(chosen.length>10)files.append(text('p','NAS 상태 확인과 저장은 안전을 위해 10곡씩 나누어 자동 처리합니다.','tag-cover-warning'));
   q('#coverCurrentSummary').textContent=known.length?`확인 ${known.length}곡 · 내장 커버 있음 ${withFront.length}곡 · 없음 ${known.length-withFront.length}곡${unique.size>1?' · 기존 커버가 서로 다름':''}`:'내장 커버 상태 확인 전';
   current.replaceChildren();const representative=withFront.find(r=>r.preview_data_url?.startsWith('data:image/jpeg;base64,'));if(representative){const img=document.createElement('img');img.src=representative.preview_data_url;img.alt='현재 앨범 내장 커버';current.append(img);}
