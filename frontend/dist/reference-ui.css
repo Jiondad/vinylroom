@@ -311,3 +311,16 @@ body .ui6-track-row .ui6-pixel-column:nth-child(5){animation-duration:1000ms;ani
 body .ui6-track-row[data-ui6-current="playing"] .ui6-pixel-column{animation-play-state:running}
 @keyframes ui6-pixel-level{0%,100%{clip-path:inset(0 0 0 0)}50%{clip-path:inset(8px 0 0 0)}}
 @media(prefers-reduced-motion:reduce){body .ui6-track-row .ui6-pixel-column{animation:none}}
+
+/* Two existing album edit actions fit within the mobile cover column. */
+@media(max-width:740px){
+ body .album-full-page.ui6-album .ui6-cover-column .album-cover-tools{
+  display:flex!important;flex-flow:row nowrap!important;align-items:center;justify-content:center;gap:4px;width:100%;max-width:none
+ }
+ body .album-full-page.ui6-album .ui6-cover-column .album-cover-tools :is(#edit-index,#tag-edit-index){
+  box-sizing:border-box;display:inline-flex!important;align-items:center;justify-content:center;
+  flex:1 1 0!important;width:0!important;min-width:0!important;max-width:100%;margin:0!important;
+  min-height:30px!important;height:30px!important;padding:2px 2px!important;
+  font-size:10px!important;line-height:18px!important;white-space:nowrap!important
+ }
+}

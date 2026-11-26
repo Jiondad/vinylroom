@@ -44,7 +44,7 @@ export function closeAdminCenter(){dismissCurrent?.();}
 export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndexing,openPlaybackDiagnostics,api,letters=[],toast=()=>{},initialTagAlbum=null}={}){
  if(!canManage?.())throw Error('승인된 관리자만 이용할 수 있습니다.');
  dismissCurrent?.();
- const page=document.createElement('section');page.id='vinyl-admin-center';page.className='vinyl-admin-page';
+ const page=document.createElement('section');page.id='vinyl-admin-center';page.className='vinyl-admin-page';if(initialTagAlbum?.id)page.classList.add('vr-tag-editor-from-album');
  page.setAttribute('aria-label','Vinyl Room Admin');
  page.innerHTML=`<div class="vr-admin-inner"><header class="vr-admin-header"><div class="vr-admin-heading"><button type="button" data-close aria-label="관리자센터 닫고 이전 화면으로 돌아가기">← 돌아가기</button><div><p>VINYL ROOM / ADMIN</p><h1>Admin</h1></div></div></header>
  <nav class="vr-admin-tabs" aria-label="관리자 메뉴">
@@ -390,7 +390,10 @@ export function mountAdminCenter({canManage,getAccessToken,openMembers,openIndex
  window.addEventListener('keydown',onKey);
  document.addEventListener('click',onSidebar,true);
  dismissCurrent=close;
- if(initialTagAlbum?.id||tagEditorRefreshRequested())tab('tag-editor');
+ if(initialTagAlbum?.id||tagEditorRefreshRequested()){
+  tab('tag-editor');
+  if(initialTagAlbum?.id&&window.matchMedia('(max-width:740px)').matches)requestAnimationFrame(()=>{if(!closed&&page.classList.contains('vr-tag-editor-active'))window.scrollTo({top:0,left:0,behavior:'instant'});});
+ }
  else void loadPreviewMembers();
  return {close,tab};
 }

@@ -412,3 +412,11 @@ body .vinyl-admin-page.vr-tag-editor-active .vr-admin-inner{padding-top:0}
  #vinyl-admin-center .vr-u-history td,#vinyl-admin-center .vr-u-history th{font-size:12px;padding:7px 4px}
  #vinyl-admin-center .vr-unified-dashboard h3{font-size:16px}
 }
+
+/* Mobile deep link: the relative editor must not follow the full album page
+   in document flow. Keep the album node mounted for return and Catalog sync. */
+@media(max-width:740px){
+ body.album-page-open.vinyl-admin-page-open.vinyl-tag-editor-open>.album-full-page{display:none!important}
+ body .vinyl-admin-page.vr-tag-editor-active.vr-tag-editor-from-album .vr-admin-header{display:flex!important;min-height:0;margin:0;padding:6px 0;border:0}
+ body .vinyl-admin-page.vr-tag-editor-active.vr-tag-editor-from-album .vr-admin-heading>div{display:none}
+}
