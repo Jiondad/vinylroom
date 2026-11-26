@@ -6,8 +6,8 @@ const LIVE_MANIFEST_MS = 30000;
 const manifestErrors=new Set();
 import {NAS_URL} from './config.js';
 const IMAGE_PATH = /^images\/[a-f0-9]{24}-(?:thumb|full)\.webp$/;
-const STATIC_MANIFEST='/artist-profiles/profiles.json';
-const STATIC_ASSETS='/artist-profiles/';
+const STATIC_MANIFEST='./artist-profiles/profiles.json';
+const STATIC_ASSETS='./artist-profiles/';
 let openDialog = null;
 
 export function safeImagePath(path, type = null) {
