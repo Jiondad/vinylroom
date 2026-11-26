@@ -5,7 +5,7 @@ export function installDesignV2(doc=document,{groups=[],describe}={}){
  doc.body.classList.add('vr-ds-v2');
  doc.documentElement.dataset.vrTypographyAmendment='NOTO_350_DEMO_PARITY_20261102';
  const userWeight=doc.createElement('link');userWeight.rel='stylesheet';userWeight.href=new URL('./site-font-weight.css',import.meta.url).href;doc.head.append(userWeight);
- const albumText=doc.createElement('link');albumText.rel='stylesheet';albumText.href=new URL('./album-text-unify.css',import.meta.url).href;doc.head.append(albumText);
+ const albumText=doc.createElement('link');albumText.rel='stylesheet';albumText.href=new URL('./album-text-unify.css?v=20261127-mobile-track-clamp',import.meta.url).href;doc.head.append(albumText);
  const typography=doc.createElement('link');typography.rel='stylesheet';typography.href=new URL('./typography-operational.css',import.meta.url).href;doc.head.append(typography);
  for(const file of ['typography-a2.css','design-v2-tokens.css','design-v2.css']){const link=doc.createElement('link');link.rel='stylesheet';link.href=new URL('./'+file,import.meta.url).href;doc.head.append(link);}
  // Approved original demo loader; sizes and playback code are preserved.
