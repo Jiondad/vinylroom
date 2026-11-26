@@ -176,7 +176,11 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
    if(!controller.signal.aborted&&!job.controller.signal.aborted&&canManage()){
     if(job.url==='/api/catalog-sync/status'&&result.state==='CATALOG_SYNC_COMPLETED'){
      invalidateAlbumCover(result.album_id);
-     for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])if(img.dataset.tagCover===result.album_id){clearMemberImage(img);void loadCover(img,result.album_id).then(()=>{if(img.isConnected)img.hidden=false;}).catch(()=>{img.hidden=true;});}
+     for(const img of frame.contentDocument?.querySelectorAll('img[data-tag-cover]')||[])if(img.dataset.tagCover===result.album_id){
+      clearMemberImage(img);
+      const report=state=>{if(!controller.signal.aborted&&canManage()&&img.isConnected)frame.contentWindow?.postMessage({type:'vr-tag-catalog-cover-status',channel,album_id:result.album_id,state},origin);};
+      void loadCover(img,result.album_id).then(async()=>{if(!img.isConnected)return;await img.decode();if(!img.naturalWidth)throw Error('대표 이미지 확인 실패');img.hidden=false;report('LOADED');}).catch(()=>{if(img.isConnected)img.hidden=true;report('UNAVAILABLE');});
+     }
      window.dispatchEvent(new CustomEvent('vinyl-tag-catalog-synced',{detail:{albumId:result.album_id}}));
     }
     frame.contentWindow?.postMessage({type:'vr-tag-result',channel,id:job.id,result,metrics:{...metrics,bridge_ms:performance.now()-started}},origin);

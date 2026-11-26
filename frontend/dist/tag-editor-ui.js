@@ -31,6 +31,7 @@ window.addEventListener('message',event=>{if(event.source!==parent||event.origin
  if(m?.type==='vr-tag-init'&&!channel&&typeof m.channel==='string'){channel=m.channel;document.body.hidden=false;document.body.classList.remove('locked');if(m.preview)$('#sourceBadge').textContent='DEMO · NAS 미연결';void expand('');void readSaveCaps();if(m.initialAlbum)openLinkedAlbum(m.initialAlbum);else void restoreLastEditorAlbum();}
  if(m?.type==='vr-tag-viewport'&&m.channel===channel&&Number.isFinite(m.top)&&Number.isFinite(m.height)&&m.top>=0&&m.height>=240){document.documentElement.style.setProperty('--tag-visible-top',m.top+'px');document.documentElement.style.setProperty('--tag-visible-height',m.height+'px');}
  if(m?.type==='vr-tag-revoke'){channel=null;for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('관리자 인증이 필요합니다.'));}pending.clear();inflight.clear();S.drafts.clear();S.original=[];S.draft=[];coverEditor.close();document.body.classList.add('locked');}
+ if(m?.type==='vr-tag-catalog-cover-status'&&m.channel===channel&&currentCatalogIds().includes(m.album_id))$('#catalogCoverStatus').textContent=m.state==='LOADED'?'대표 커버 표시 확인':'대표 커버 미표시 · 색인 커버 추출 확인 필요';
  if(m?.type==='vr-tag-result'&&m.channel===channel){const p=pending.get(m.id);if(p){clearTimeout(p.timer);pending.delete(m.id);m.error?p.reject(Error(m.error)):p.resolve({result:m.result,metrics:m.metrics});}}
 });
 if(parent===window){document.body.hidden=false;document.body.classList.add('locked');}
@@ -118,7 +119,7 @@ async function restoreLastEditorAlbum(){
 async function syncSavedCatalog(ids){
  if(catalogSyncBusy)return 'Catalog 갱신 진행 중';
  const targets=[...new Set(ids)],viewId=S.album?.id;if(!viewId||!targets.length)return 'Catalog 갱신 대상 없음';
- catalogSyncBusy=true;$('#catalogSync').disabled=true;let count=0;
+ catalogSyncBusy=true;$('#catalogSync').disabled=true;$('#catalogCoverStatus').textContent='';let count=0;
  try{
   for(const id of targets){
    if(S.album?.id!==viewId)throw Error('앨범 선택 변경');
@@ -135,7 +136,7 @@ async function syncSavedCatalog(ids){
    }
    if(!done)throw Error('색인 완료 대기 초과 · 색인 관리 확인 필요');
   }
-  const message='Catalog 색인 완료 · '+count+'/'+targets.length+' 앨범 · 대표 커버 및 정보 재조회';
+  const message='Catalog 색인 완료 · '+count+'/'+targets.length+' 앨범 · 원본 UUID·경로 확인';
   $('#catalogSyncStatus').textContent=message;return message;
  }catch(e){const message='Catalog 갱신 미완료 · '+count+'/'+targets.length+' 앨범 · '+e.message+' · 기존 저장 음원 재저장 불필요';$('#catalogSyncStatus').textContent=message;return message;}
  finally{catalogSyncBusy=false;$('#catalogSync').disabled=!S.album||tagSaveBusy;}
@@ -145,7 +146,7 @@ $('#catalogSync').onclick=async()=>{if(!S.album||tagSaveBusy||catalogSyncBusy||d
 function summary(a){if(a.disc_group)return `<button type="button" class="cover-button" id="coverOpen" aria-label="앨범 대표 커버 등록 또는 변경"><span>♫</span><img data-tag-cover="${esc(a.discs[0].id)}" alt="앨범 대표 커버"><span>대표 커버 관리</span></button><div><h2>${esc(a.title)} · CD 통합</h2><p>${esc(a.artist)} · ${a.discs.length}개 디스크 · ${a.entries.length}곡 · 디스크별 확인 후 통합 NAS 저장</p><div class="folder-path" title="${esc(a.path)}">${esc(a.path)}</div></div>`;
  return `<button class="cover-button" id="coverOpen" aria-label="내장 커버 편집 열기"><span>◎</span><img data-tag-cover="${esc(a.id)}" alt="앨범 색인 커버"><span>커버 편집</span></button><div><h2>${esc(a.title)}</h2><p>${esc(a.artist)} · ${esc(a.date||'연도 없음')}</p><div class="folder-path" title="${esc(a.path||a.relative_path||'')}">${esc(a.path||a.relative_path||'')}</div></div>`;}
 async function selectAlbum(id){if(tagSaveBusy){toast('NAS 저장 중에는 앨범을 변경하지 마세요.');return;}if(S.active===id&&S.album)return;const info=[...S.nodes.values()].find(n=>n.album?.id===id)?.album;if(!info)return;
- saveDraft();const ticket=gate.next(),started=performance.now();if(currentTrackRequest)currentTrackRequest.cancel();S.active=id;$('#catalogSyncStatus').textContent='';S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();$('#albumHeader').innerHTML=summary(info);$('#loadStatus').textContent='트랙 태그를 불러오는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;renderTree();renderTracks('트랙 태그를 불러오는 중…');
+ saveDraft();const ticket=gate.next(),started=performance.now();if(currentTrackRequest)currentTrackRequest.cancel();S.active=id;$('#catalogSyncStatus').textContent='';$('#catalogCoverStatus').textContent='';S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();$('#albumHeader').innerHTML=summary(info);$('#loadStatus').textContent='트랙 태그를 불러오는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;renderTree();renderTracks('트랙 태그를 불러오는 중…');
  $('#albumHeader').setAttribute('aria-busy','true');parent.postMessage({type:'vr-tag-covers',channel},location.origin);
  const request=read('/api/tracks?album='+encodeURIComponent(id));currentTrackRequest=request;
  try{const {result,metrics}=await request;if(!gate.current(ticket))return;const album=result?.album;
@@ -171,7 +172,7 @@ async function selectDiscGroup(path){
  if(currentTrackRequest)currentTrackRequest.cancel();
  const groupId='disc-group:'+path,requests=child.map(n=>read('/api/tracks?album='+encodeURIComponent(n.album.id)));
  currentTrackRequest={cancel:()=>requests.forEach(r=>r.cancel?.())};
- S.active=groupId;$('#catalogSyncStatus').textContent='';S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();
+ S.active=groupId;$('#catalogSyncStatus').textContent='';$('#catalogCoverStatus').textContent='';S.album=null;S.original=[];S.draft=[];S.renames={};S.warnings={};S.selected.clear();S.anchor=null;justSaved.clear();syncMultiTags();coverEditor.close();
  $('#albumHeader').innerHTML='<div class="cover-placeholder">♫</div><div><h2>CD 통합 조회 중…</h2><p>'+esc(path)+'</p></div>';
  $('#loadStatus').textContent='각 디스크를 읽기 전용으로 조회하는 중…';$('#bulkApply').disabled=true;$('#resetBtn').disabled=true;
  renderTree();renderTracks('디스크 조회 중…');
