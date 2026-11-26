@@ -268,3 +268,19 @@ dialog[open]{position:fixed;inset:calc(var(--tag-visible-top,0px) + 12px) 0 auto
  .track-panel tbody tr>td:nth-child(8)::before{content:'FEATURING'}
  .track-panel tbody tr>td:nth-child(9)::before{content:'GENRE'}
 }
+
+/* Read-only filename extraction preview: no change to track editor or album layout. */
+.from-preview{margin-top:7px;padding:7px 9px;border:1px solid var(--border);border-radius:5px;background:#fff;font-size:12px;min-width:0}
+.from-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.from-preview-heading button{min-height:26px;font-size:11px;padding:2px 7px}
+.from-preview-row{padding:5px 0;border-bottom:1px solid var(--border);min-width:0}
+.from-preview-file{color:var(--muted);font-size:11px;overflow-wrap:anywhere;margin-bottom:4px}
+.from-preview-field{display:grid;grid-template-columns:100px minmax(0,1fr) minmax(90px,auto);gap:7px;align-items:start;padding:2px 0}
+.from-preview-field strong{font-size:11px;font-weight:450}
+.from-preview-value{overflow-wrap:anywhere}
+.from-preview-field small{font-size:11px;color:var(--muted);overflow-wrap:anywhere;max-width:240px}
+.from-preview-warning{color:#986b36}
+.from-preview-dialog{width:min(850px,calc(100% - 32px));max-height:85vh;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:16px;color:inherit;background:#fff;font:inherit}
+.from-preview-dialog::backdrop{background:#25323866}
+.from-preview-dialog>p{color:var(--muted);font-size:12px;margin:6px 0}
+@media(max-width:650px){.from-preview-field{grid-template-columns:80px minmax(0,1fr)}.from-preview-field small{grid-column:2}.from-preview-dialog{padding:12px}}

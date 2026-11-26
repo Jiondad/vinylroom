@@ -1,4 +1,5 @@
 import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?v=20261122-default-rename';
+import {previewPlan} from './tag-editor-plan.js?v=20261122-default-rename';
 import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261127-cover-formats';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),clone=v=>structuredClone(v),base=f=>f.split('/').pop();
 const S={album:null,original:[],draft:[],selected:new Set(),renames:{},warnings:{},drafts:new Map(),nodes:new Map(),active:'',search:[],metrics:[],anchor:null,visible:[]};
@@ -270,6 +271,42 @@ function displayedDiscNumber(e){
  const tag=String(e.tags?.discnumber?.[0]||'').split('/')[0];
  return /^[0-9]+$/.test(tag)&&+tag>0?String(+tag).padStart(2,'0'):'—';
 }
+
+function filenamePreviewRows(){
+ if(!S.album)return [];
+ const selected=$('#bulkScope').value==='album'?S.draft.map(e=>e.file):[...S.selected];
+ if(!selected.length)return [];
+ const result=previewPlan({entries:S.draft,selected,mode:'from',format:$('#format').value,replace:$('#bulkPolicy').value==='replace',order:'filename'});
+ return result.rows;
+}
+function filenamePreviewRow(row){
+ const entry=S.draft.find(e=>e.file===row.file);
+ const display=v=>(v||[]).join(' | ')||'빈 값';
+ const explain=code=>reasons[code]||({album_common_editor_only:'공통 태그 편집에서 변경',use_normalize_tracknumbers_for_existing_format:'기존 번호 유지'}[code])||code;
+ let cells='';
+ if(row.state==='HOLD'||row.state==='UNPARSED')cells='<p class="from-preview-warning">'+esc(explain(row.reason))+'</p>';
+ else{
+  cells=Object.entries(row.parsed_fields||{}).map(([f,extracted])=>{
+   const change=row.changes?.[f],before=entry?.tags?.[f]||[],after=change?change.after:before;
+   const status=change?'변경 예정':row.skipped?.[f]?explain(row.skipped[f]):'변경 없음';
+   return '<div class="from-preview-field"><strong>'+esc(fields[f]||f)+'</strong><span class="from-preview-value">'+esc(display(extracted))+'</span><small>'+esc(status+(change?' · 기존: '+display(before):JSON.stringify(extracted)!==JSON.stringify(after)?' · 유지: '+display(after):''))+'</small></div>';
+  }).join('');
+  if(row.discarded_dummy_parts?.length)cells+='<div class="from-preview-field"><strong>제외</strong><span class="from-preview-value">'+esc(row.discarded_dummy_parts.join(' | '))+'</span></div>';
+ }
+ return '<article class="from-preview-row"><p class="from-preview-file">'+esc(base(row.file))+'</p>'+cells+'</article>';
+}
+function renderFilenamePreview(){
+ const panel=$('#fromPreview');if(!panel)return;
+ panel.hidden=$('#bulkField').value!=='from'||activeTool!=='from';
+ if(panel.hidden){panel.replaceChildren();return;}
+ if(!S.album){panel.textContent='앨범을 선택하세요.';return;}
+ try{
+  const rows=filenamePreviewRows();if(!rows.length){panel.textContent='트랙을 선택하면 추출 결과가 표시됩니다.';return;}
+  const changed=rows.filter(r=>r.state==='PROPOSED').length,held=rows.filter(r=>['HOLD','UNPARSED'].includes(r.state)).length;
+  panel.innerHTML='<div class="from-preview-heading"><strong>변환 미리보기 · '+rows.length+'곡 · 변경 예정 '+changed+'곡'+(held?' · 확인 필요 '+held+'곡':'')+'</strong><button type="button" id="fromPreviewAll">전체 '+rows.length+'곡 보기</button></div>'+filenamePreviewRow(rows[0])+'<small>미리보기는 파일과 태그를 변경하지 않습니다. 변환 후 별도 저장이 필요합니다.</small>';
+ }catch(e){panel.textContent='패턴 확인: '+(reasons[e.message]||e.message);}
+}
+
 function renderTracks(empty='선택한 앨범의 트랙이 여기에 표시됩니다.'){
  let lastDisc=null;const entries=S.draft.filter(e=>!$('#missingOnly').checked||changedFields(e).length||S.renames[e.file]||!e.tags.title?.length||!e.tags.tracknumber?.length),parts=[];
  S.visible=entries.map(e=>e.file);
@@ -284,7 +321,7 @@ function renderTracks(empty='선택한 앨범의 트랙이 여기에 표시됩�
  $('#tagStatusSummary').textContent=S.album?
   [unsaved?'미저장 '+unsaved+'곡':'미저장 없음',saved?'저장 확인 '+saved+'곡':'',missingCount?'필수 태그 누락 '+missingCount+'곡':''].filter(Boolean).join(' · '):'';
  $('#draftCount').textContent='변경 '+unsaved+'곡';$('#commonSummary').textContent=S.album?['album','album_artist','date'].map(f=>{const v=[...new Set(S.draft.map(e=>values(e,f)))];return fields[f]+': '+(v.length>1?'파일별 값 다름':v[0]||'빈 값');}).join(' · '):'';
- saveButtonState();
+ saveButtonState();renderFilenamePreview();
 }
 $('#artistList').onclick=e=>{const group=e.target.closest('[data-disc-group]'),a=e.target.closest('[data-album]'),folder=e.target.closest('[data-folder]'),toggle=e.target.closest('[data-expand]'),retry=e.target.closest('[data-retry]');if(group)void selectDiscGroup(group.dataset.discGroup);else if(a)void selectAlbum(a.dataset.album);else if(retry)void expand(retry.dataset.retry,{retry:true});else if(toggle||folder)void expand((toggle||folder).dataset[toggle?'expand':'folder']);};
 $('#artistForm').onsubmit=async e=>{e.preventDefault();const query=$('#artistSearch').value.trim(),ticket=++searchVersion;if(!query){$('#searchResults').replaceChildren();return;}$('#searchResults').textContent='검색 중…';try{const r=await api('/api/artists?q='+encodeURIComponent(query));if(ticket!==searchVersion)return;S.search=r.items||[];$('#searchResults').innerHTML='<p class="search-title">검색 결과</p>'+S.search.map((a,i)=>`<button class="search-result" data-search-artist="${i}">${esc(a.name)}</button>`).join('')+(r.truncated?'<p class="tree-feedback">검색어를 좁혀 주세요.</p>':'');if(!S.search.length)$('#searchResults').textContent='검색 결과 없음';}catch(e){if(ticket===searchVersion)$('#searchResults').textContent=e.message;}};
@@ -318,7 +355,10 @@ $('#bulkApply').onclick=async()=>{if(!S.album||tagSaveBusy)return;try{
  }else $('#bulkStatus').textContent=`${r.changed}곡 초안 변경 · ${Object.keys(S.warnings).length}곡 참고`;
  }catch(e){$('#bulkStatus').textContent='변환 실패 · '+e.message;}};
 function toolbar(){const f=$('#bulkField').value,isFormat=['from','to'].includes(f),isNumber=['number','normalize'].includes(f);$('#formatControls').hidden=!isFormat;$('#numberControls').hidden=f!=='number';$('.bulk-value').hidden=isFormat||isNumber;$('#bulkPolicy').disabled=f==='normalize'||f==='to';for(const o of $('#variable').options)o.disabled=f==='to'&&o.value==='%dummy%';for(const o of $('#preset').options)o.disabled=f==='to'&&o.value.includes('%dummy%');if(f==='to'&&$('#format').value.includes('%dummy%'))$('#format').value='%discnumber% - $num(%track%,2). %title%';$('#bulkValue').placeholder=['genre','featuring'].includes(f)?'여러 값은 | 로 구분':'변경할 값';}
-$('#bulkField').onchange=toolbar;$('#preset').onchange=e=>{if(e.target.value)$('#format').value=e.target.value;};$('#variable').innerHTML+=['artist','albumartist','album','date','year','discnumber','track','title','genre','featuring','dummy'].map(f=>`<option value="%${f}%">%${f}%</option>`).join('');$('#variable').onchange=e=>{const input=$('#format');input.setRangeText(e.target.value,input.selectionStart??input.value.length,input.selectionEnd??input.value.length,'end');input.focus();e.target.value='';};
+$('#bulkField').onchange=()=>{toolbar();renderFilenamePreview();};$('#preset').onchange=e=>{if(e.target.value)$('#format').value=e.target.value;renderFilenamePreview();};$('#variable').innerHTML+=['artist','albumartist','album','date','year','discnumber','track','title','genre','featuring','dummy'].map(f=>`<option value="%${f}%">%${f}%</option>`).join('');$('#variable').onchange=e=>{const input=$('#format');input.setRangeText(e.target.value,input.selectionStart??input.value.length,input.selectionEnd??input.value.length,'end');input.focus();e.target.value='';renderFilenamePreview();};
+$('#format').addEventListener('input',renderFilenamePreview);$('#bulkScope').addEventListener('change',renderFilenamePreview);$('#bulkPolicy').addEventListener('change',renderFilenamePreview);
+$('#fromPreview').addEventListener('click',e=>{if(!e.target.closest('#fromPreviewAll'))return;try{const rows=filenamePreviewRows();if(!rows.length)return;$('#fromPreviewRows').innerHTML=rows.map(filenamePreviewRow).join('');$('#fromPreviewDialog').showModal();}catch(error){toast(error.message);}});
+$('#fromPreviewClose').onclick=()=>$('#fromPreviewDialog').close();
 $('#tracks').onchange=e=>{const file=e.target.dataset.select;if(file){e.target.checked?S.selected.add(file):S.selected.delete(file);renderTracks();syncMultiTags();return;}const f=e.target.dataset.field;if(!f)return;const entry=S.draft.find(row=>row.file===e.target.dataset.file);if(!entry)return;let val=e.target.value.trim();try{if(f==='tracknumber'){if(val&&!/^(?:0?[1-9]|[1-9]\d)(?:\/\d{1,3})?$/.test(val))throw Error('트랙번호는 01~99입니다.');entry.tags[f]=val?[val.replace(/^([1-9])(?=\/|$)/,'0$1')]:[];}else{const r=applyBulkDraft({entries:S.draft,selected:[entry.file],scope:'selected',field:f,value:val,replace:true});S.draft=r.entries;S.warnings=r.warnings;}saveDraft();}catch(e){toast(e.message);}renderTracks();};
 function selectTrack(file,event){
  if(!S.visible.includes(file))return;
