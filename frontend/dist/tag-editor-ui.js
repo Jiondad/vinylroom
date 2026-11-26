@@ -312,8 +312,8 @@ $('#bulkApply').onclick=async()=>{if(!S.album||tagSaveBusy)return;try{
  }else if(mode==='number'||mode==='normalize'){
   const intended=S.draft.filter(e=>{const previous=priorNumbers.get(e.file);return previous&&(previous.tracknumber!==values(e,'tracknumber')||previous.discnumber!==values(e,'discnumber'))&&changedFields(e).some(f=>f==='tracknumber'||f==='discnumber');});
   if(!intended.length){$('#bulkStatus').textContent='저장할 트랙번호 변경이 없습니다.';return;}
-  if(intended.length>1){$('#bulkStatus').textContent=`NAS HTTP 400 미해결 · ${intended.length}곡 자동 일괄 저장을 안전상 중지했습니다. 화면은 미저장 초안이며 실제 저장이 아닙니다.`;$('#saveStatus').textContent='NAS 오류 해결 전 전체 앨범 자동저장 일시 중지';return;}
   if(!saveCaps.tags){$('#bulkStatus').textContent='저장 실패 · NAS 저장 연결이 꺼져 있어 변경 내용은 미저장입니다.';return;}
+  if(intended.length>1&&!window.confirm(`${intended.length}곡의 트랙번호·디스크번호 변경을 NAS에 저장할까요?`)){$('#bulkStatus').textContent=`${intended.length}곡 번호 변경 초안 · 저장 취소 · 미저장 상태입니다.`;return;}
   await persistTagRows(intended,{automatic:true,onlyFields:['tracknumber','discnumber']});
  }else $('#bulkStatus').textContent=`${r.changed}곡 초안 변경 · ${Object.keys(S.warnings).length}곡 참고`;
  }catch(e){$('#bulkStatus').textContent='변환 실패 · '+e.message;}};
