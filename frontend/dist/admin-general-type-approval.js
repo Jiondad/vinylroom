@@ -25,7 +25,7 @@ export function mountGeneralTypeApproval({host,proposal,api,canManage,signal}){
    }else if(d?.ok===true&&d.album_id===album&&d.proposal_id===id&&d.field==='work.album_type'&&['미확인','unknown','',null].includes(d.before)&&TYPES.has(d.after)&&SHA.test(d.binding_sha256||'')&&d.confirmation_required===true&&Number.isSafeInteger(d.review_revision)&&d.review_revision>0){
     say((d.before||'미확인')+' → '+d.after+' · 미리보기 확인 · 반영 비활성');
    }else throw Error('preview_invalid');
-  }catch(e){say('승인 내용 확인 실패'+(Number.isInteger(e?.status)?' (HTTP '+e.status+')':'')+' · 반영 차단');}
+  }catch(e){const reasons={existing_effective_genre_protected:'이미 유효 장르가 있어 기존 정보를 보호합니다. 추가 반영 불필요.',approval_or_current_state_not_verified:'서버 승인 조건 미충족 · 현재 정보 또는 저장된 초안 확인 필요',native_snapshot_validation_failed:'저장된 검토 초안과 현재 제안이 일치하지 않습니다.',general_preview_disabled:'서버 미리보기 비활성',admin_required:'관리자 권한 확인 필요'};say((Object.hasOwn(reasons,e?.code)?reasons[e.code]:'승인 내용 확인 실패'+(Number.isInteger(e?.status)?' (HTTP '+e.status+')':''))+' · 반영 차단');}
   finally{busy=false;if(alive())button.disabled=!allowed();}
  };
  return ()=>local.abort();

@@ -91,7 +91,7 @@ async function api(path,{admin=false,body,signal}={}){
  if(admin){repo.requireAdmin();if(Date.now()>repo.expires-60000)await repo.refresh();}
  const r=await fetch(NAS_URL+path,{method:body?'POST':'GET',credentials:'omit',redirect:'error',headers:{Authorization:'Bearer '+access,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:signal||AbortSignal.timeout(20000)});
  if(r.status===401||r.status===403)invalidateMemberAccess();
- const data=await r.json().catch(()=>({}));if(!r.ok){const error=Error((data.message||'NAS 요청에 실패했습니다.')+' (HTTP '+r.status+' · '+path.split('?')[0]+')');error.status=r.status;throw error;}return data;
+ const data=await r.json().catch(()=>({}));if(!r.ok){const error=Error((data.message||'NAS 요청에 실패했습니다.')+' (HTTP '+r.status+' · '+path.split('?')[0]+')');error.status=r.status;if(typeof data.code==='string'&&/^[a-z0-9_]{1,100}$/.test(data.code))error.code=data.code;throw error;}return data;
 }
 const artistProfileManager=createArtistProfileManager({
  allowed:()=>repo.admin&&isApprovedMember(),token:currentMemberToken,
