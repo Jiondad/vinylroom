@@ -21,3 +21,7 @@ export function paintArtistCategoryCounts(nav,notice,snapshot){
  }
  if(notice){notice.hidden=!snapshot?.unmapped;notice.textContent=snapshot?.unmapped?'기존 유형 필터에 포함되지 않는 소장본 '+snapshot.unmapped.toLocaleString()+'장 (전체에 포함)':'';}
 }
+
+export function artistHomeSort(value){return value==='recent'?'recent':'year';}
+export function artistHomeHidesArtist(row,artist){return typeof artist==='string'&&artist.length>0&&row?.artist===artist;}
+export function artistHomeListLabel(category,total){return (category||'전체')+' · '+(Number.isSafeInteger(total)&&total>=0?total.toLocaleString()+'장':'수량 미확인');}

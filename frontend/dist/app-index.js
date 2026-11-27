@@ -1,4 +1,4 @@
-import {ARTIST_ALBUM_TYPES,artistCategoryCounts,paintArtistCategoryCounts} from './artist-category-counts.js';
+import {ARTIST_ALBUM_TYPES,artistCategoryCounts,paintArtistCategoryCounts,artistHomeSort,artistHomeHidesArtist,artistHomeListLabel} from './artist-category-counts.js';
 import {installButtonSystem} from './button-system.js';
 import {mountAlbumReference} from './reference-ui.js';
 import {installBackToTop} from './back-to-top.js';
@@ -191,7 +191,7 @@ function browseArtist(catalogArtist){
  prefetchArtistPortrait(catalogArtist);
  artist=catalogArtist;letter=category='';view='library';page=1;
  for(const id of ['search','genre','format'])$('#'+id).value='';
- $('#sort').value='artist';
+ $('#sort').value='year';
  return render(true,false,transition);
 }
 function restorePage(){try{
@@ -235,6 +235,7 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
  let effectiveView=view==='random'?'tracks':searching?'tracks':view;
  const params=new URLSearchParams({view:view==='random'?'random':effectiveView,page,q:$('#search').value,genre:$('#genre').value,format:$('#format').value,sort:$('#sort').value,artist,letter,category:artist&&effectiveView==='library'?category:''});
  if(view==='random')params.set('seed',randomSeed);
+ if(artist&&effectiveView==='library')params.set('sort',artistHomeSort(params.get('sort')));
  // Hidden Artist controls must not inherit another menu's filter selections.
  if(view==='artists'){params.set('genre','');params.set('format','');params.set('sort','artist');}
  if(view==='artists'){
@@ -284,7 +285,8 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
   let html='';
   if(artist&&view==='library')html+='<div id="artist-home-host"></div>';
   if(view==='random')html+=`<div class="actions random-actions"><div class="vinyl-quick-actions"><button id="random-play" data-quick-label="▶ 전체재생" ${result.items.length?'':'disabled'} aria-label="전체 재생">전체 재생</button><button id="random-download" class="mobile-batch-download" data-quick-label="↓ 다운로드" ${result.items.length?'':'disabled'} aria-label="현재 목록 전체 다운로드">다운로드</button><button id="random-queue" data-quick-label="＋ 대기열" ${result.items.length?'':'disabled'} aria-label="대기열에 모두 추가">대기열에 모두 추가</button><button id="random-save" data-quick-label="♫ 플리저장" ${result.items.length?'':'disabled'} aria-label="플레이리스트에 저장">플레이리스트에 저장</button></div></div>`;
-  if(artist&&effectiveView==='library')html+=`<nav class="category-filter" data-artist-category-counts aria-label="앨범 분류">${['',...categories].map(c=>`<button data-category="${esc(c)}" aria-pressed="${c===category}">${esc(c||'전체')}<span class="artist-category-count" hidden></span></button>`).join('')}</nav><p class="artist-category-unmapped" hidden></p>`;
+   const isArtistAlbumList=Boolean(artist&&view==='library'&&effectiveView==='library');
+  if(isArtistAlbumList)html+=`<nav class="category-filter" data-artist-category-counts aria-label="앨범 분류">${['',...categories].map(c=>`<button data-category="${esc(c)}" aria-pressed="${c===category}">${esc(c||'전체')}<span class="artist-category-count" hidden></span></button>`).join('')}</nav><p class="artist-category-unmapped" hidden></p><div class="artist-discography-toolbar"><span class="artist-discography-count">${esc(artistHomeListLabel(category,result.total))}</span><select data-artist-sort aria-label="아티스트 앨범 정렬"><option value="year" ${artistHomeSort(params.get('sort'))==='year'?'selected':''}>발매 연도순</option><option value="recent" ${artistHomeSort(params.get('sort'))==='recent'?'selected':''}>최근 등록순</option></select></div>`;
   if(artist&&state.categories_ready===false)html+='<p class="hint">NAS 폴더 기준으로 분류를 갱신 중입니다. 기존 목록은 계속 이용할 수 있습니다.</p>';
   if(view==='random'){
    html+=`<div class="random-grid">${result.items.map(t=>`<article class="random-track"><button class="random-song-card" ${isApprovedMember()?`data-random-track="${esc(t.album_id)}:${t.track_index}" data-search-play="${esc(t.album_id)}" data-song-index="${t.track_index}" aria-label="${esc(t.title)} 재생. 빠르게 두 번 터치하면 대기열에 추가"`:`data-open="${esc(t.album_id)}" aria-label="${esc(t.title)} · 앨범 상세"`}>${cover({id:t.album_id,title:t.album_title,artist:t.artist})}<strong title="${esc(t.title)}">${esc(t.title)}</strong></button><div class="random-track-info">${randomCatalogLabel('artist',t.artist,t.artist)}${randomCatalogLabel('album',t.album_id,t.album_title)}</div></article>`).join('')}</div>`;
@@ -300,7 +302,7 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
    html+='</div>';
   }else{
    if(view==='duplicates')html+='<p class="hint">아티스트와 제목이 같은 비교 후보입니다. 동일 음원으로 확정한 결과가 아닙니다.</p>';
-   html+=`<div class="grid">${result.items.map(a=>`<article class="album"><button class="album-open" data-open="${esc(a.id)}" aria-label="${esc(a.title)} 상세">${cover(a)}<h3 title="${esc(a.title)}">${esc(a.title)}</h3></button><button class="artist-name album-artist-link" data-index-artist="${esc(a.artist)}" aria-label="${esc(a.artist)} 전체 앨범 보기">${esc(a.artist)}</button><div class="album-info-row"><span>${esc(albumReleaseDate(a)||'연도 미확인')}</span><span>${esc(catalogTypeLabel(a.category))}</span></div><div class="album-info-row"><span class="album-card-genre" title="${esc(a.genre||'미분류')}">${esc(a.genre||'미분류')}</span><span class="album-card-quality">${esc(formatLabel(a))}</span></div></article>`).join('')}</div>`;
+   html+=`<div class="grid">${result.items.map(a=>`<article class="album${isArtistAlbumList?' artist-discography-album':''}"><button class="album-open" data-open="${esc(a.id)}" aria-label="${esc(a.title)} 상세">${cover(a)}<h3 title="${esc(a.title)}">${esc(a.title)}</h3></button>${isArtistAlbumList&&artistHomeHidesArtist(a,artist)?'':`<button class="artist-name album-artist-link" data-index-artist="${esc(a.artist)}" aria-label="${esc(a.artist)} 전체 앨범 보기">${esc(a.artist)}</button>`}<div class="album-info-row"><span>${esc(albumReleaseDate(a)||'연도 미확인')}</span><span>${esc(catalogTypeLabel(a.category))}</span></div><div class="album-info-row"><span class="album-card-genre" title="${esc(a.genre||'미분류')}">${esc(a.genre||'미분류')}</span><span class="album-card-quality">${esc(formatLabel(a))}</span></div></article>`).join('')}</div>`;
   }
   if(!result.items.length)html+='<p class="empty">해당 목록이 없습니다. 색인 상태 또는 검색 조건을 확인하세요.</p>';
   // Commit view styles with their content to keep the old grid stable while loading.
@@ -358,6 +360,7 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
   $('#content').querySelectorAll('[data-open]').forEach(b=>b.onclick=action(()=>detail(b.dataset.open)));
   $('#content').querySelectorAll('[data-index-artist]').forEach(b=>b.onclick=()=>browseArtist(b.dataset.indexArtist));
   $('#content').querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{category=b.dataset.category;page=1;render(true);});
+   const artistSort=$('#content [data-artist-sort]');if(artistSort)artistSort.onchange=()=>{$('#sort').value=artistHomeSort(artistSort.value);page=1;render(true);};
   $('#content').querySelectorAll('[data-letter]').forEach(b=>b.onclick=async()=>{const left=b.parentElement.scrollLeft;letter=b.dataset.letter;page=1;await render(true);const strip=$('#content .artist-index');if(strip){strip.scrollLeft=left;const selected=[...strip.querySelectorAll('[data-letter]')].find(item=>item.dataset.letter===letter);if(selected){const r=selected.getBoundingClientRect(),s=strip.getBoundingClientRect();if(r.left<s.left)strip.scrollLeft-=s.left-r.left;else if(r.right>s.right)strip.scrollLeft+=r.right-s.right;}}});
   $('#content').querySelectorAll('[data-genre]').forEach(b=>b.onclick=()=>artistGenre(b.dataset.genre));
   if(artistTransition&&pendingArtistTransition===artistTransition){
