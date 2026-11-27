@@ -2,6 +2,7 @@ const views=new Set(['home','library','artists','random','top100','review','dupl
 export function navigationSnapshot(value={}){
  const result={view:views.has(value.view)?value.view:'home',page:Number.isSafeInteger(value.page)&&value.page>0?Math.min(value.page,100000):1};
  for(const key of ['artist','letter','category','search','genre','format','sort','seed','chart','album'])result[key]=typeof value[key]==='string'?value[key].slice(0,key==='search'?500:400):'';
+ result.artistGroup=result.view==='library'&&result.artist&&value.artistGroup==='work'?'work':'';
  result.panel=value.panel==='playlist'?'playlist':'';return result;
 }
 export function createNavigationHistory({window,onNavigate,onError=()=>{},urlForSnapshot=null}){
