@@ -43,3 +43,29 @@ main .toolbar[data-artist-home]+.results-line:has(.artist-home-title){margin-top
 
 /* W12 relationship layout: desktop side by side; mobile independent disclosure. */
 .artist-home .artist-relationship-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px;border-top:1px solid #e5dfd3;margin-top:14px;padding-top:10px}.artist-home .artist-relationship-layout.is-single{grid-template-columns:minmax(0,1fr)}.artist-relationship-block{min-width:0}.artist-home .artist-relationship-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;background:transparent;color:inherit;padding:0 0 7px;text-align:left;font:inherit;font-size:13px;font-weight:320;opacity:1}.artist-home .artist-relationship-toggle:disabled{cursor:default;opacity:1;color:inherit}.artist-home .artist-relationship-content[hidden]{display:none!important}.artist-home .artist-relationship-content>.artist-members,.artist-home .artist-relationship-content>.related-artists{margin:0;padding:0;border:0}.artist-home .artist-relationship-content>.artist-members>h2,.artist-home .artist-relationship-content .related-heading>h2{display:none}.artist-home .artist-relationship-content .related-heading:not(:has(button)){display:none}.artist-home .artist-relationship-content .related-heading{justify-content:flex-end}.artist-home .artist-relationship-content .related-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,145px),1fr))}.artist-relationship-toggle span{display:none}@media(max-width:600px){.artist-home .artist-relationship-layout{grid-template-columns:minmax(0,1fr);gap:0;padding-top:0}.artist-relationship-block+.artist-relationship-block{border-top:1px solid #e5dfd3}.artist-home .artist-relationship-toggle{min-height:40px;padding:5px 0;cursor:pointer}.artist-relationship-toggle span{display:block;width:7px;height:7px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg);margin-right:4px}.artist-relationship-toggle[aria-expanded=true] span{transform:rotate(225deg)}.artist-home .artist-relationship-content{padding-bottom:10px}}
+
+/* W12 relationship portraits: compact vertical rows, no identity guess or external photo. */
+.artist-home .artist-relationship-layout:not(.is-single)>.artist-relationship-block+.artist-relationship-block{border-left:1px solid #e5dfd3;padding-left:20px}
+.artist-home .artist-relationship-content .artist-members-group h3{font-size:12px;font-weight:320;margin:5px 0 7px;color:#827b6f}
+.artist-home .artist-members-group h3 small{font-size:11px;color:#9a9184;font-weight:320}
+.artist-home .artist-members-group+.artist-members-group{border-top:1px solid #eae5dc;padding-top:10px;margin-top:10px}
+.artist-home .artist-relation-list{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;max-width:650px}
+.artist-home .artist-relation-item{min-width:0}
+.artist-home .artist-relation-item>button.catalog-link,.artist-home .artist-relation-static{display:flex!important;align-items:center;gap:10px;width:100%;min-height:48px;padding:3px 5px!important;border:0!important;background:transparent;text-align:left;font:inherit;text-decoration:none!important;white-space:normal;border-radius:5px;color:#403e38}
+.artist-home .artist-relation-item>button.catalog-link{cursor:pointer}
+.artist-home .artist-relation-item>button.catalog-link:hover{background:#f6f3ed}
+.artist-home .artist-relation-item>button.catalog-link strong{color:#927a50}
+.artist-home .artist-relation-item>button.catalog-link:hover strong{text-decoration:underline;text-underline-offset:2px}
+.artist-home .artist-relation-thumb{position:relative;display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;background:#f0ece4;color:#a79b87;border-radius:5px;overflow:hidden}
+.artist-home .artist-relation-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}
+.artist-home .artist-relation-thumb.has-photo img{opacity:1}
+.artist-home .artist-relation-thumb.has-photo svg{visibility:hidden}
+.artist-home .artist-relation-info{display:grid;min-width:0;flex:1;gap:3px;overflow-wrap:anywhere}
+.artist-home .artist-relation-info strong{font-size:13px;font-weight:320;line-height:1.35}
+.artist-home .artist-relation-info small{font-size:11px;font-weight:320;color:#777;line-height:1.35}
+.artist-home .artist-relation-role{font-size:12px;font-weight:320;color:#777;text-align:right;max-width:38%;overflow-wrap:anywhere}
+.artist-home .artist-relation-arrow{font-size:17px;color:#a99e8b;flex:none}
+.artist-home .artist-relation-more summary{font-size:12px;color:#927a50;cursor:pointer;padding:5px;list-style:none}
+.artist-home .artist-relation-more summary::-webkit-details-marker{display:none}
+.artist-home .artist-relation-more:not([open]) .artist-more-close,.artist-home .artist-relation-more[open] .artist-more-open{display:none}
+@media(max-width:600px){.artist-home .artist-relationship-layout:not(.is-single)>.artist-relationship-block+.artist-relationship-block{border-left:0;padding-left:0}.artist-home .artist-relation-thumb{width:36px;height:36px;flex-basis:36px}.artist-home .artist-relation-item>button.catalog-link,.artist-home .artist-relation-static{gap:8px;min-height:42px}.artist-home .artist-relation-role{font-size:11px}}

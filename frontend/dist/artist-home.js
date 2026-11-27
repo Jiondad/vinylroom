@@ -1,7 +1,8 @@
 import {mergePublicRelated,relatedListMarkup} from './artist-relationship-links.js';
 import {publicMembers} from './artist-members.js';
 import {NAS_URL} from './config.js';
-import {mountArtistPortrait,ensureArtistGalleryStyle} from './artist-gallery-integration.js';
+import {mountArtistPortrait,ensureArtistGalleryStyle,ARTIST_MANIFEST,ARTIST_ASSETS} from './artist-gallery-integration.js';
+import {loadArtistProfiles,profileFor,sameOriginAssetBase} from './artist-image-core.js';
 const homeOwners=new WeakMap();
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export async function mountArtistHome(host,{name,albums=[],total,canManage=()=>false,onArtist=()=>{},photoManagement=null,loadArtistInfo=null}){
@@ -21,6 +22,19 @@ export async function mountArtistHome(host,{name,albums=[],total,canManage=()=>f
  media?.addEventListener('change',onLayout);owner.dispose=()=>{media?.removeEventListener('change',onLayout);disposePortrait?.();};
  function relationshipLayout(members,related){const blocks=[['members','Band Members'+(memberCount?' ('+memberCount+')':''),members],['related','관련 아티스트'+(manualRelated.length?' ('+manualRelated.length+')':''),related]].filter(x=>x[2]);return blocks.length?'<div class="artist-relationship-layout'+(blocks.length===1?' is-single':'')+'">'+blocks.map(([key,label,content])=>'<section class="artist-relationship-block" data-relationship="'+key+'"><button type="button" class="artist-relationship-toggle" aria-expanded="true">'+label+'<span aria-hidden="true"></span></button><div class="artist-relationship-content">'+content+'</div></section>').join('')+'</div>':'';}
 
+ // The same cached NAS manifest used by Artist Home/Gallery; no per-member API call.
+ function hydrateRelationshipPhotos(){
+  const slots=[...host.querySelectorAll('[data-relation-photo]')];if(!slots.length)return;
+  void loadArtistProfiles(ARTIST_MANIFEST).then(profiles=>{
+   if(!isHomeCurrent())return;
+   for(const slot of slots){if(!slot.isConnected||!host.contains(slot)||slot.querySelector('img'))continue;const entry=profileFor(profiles,slot.dataset.relationPhoto);
+    if(!entry||entry.assetBaseUrl!==ARTIST_ASSETS)continue;
+    const img=host.ownerDocument.createElement('img');img.alt='';img.loading='lazy';img.decoding='async';img.addEventListener('load',()=>{if(slot.contains(img))slot.classList.add('has-photo');},{once:true});img.addEventListener('error',()=>{img.remove();slot.classList.remove('has-photo');},{once:true});
+    img.src=new URL(entry.thumb,sameOriginAssetBase(ARTIST_ASSETS)).href;slot.append(img);
+    if(img.complete&&img.naturalWidth>0)slot.classList.add('has-photo');
+   }
+  }).catch(()=>{});
+ }
  function render(message=''){
  const existingPortrait=portraitStarted?host.querySelector('.artist-portrait-column'):null;
  if(!isHomeCurrent())return;
@@ -29,7 +43,7 @@ export async function mountArtistHome(host,{name,albums=[],total,canManage=()=>f
  const summary=introduction;
  host.innerHTML=`<section class="artist-home" aria-label="아티스트 홈"><div class="artist-profile"><div class="artist-portrait-column"><div class="artist-portrait" data-photo-state="loading" aria-busy="true"></div></div><div class="artist-intro"><h1>${esc(name)}</h1>${genre&&!['미분류','미확인'].includes(genre)?`<p class="artist-main-genre">${esc(genre)}</p>`:''}${summary?`<p class="artist-summary">${esc(summary)}</p>`:''}<p class="artist-holdings">소장 앨범 ${count.toLocaleString()}장</p></div></div>${relationshipLayout(memberMarkup,relatedMarkup())}<p class="artist-message" role="status">${esc(message)}</p></section>`;
  if(existingPortrait)host.querySelector('.artist-portrait-column').replaceWith(existingPortrait);
- syncRelationshipLayout();
+ syncRelationshipLayout();hydrateRelationshipPhotos();
  host.querySelectorAll('.artist-relationship-toggle').forEach(button=>button.onclick=()=>{if(!media?.matches)return;const key=button.closest('.artist-relationship-block').dataset.relationship;if(mobileOpen.has(key))mobileOpen.delete(key);else mobileOpen.add(key);syncRelationshipLayout();});
  const portrait=host.querySelector('.artist-portrait');
  if(!portraitStarted){portraitStarted=true;void mountArtistPortrait(portrait,name,isHomeCurrent,photoManagement).then(dispose=>{if(!isHomeCurrent())dispose();else disposePortrait=dispose;});}

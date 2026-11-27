@@ -5,7 +5,23 @@ export function normalizeTarget(v){if(v==null)return null;if(typeof v!=='object'
 export function relationshipName(row){let target=null;try{target=normalizeTarget(row.catalog_target);}catch{}return target?catalogLink('artist',target.name,row.name,{trusted:false}):esc(row.name);}
 export function normalizeRelated(input){if(!Array.isArray(input)||input.length>100)throw Error('관련 아티스트 목록을 확인하세요.');const seen=new Set(),keys=new Set();return input.map(row=>{if(!row||typeof row.name!=='string'||!row.name.trim()||row.name.length>250||typeof (row.label??'')!=='string'||(row.label??'').length>150||/[\x00-\x1f\x7f]/.test(row.name+(row.label??'')))throw Error('관련 아티스트 이름·관계를 확인하세요.');const name=row.name.trim(),label=(row.label??'').trim(),id=name.normalize('NFC').toLowerCase(),target=normalizeTarget(row.catalog_target);if(seen.has(id)||target&&keys.has(target.key))throw Error('중복 관련 아티스트: '+name);seen.add(id);if(target)keys.add(target.key);return {name,label,...(target?{catalog_target:target}:{})};});}
 export function mergePublicRelated(manual,reverse){const out=[],byKey=new Map();for(const row of [...(Array.isArray(manual)?manual:[]),...(Array.isArray(reverse)?reverse:[])]){if(typeof row?.name!=='string'||!row.name.trim())continue;let target=null;try{target=normalizeTarget(row.catalog_target);}catch{}const key=target?'key:'+target.key:'text:'+row.name.normalize('NFC').toLowerCase();let item=byKey.get(key);if(!item){item={name:row.name,labels:[],...(target?{catalog_target:target}:{})};out.push(item);byKey.set(key,item);}if(typeof row.label==='string'&&row.label&&!item.labels.includes(row.label))item.labels.push(row.label);}return out;}
-export function relatedListMarkup(rows){return rows.length?'<div class="artist-manual-related-grid">'+rows.map(row=>'<article><strong>'+relationshipName(row)+'</strong>'+(row.labels.length?'<small>'+esc(row.labels.join(' · '))+'</small>':'')+'</article>').join('')+'</div>':'';}
+// Public rows share one presentation; only an explicit NAS-validated target can link or load a photo.
+export function relationshipCard(row,{roles='',periods='',label=''}={}){
+ let target=null;try{target=normalizeTarget(row.catalog_target);}catch{}
+ const photo='<span class="artist-relation-thumb"'+(target?' data-relation-photo="'+esc(target.name)+'"':'')+' aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-2a7 7 0 0 1 14 0v2"/></svg></span>';
+ const info='<span class="artist-relation-info"><strong>'+esc(row.name)+'</strong>'+((label||periods)?'<small>'+esc([label,periods].filter(Boolean).join(' · '))+'</small>':'')+'</span>';
+ const content=photo+info+(roles?'<span class="artist-relation-role">'+esc(roles)+'</span>':'')+(target?'<span class="artist-relation-arrow" aria-hidden="true">›</span>':'');
+ // Use the existing verified Catalog navigation handler, not a new navigation path.
+ const link=target?catalogLink('artist',target.name,row.name,{trusted:false}):'';
+ const end='>'+esc(row.name)+'</button>';
+ return '<article class="artist-relation-item">'+(target&&link.endsWith(end)?link.slice(0,-end.length)+'>'+content+'</button>':'<div class="artist-relation-static">'+content+'</div>')+'</article>';
+}
+export function relationshipRows(rows,render,limit=5){
+ if(!rows.length)return '';
+ const first=rows.slice(0,limit).map(render).join(''),rest=rows.slice(limit);
+ return '<div class="artist-relation-list">'+first+(rest.length?'<details class="artist-relation-more"><summary><span class="artist-more-open">전체 보기 ('+rows.length+'명)</span><span class="artist-more-close">접기</span></summary><div class="artist-relation-list">'+rest.map(render).join('')+'</div></details>':'')+'</div>';
+}
+export function relatedListMarkup(rows){return relationshipRows(rows,row=>relationshipCard(row,{label:row.labels.join(' · ')}));}
 export function mountRelationshipPicker(host,row,search,onSelect){
  const doc=host.ownerDocument,node=(tag,txt)=>{const el=doc.createElement(tag);if(txt)el.textContent=txt;return el;};
  const box=node('div');box.className='artist-relationship-picker';
