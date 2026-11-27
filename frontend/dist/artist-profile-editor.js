@@ -122,7 +122,7 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
   const membersPanel=node('div');membersPanel.className='artist-editor-tab-panel';membersPanel.append(kindPanel);
   const relationshipsPanel=node('div');relationshipsPanel.className='artist-editor-tab-panel';relationshipsPanel.append(relatedPanel);
   const tabItems=[['basic','기본 정보',basicPanel],...(membersAvailable?[['members','유형·멤버',membersPanel]]:[]),...(canLink&&relatedEditor?[['related','관련 아티스트',relationshipsPanel]]:[])];
-  const tabButtons=[];function selectTab(id){for(const [key,,panel] of tabItems)panel.hidden=key!==id;for(const [key,b] of tabButtons){b.setAttribute('aria-selected',String(key===id));b.classList.toggle('is-active',key===id);}}
+  const tabButtons=[];let activeTab='basic';function selectTab(id){activeTab=id;for(const [key,,panel] of tabItems)panel.hidden=key!==id;for(const [key,b] of tabButtons){b.setAttribute('aria-selected',String(key===id));b.classList.toggle('is-active',key===id);}}
   for(const [key,label,panel] of tabItems){const b=node('button',label);b.type='button';b.setAttribute('role','tab');b.onclick=()=>selectTab(key);panel.setAttribute('role','tabpanel');tabs.append(b);tabButtons.push([key,b]);}
   selectTab('basic');const footer=node('div');footer.className='artist-editor-footer';footer.append(message,cancel);
   form.append(header,tabs,...tabItems.map(t=>t[2]),footer);cover.append(form);
@@ -134,7 +134,7 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
   async function change(action,extra={},introUpdate=null){
    if(!await verify())throw Error('관리자 권한을 다시 확인하세요.');
    kindPanel.disabled=true;relatedPanel.disabled=true;for(const button of controls.querySelectorAll('button'))button.disabled=true;
-   try{for(const step of (action==='delete'?['hide','clear']:action==='auto'?['clear','unhide']:[action]))await request('manage'+params,{body:{action:step,...extra}});if(introUpdate!==null&&action!=='introduction')await request('manage'+params,{body:{action:'introduction',introduction:introUpdate}});invalidateArtistProfiles(ARTIST_MANIFEST);originalIntro=intro.value;resetPhoto();file.value='';if(autoSelect)autoSelect.value='';message.textContent='기본 정보 저장 완료';await onUpdated();for(const button of controls.querySelectorAll('button'))button.disabled=false;}
+   try{for(const step of (action==='delete'?['hide','clear']:action==='auto'?['clear','unhide']:[action]))await request('manage'+params,{body:{action:step,...extra}});if(introUpdate!==null&&action!=='introduction')await request('manage'+params,{body:{action:'introduction',introduction:introUpdate}});invalidateArtistProfiles(ARTIST_MANIFEST);if(action!=='delete')originalIntro=intro.value;resetPhoto();file.value='';if(autoSelect)autoSelect.value='';message.textContent='기본 정보 저장 완료';await onUpdated();for(const button of controls.querySelectorAll('button'))button.disabled=false;}
    catch(err){message.textContent=err.message;}finally{kindPanel.disabled=false;relatedPanel.disabled=false;for(const button of controls.querySelectorAll('button'))button.disabled=false;}
   }
   memberSave.onclick=async()=>{if(!membersAvailable||!membersEditor)return;let payload;try{payload=memberUpdate(kindSelect.value,kindSelect.value==='group'?membersEditor.value():[],originalKind,originalMembers);if(!payload){message.textContent='변경할 유형이나 멤버 정보가 없습니다.';return;}}catch(err){message.textContent=err.message;return;}
@@ -150,6 +150,7 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
   hide.onclick=()=>void change('delete');
   form.onsubmit=async event=>{
    event.preventDefault();
+   if(activeTab!=='basic')return;
    const picked=chosenFile;
    const changedIntro=introAvailable&&intro.value!==originalIntro?intro.value:null;
    if(autoSelect?.value==='auto'){await change('auto',{},changedIntro);return;}
