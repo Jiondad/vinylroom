@@ -81,7 +81,7 @@ async function catalog(params,onFirst){
   return result;
  },params.get('view')==='random'?60000:20000);
 }
-const categories=['Studio','Live','Compilations','Singles & EPs','Bootlegs','ETC'];
+const categories=['Studio','Live','Compilations','Singles & EPs','Bootlegs','OST','ETC','미확인'];
 let category='';
 const letters=['0–9',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ',...'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ','기타'];
 function toast(s){$('#toast').textContent=s;$('#toast').classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').classList.remove('show'),6000);}
