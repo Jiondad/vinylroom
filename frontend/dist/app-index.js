@@ -1,3 +1,4 @@
+import {ARTIST_ALBUM_TYPES,artistCategoryCounts,paintArtistCategoryCounts} from './artist-category-counts.js';
 import {installButtonSystem} from './button-system.js';
 import {mountAlbumReference} from './reference-ui.js';
 import {installBackToTop} from './back-to-top.js';
@@ -81,8 +82,8 @@ async function catalog(params,onFirst){
   return result;
  },params.get('view')==='random'?60000:20000);
 }
-const categories=['Studio','Live','Compilations','Singles & EPs','Bootlegs','OST','ETC','미확인'];
-let category='';
+const categories=ARTIST_ALBUM_TYPES;
+let category='',lastArtistCategoryCounts=null;
 const letters=['0–9',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ',...'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ','기타'];
 function toast(s){$('#toast').textContent=s;$('#toast').classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').classList.remove('show'),6000);}
 function action(fn){return async e=>{const b=e?.currentTarget;if(b)b.disabled=true;try{await fn(e);}catch(err){toast(err.message);}finally{if(b?.isConnected)b.disabled=false;}};}
@@ -283,7 +284,7 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
   let html='';
   if(artist&&view==='library')html+='<div id="artist-home-host"></div>';
   if(view==='random')html+=`<div class="actions random-actions"><div class="vinyl-quick-actions"><button id="random-play" data-quick-label="▶ 전체재생" ${result.items.length?'':'disabled'} aria-label="전체 재생">전체 재생</button><button id="random-download" class="mobile-batch-download" data-quick-label="↓ 다운로드" ${result.items.length?'':'disabled'} aria-label="현재 목록 전체 다운로드">다운로드</button><button id="random-queue" data-quick-label="＋ 대기열" ${result.items.length?'':'disabled'} aria-label="대기열에 모두 추가">대기열에 모두 추가</button><button id="random-save" data-quick-label="♫ 플리저장" ${result.items.length?'':'disabled'} aria-label="플레이리스트에 저장">플레이리스트에 저장</button></div></div>`;
-  if(artist&&effectiveView==='library')html+=`<nav class="category-filter" aria-label="앨범 분류"><button data-category="" aria-pressed="${!category}">전체</button>${categories.map(c=>`<button data-category="${esc(c)}" aria-pressed="${c===category}">${esc(c)}</button>`).join('')}</nav>`;
+  if(artist&&effectiveView==='library')html+=`<nav class="category-filter" data-artist-category-counts aria-label="앨범 분류">${['',...categories].map(c=>`<button data-category="${esc(c)}" aria-pressed="${c===category}">${esc(c||'전체')}<span class="artist-category-count" hidden></span></button>`).join('')}</nav><p class="artist-category-unmapped" hidden></p>`;
   if(artist&&state.categories_ready===false)html+='<p class="hint">NAS 폴더 기준으로 분류를 갱신 중입니다. 기존 목록은 계속 이용할 수 있습니다.</p>';
   if(view==='random'){
    html+=`<div class="random-grid">${result.items.map(t=>`<article class="random-track"><button class="random-song-card" ${isApprovedMember()?`data-random-track="${esc(t.album_id)}:${t.track_index}" data-search-play="${esc(t.album_id)}" data-song-index="${t.track_index}" aria-label="${esc(t.title)} 재생. 빠르게 두 번 터치하면 대기열에 추가"`:`data-open="${esc(t.album_id)}" aria-label="${esc(t.title)} · 앨범 상세"`}>${cover({id:t.album_id,title:t.album_title,artist:t.artist})}<strong title="${esc(t.title)}">${esc(t.title)}</strong></button><div class="random-track-info">${randomCatalogLabel('artist',t.artist,t.artist)}${randomCatalogLabel('album',t.album_id,t.album_title)}</div></article>`).join('')}</div>`;
@@ -325,7 +326,10 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
   }
   if(artist&&view==='library'){
    const profileArtist=artist,homeHost=$('#artist-home-host');
-   void mountArtistHome(homeHost,{name:profileArtist,albums:result.items,total:result.total,canManage:()=>repo.admin&&isApprovedMember(),onArtist:browseArtist,photoManagement:repo.admin&&isApprovedMember()?artistProfileManager:null,loadArtistInfo:async()=>{const r=await api('/v2/albums?'+new URLSearchParams({view:'artists',artist:profileArtist,page:'1'}));return r.items?.find(row=>row.name===profileArtist);}});
+   const categoryNav=$('#content [data-artist-category-counts]'),categoryNotice=$('#content .artist-category-unmapped');
+   if(lastArtistCategoryCounts?.name!==profileArtist)lastArtistCategoryCounts=null;
+   paintArtistCategoryCounts(categoryNav,categoryNotice,lastArtistCategoryCounts);
+   void mountArtistHome(homeHost,{name:profileArtist,albums:result.items,total:lastArtistCategoryCounts?.total??result.total,canManage:()=>repo.admin&&isApprovedMember(),onArtist:browseArtist,photoManagement:repo.admin&&isApprovedMember()?artistProfileManager:null,loadArtistInfo:async()=>{try{const r=await api('/v2/albums?'+new URLSearchParams({view:'artists',artist:profileArtist,page:'1'}));const row=r.items?.find(row=>row.name===profileArtist);if(token===generation&&view==='library'&&artist===profileArtist&&homeHost.isConnected){lastArtistCategoryCounts=artistCategoryCounts(row,profileArtist);paintArtistCategoryCounts(categoryNav,categoryNotice,lastArtistCategoryCounts);}return row;}catch(e){if(token===generation&&view==='library'&&artist===profileArtist&&homeHost.isConnected){lastArtistCategoryCounts=null;paintArtistCategoryCounts(categoryNav,categoryNotice,null);}throw e;}}});
    if(repo.admin&&isApprovedMember()&&!artistProfileManager.enabled())void artistProfileManager.verify().then(ok=>{
     if(!ok||token!==generation||view!=='library'||artist!==profileArtist||!homeHost.isConnected)return;
     const column=homeHost.querySelector('.artist-portrait-column');
