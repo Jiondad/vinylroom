@@ -31,7 +31,8 @@ export function updateSynthetic(r,id,revision,patch,authorized){
  if(Object.keys(patch).some(k=>!allowed.includes(k)))throw Error('지원하지 않는 필드');
  const next=structuredClone(r);Object.assign(next.artists.find(p=>p.id===id),patch,{revision:revision+1,updated:new Date().toISOString()});validateRegistry(next);return next;
 }
-let adapter={synthetic:false,load:async()=>structuredClone((await import('./artist-verified-sidecar.js')).default)};
+// No bundled artist records. Legacy helpers remain available for isolated tests.
+let adapter={synthetic:false,load:async()=>({version:1,artists:[],bindings:[],relationships:[]})};
 export function configureArtistMetadata(next){if(!next||typeof next.load!=='function')throw Error('metadata adapter 필요');adapter=next;}
 export function artistMetadataAdapter(){return adapter;}
 
