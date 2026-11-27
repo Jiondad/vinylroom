@@ -116,6 +116,23 @@ async function restoreLastEditorAlbum(){
   if(stillCurrent())$('#loadStatus').textContent='이전 앨범 재조회 실패 · '+e.message;
  }
 }
+// Update only metadata and tree labels; never replace cover nodes, drafts or selection.
+function applyCatalogHeader(a){
+ const current=S.album;
+ if(!current||!a||typeof a.title!=='string'||typeof a.artist!=='string'||typeof a.date!=='string')return false;
+ const member=current.disc_group?current.discs.find(d=>d.id===a.id):current.id===a.id?current:null;
+ if(!member||member.path!==a.path)return false;
+ for(const n of S.nodes.values())if(n.album?.id===a.id&&(n.album.relative_path||n.album.path)===a.path){
+  Object.assign(n.album,{title:a.title,artist:a.artist,date:a.date});n.name=a.title;
+ }
+ if(!current.disc_group||current.discs[0].id===a.id){
+  Object.assign(current,{title:a.title,artist:a.artist,date:a.date});
+  const header=$('#albumHeader');
+  header.querySelector('h2').textContent=current.title+(current.disc_group?' · CD 통합':'');
+  header.querySelector('p').textContent=current.disc_group?current.artist+' · '+current.discs.length+'개 디스크 · '+current.entries.length+'곡 · 디스크별 확인 후 통합 NAS 저장':current.artist+' · '+(current.date||'연도 없음');
+ }
+ renderTree();rememberEditorView();return true;
+}
 async function syncSavedCatalog(ids){
  if(catalogSyncBusy)return 'Catalog 갱신 진행 중';
  const targets=[...new Set(ids)],viewId=S.album?.id;if(!viewId||!targets.length)return 'Catalog 갱신 대상 없음';
@@ -130,13 +147,13 @@ async function syncSavedCatalog(ids){
    for(let n=0;n<90;n++){
     if(S.album?.id!==viewId)throw Error('앨범 선택 변경');
     const result=await api('/api/catalog-sync/status',{album_id:id});
-    if(result.state==='CATALOG_SYNC_COMPLETED'&&result.job_id===start.job_id){count++;done=true;break;}
+    if(result.state==='CATALOG_SYNC_COMPLETED'&&result.job_id===start.job_id){if(!applyCatalogHeader(result.album))throw Error('색인 완료 · 상단 정보 식별 확인 필요');count++;done=true;break;}
     if(result.state!=='CATALOG_SYNC_PENDING'||result.job_id!==start.job_id)throw Error(result.reason||'색인 결과 확인 필요');
     await new Promise(resolve=>setTimeout(resolve,2000));
    }
    if(!done)throw Error('색인 완료 대기 초과 · 색인 관리 확인 필요');
   }
-  const message='Catalog 색인 완료 · '+count+'/'+targets.length+' 앨범 · 원본 UUID·경로 확인';
+  const message='Catalog 색인 완료 · '+count+'/'+targets.length+' 앨범 · 원본 UUID·경로 확인 · 앨범 정보 갱신';
   $('#catalogSyncStatus').textContent=message;return message;
  }catch(e){const message='Catalog 갱신 미완료 · '+count+'/'+targets.length+' 앨범 · '+e.message+' · 기존 저장 음원 재저장 불필요';$('#catalogSyncStatus').textContent=message;return message;}
  finally{catalogSyncBusy=false;$('#catalogSync').disabled=!S.album||tagSaveBusy;}
@@ -159,7 +176,7 @@ async function selectAlbum(id){if(tagSaveBusy){toast('NAS 저장 중에는 앨�
    throw Error('앨범 범위 밖 또는 중복 트랙 경로가 발견되었습니다.');
   files.add(entry.file);
  }
- S.album=album;$('#albumHeader .folder-path').textContent=album.path||'';$('#albumHeader .folder-path').title=album.path||'';S.original=clone(album.entries);const saved=S.drafts.get(id+'|shared'),valid=saved?.original===JSON.stringify(S.original);S.draft=clone(valid?saved.draft:album.entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};S.selected=new Set();S.anchor=null;syncMultiTags();$('#loadStatus').textContent='';$('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();rememberEditorView();
+ S.album=album;applyCatalogHeader({id:album.id,path:album.path,title:String(album.title||''),artist:String(album.artist||''),date:String(album.date||'')});$('#albumHeader .folder-path').textContent=album.path||'';$('#albumHeader .folder-path').title=album.path||'';S.original=clone(album.entries);const saved=S.drafts.get(id+'|shared'),valid=saved?.original===JSON.stringify(S.original);S.draft=clone(valid?saved.draft:album.entries);S.renames=valid?clone(saved.renames):{};S.warnings=valid?clone(saved.warnings):{};S.selected=new Set();S.anchor=null;syncMultiTags();$('#loadStatus').textContent='';$('#bulkApply').disabled=false;$('#resetBtn').disabled=false;renderTracks();rememberEditorView();
  if(refreshView?.album?.id===id&&Number.isFinite(refreshView.scrollTop))requestAnimationFrame(()=>{$('#artistScroll').scrollTop=refreshView.scrollTop;});const measurement={album_id:id,...metrics,display_ms:performance.now()-started};S.metrics.push(measurement);parent.postMessage({type:'vr-tag-measured',channel,measurement},location.origin);$('#albumHeader').dataset.readMetrics=JSON.stringify(measurement);window.vrTagEditorLastSelection=measurement;window.dispatchEvent(new CustomEvent('vr-tag-selection-measured',{detail:measurement}));
  if(matchMedia('(max-width:650px)').matches){$('.browser').classList.add('collapsed');$('#browseToggle').textContent='펼치기';$('#browseToggle').setAttribute('aria-expanded','false');}
  }catch(e){if(gate.current(ticket)&&e.message!=='selection_superseded'){$('#loadStatus').textContent=e.message;renderTracks('조회 실패 · 왼쪽 앨범을 다시 선택하세요.');}}

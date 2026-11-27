@@ -3,6 +3,10 @@ import {coverMemberImage,clearMemberImage,invalidateAlbumCover} from './member-i
 const UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 const norm=s=>String(s||'').normalize('NFKC').trim().toLocaleLowerCase();
 const list=v=>Array.isArray(v)?v.map(String):v==null?[]:[String(v)];
+export function catalogHeader(a,id,path){
+ if(a?.id!==id||a.relative_path!==path||a.missing||a.hidden||typeof a.title!=='string'||typeof a.artist!=='string')throw Error('Catalog 앨범 정보 식별 불일치');
+ return {id,path,title:a.title,artist:a.artist,date:String(a.original_year||a.release_year||'')};
+}
 export function indexedTagAlbum(a,id){
  if(a?.id!==id||a.missing||a.hidden)throw Error('활성 앨범 식별을 확인할 수 없습니다.');
  const files=a.physical_files;
@@ -61,7 +65,7 @@ export function createTagReader({api,canManage,signal,initialAlbumId=null}){
    if(job.state!=='completed'||(Array.isArray(job.errors)?job.errors.length:!!job.errors)||Number(job.missing||0)>0)return hold('색인 완료 확인 실패: '+job.state);
    detailCache.delete(id);const updated=await detail(id);
    if(updated.id!==id||updated.relative_path!==path||updated.missing||updated.hidden)return hold('Catalog 앨범 UUID·경로 변경 확인 필요');
-   syncJobs.delete(id);return {state:'CATALOG_SYNC_COMPLETED',album_id:id,job_id:jobId,updated:job.updated,unchanged:job.unchanged};
+   const album=catalogHeader(updated,id,path);syncJobs.delete(id);return {state:'CATALOG_SYNC_COMPLETED',album_id:id,job_id:jobId,updated:job.updated,unchanged:job.unchanged,album};
   }
   if(u.pathname==='/api/save-capabilities')return get('/v2/admin/tag-cover/save-capabilities');
   if(['/api/rename/plan','/api/rename/apply','/api/rename/restore'].includes(u.pathname)){
@@ -150,7 +154,7 @@ export function createTagReader({api,canManage,signal,initialAlbumId=null}){
      if(typeof e.file!=='string'||!e.file.startsWith(a.path+'/')||e.file.startsWith('/')||e.file.includes('\\')||e.file.split('/').some(p=>!p||p==='.'||p==='..')||seen.has(e.file)||!e.tags)throw Error('실제 파일 식별 불일치');
      seen.add(e.file);return {...e,relative_file:e.file};
     });
-    album={id,artist:a.artist,title:a.title,date:a.year||'',path:a.path,count:entries.length,entries,source:'NAS_ACTUAL_AUDIO_TAGS'};
+    album={...catalogHeader(indexed,id,a.path),count:entries.length,entries,source:'NAS_ACTUAL_AUDIO_TAGS'};
    }else album=indexedTagAlbum(indexed,id);
    coverFiles.set(id,new Map(album.entries.filter(e=>e.relative_file).map(e=>[e.file,e.relative_file])));scopes.set(id,album.path);return {album};
   }
@@ -165,7 +169,7 @@ export function mountTagEditor({container,api,canManage,loadCover=coverMemberIma
  function updateViewport(){viewportTick=0;if(controller.signal.aborted||!canManage())return;const r=frame.getBoundingClientRect();frame.contentWindow?.postMessage({type:'vr-tag-viewport',channel,top:Math.max(0,-r.top),height:Math.max(240,innerHeight-Math.max(0,r.top)-12)},location.origin);}
  function scheduleViewport(){if(!viewportTick)viewportTick=requestAnimationFrame(updateViewport);}
  window.addEventListener('scroll',scheduleViewport,{passive:true});window.addEventListener('resize',scheduleViewport);
- frame.src=new URL('tag-editor-ui.html?v=20261127-catalog-sync',document.baseURI).href;
+ frame.src=new URL('tag-editor-ui.html?v=20261127-catalog-header',document.baseURI).href;
  const allowedInitialAlbum=initialAlbum&&UUID.test(initialAlbum.id||'')?{id:initialAlbum.id,title:String(initialAlbum.title||''),artist:String(initialAlbum.artist||''),date:String(initialAlbum.date||''),relative_path:String(initialAlbum.relative_path||'')}:null;
  const read=createTagReader({api,canManage:()=>!controller.signal.aborted&&canManage(),signal:controller.signal,initialAlbumId:allowedInitialAlbum?.id});
  // Bounded concurrent reads: a stale browse cannot monopolize the selected album.
