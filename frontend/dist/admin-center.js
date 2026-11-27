@@ -1,4 +1,4 @@
-import {mountTagEditor} from './tag-editor-host.js?v=20261127-rename-fullwidth';
+import {mountTagEditor} from './tag-editor-host.js?v=20261127-rename-fullwidth-v2';
 import {aiOperationStatus,renderAiOperationStatus,renderAutofillProgress,renderUnifiedClassification} from './ai-operation-status.js';
 import {attachReviewToAdminPanel} from './admin-ai-review-panel.js';
 import {REVIEW_ENDPOINT} from './admin-ai-review-report.js';

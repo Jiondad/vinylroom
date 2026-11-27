@@ -1,5 +1,5 @@
 // Browser-only draft operations. Reuses Phase 2C conversion/number calculations unchanged.
-import {previewPlan} from './tag-editor-plan.js?v=20261122-default-rename';
+import {previewPlan} from './tag-editor-plan.js?v=20261127-rename-fullwidth';
 const clone=v=>structuredClone(v),same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export const fields={title:'TITLE',artist:'ARTIST',featuring:'FEATURING',genre:'GENRE',tracknumber:'TRACKNUMBER',discnumber:'DISCNUMBER',album:'ALBUM',album_artist:'ALBUMARTIST',date:'DATE'};
 export const values=(e,f)=>(e?.tags?.[f]||[]).join(' | ');
