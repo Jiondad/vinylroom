@@ -1,5 +1,5 @@
 import {applyBulkDraft,fields,values,selectionGate} from './tag-editor-draft.js?v=20261122-default-rename';
-import {previewPlan} from './tag-editor-plan.js?v=20261122-default-rename';
+import {previewPlan} from './tag-editor-plan.js?v=20261127-rename-fullwidth';
 import {installTagCoverDraft} from './tag-editor-cover-draft.js?v=20261127-catalog-sync';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),clone=v=>structuredClone(v),base=f=>f.split('/').pop();
 const S={album:null,original:[],draft:[],selected:new Set(),renames:{},warnings:{},drafts:new Map(),nodes:new Map(),active:'',search:[],metrics:[],anchor:null,visible:[]};
