@@ -1,4 +1,5 @@
 import {parseOriginalDate} from './ai-original-date.js';
+import {catalogTypeLabel} from './ai-type-presentation.js';
 export function albumYear(album={}) { return album.original_year||album.release_year||''; }
 // original_year in list responses can be coalesced from an edition date.
 // Expand only with matching original-date tag evidence; never parse a folder.
@@ -69,6 +70,6 @@ export function qualityLabel(album={}) {
 }
 export function albumFacts(album={}) {
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const rows=[['발매일',albumDetailReleaseDate(album)],['유형',album.category],['장르',album.genre||album.styles?.join(', ')],['레이블',album.label],['음질',qualityLabel(album)]];
+ const rows=[['발매일',albumDetailReleaseDate(album)],['유형',catalogTypeLabel(album.category)],['장르',album.genre||album.styles?.join(', ')],['레이블',album.label],['음질',qualityLabel(album)]];
  return `<dl class="album-facts">${rows.map(([label,value])=>`<dt>${label}</dt><dd>${esc(value||'미확인')}</dd>`).join('')}</dl>`;
 }

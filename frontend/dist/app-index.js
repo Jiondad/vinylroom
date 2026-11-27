@@ -27,6 +27,7 @@ import {connectAccount,login as openAccount,signupRequest,currentMemberToken,isA
 import {attachArtwork} from './artwork-ui.js';
 import {searchField} from './search-presentation.js';
 import {albumReleaseDate,albumYear,formatLabel,statsMarkup,albumFacts} from './presentation.js';
+import {catalogTypeLabel} from './ai-type-presentation.js';
 import {getPlayer,describeTrack,playItem} from './player.js';
 import {mountPlaybackDiagnostics} from './playback-diagnostics.js';
 import {Repository} from './store.js';
@@ -298,7 +299,7 @@ async function render(resetScroll=false,fromHistory=false,artistTransition=null)
    html+='</div>';
   }else{
    if(view==='duplicates')html+='<p class="hint">아티스트와 제목이 같은 비교 후보입니다. 동일 음원으로 확정한 결과가 아닙니다.</p>';
-   html+=`<div class="grid">${result.items.map(a=>`<article class="album"><button class="album-open" data-open="${esc(a.id)}" aria-label="${esc(a.title)} 상세">${cover(a)}<h3 title="${esc(a.title)}">${esc(a.title)}</h3></button><button class="artist-name album-artist-link" data-index-artist="${esc(a.artist)}" aria-label="${esc(a.artist)} 전체 앨범 보기">${esc(a.artist)}</button><div class="album-info-row"><span>${esc(albumReleaseDate(a)||'연도 미확인')}</span><span>${esc(a.category||'미확인')}</span></div><div class="album-info-row"><span class="album-card-genre" title="${esc(a.genre||'미분류')}">${esc(a.genre||'미분류')}</span><span class="album-card-quality">${esc(formatLabel(a))}</span></div></article>`).join('')}</div>`;
+   html+=`<div class="grid">${result.items.map(a=>`<article class="album"><button class="album-open" data-open="${esc(a.id)}" aria-label="${esc(a.title)} 상세">${cover(a)}<h3 title="${esc(a.title)}">${esc(a.title)}</h3></button><button class="artist-name album-artist-link" data-index-artist="${esc(a.artist)}" aria-label="${esc(a.artist)} 전체 앨범 보기">${esc(a.artist)}</button><div class="album-info-row"><span>${esc(albumReleaseDate(a)||'연도 미확인')}</span><span>${esc(catalogTypeLabel(a.category))}</span></div><div class="album-info-row"><span class="album-card-genre" title="${esc(a.genre||'미분류')}">${esc(a.genre||'미분류')}</span><span class="album-card-quality">${esc(formatLabel(a))}</span></div></article>`).join('')}</div>`;
   }
   if(!result.items.length)html+='<p class="empty">해당 목록이 없습니다. 색인 상태 또는 검색 조건을 확인하세요.</p>';
   // Commit view styles with their content to keep the old grid stable while loading.
@@ -460,7 +461,7 @@ function openAlbumCover(albumId,fallback){
 }
 function edit(a){
  const fields=[['artist','아티스트'],['title','앨범명'],['original_year','원발매일'],['release_year','판본 발매일'],['edition','판본'],['label','레이블'],['catalog_number','카탈로그 번호'],['country','국가'],['performance_date','공연 날짜'],['venue','장소'],['recording_source','녹음 출처'],['genre','장르']];
- modal('앨범 정보 수정',`<form id="edit-form"><div class="fields">${fields.map(([k,l])=>`<label>${l}<input name="${k}" value="${esc(a[k])}" maxlength="500"></label>`).join('')}<label>앨범 분류<input value="${esc(a.category||'Studio')}" disabled><small>NAS 분류 폴더를 이동한 후 재색인하면 변경됩니다.</small></label><label>장르 적용<select name="genre_mode"><option value="inherit">아티스트 기본값</option><option value="override" ${a.genre_mode==='override'?'selected':''}>개별 지정</option></select></label><label>세부 장르<input name="styles" value="${esc((a.styles||[]).join(', '))}"></label><label class="full">메모<textarea name="notes">${esc(a.notes)}</textarea></label></div><p class="hint">변경한 항목은 자동 색인에서도 보존됩니다. 음악 파일은 수정하지 않습니다.</p><button type="submit">저장</button></form>`);
+ modal('앨범 정보 수정',`<form id="edit-form"><div class="fields">${fields.map(([k,l])=>`<label>${l}<input name="${k}" value="${esc(a[k])}" maxlength="500"></label>`).join('')}<label>앨범 분류<input value="${esc(catalogTypeLabel(a.category))}" disabled><small>NAS 분류 폴더를 이동한 후 재색인하면 변경됩니다.</small></label><label>장르 적용<select name="genre_mode"><option value="inherit">아티스트 기본값</option><option value="override" ${a.genre_mode==='override'?'selected':''}>개별 지정</option></select></label><label>세부 장르<input name="styles" value="${esc((a.styles||[]).join(', '))}"></label><label class="full">메모<textarea name="notes">${esc(a.notes)}</textarea></label></div><p class="hint">변경한 항목은 자동 색인에서도 보존됩니다. 음악 파일은 수정하지 않습니다.</p><button type="submit">저장</button></form>`);
  $('#edit-form').onsubmit=action(async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.styles=f.styles.split(',').map(x=>x.trim()).filter(Boolean);const changed=Object.fromEntries(Object.entries(f).filter(([k,v])=>JSON.stringify(v)!==JSON.stringify(k==='category'&&a.category_source!=='manual'?'auto':a[k]??'')));await api('/v2/edit',{admin:true,body:{id:a.id,fields:changed}});$('#dialog').close();await detail(a.id);render();});
 }
 function artistGenre(name){modal('아티스트 장르',`<form id="artist-form"><p>${esc(name)}</p><select name="genre">${GENRES.map(g=>`<option>${esc(g)}</option>`).join('')}</select><button>저장</button></form>`);$('#artist-form').onsubmit=action(async e=>{e.preventDefault();await api('/v2/artist',{admin:true,body:{name,genre:new FormData(e.target).get('genre')}});$('#dialog').close();render();});}
