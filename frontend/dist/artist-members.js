@@ -1,4 +1,4 @@
-import {normalizeTarget,relationshipName,mountRelationshipPicker} from './artist-relationship-links.js';
+import {normalizeTarget,relationshipName,mountCompactRelationshipEditor} from './artist-relationship-links.js';
 // W12 manual artist membership. No inferred identity or external calls.
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text=(v,max,label)=>{if(typeof v!=='string'||v.length>max||/[\x00-\x1f\x7f]/.test(v))throw Error(label+' 형식을 확인하세요.');return v.trim();};
@@ -30,10 +30,4 @@ export function memberUpdate(kind,rows,originalKind,originalRows){
  const members=normalizeMembers(rows);
  return kind===originalKind&&JSON.stringify(members)===JSON.stringify(originalRows)?null:{artist_kind:kind,members};
 }
-export function mountMembersEditor(host,input,search=null){
- const doc=host.ownerDocument;let rows=normalizeMembers(input);const node=(tag,txt)=>{const el=doc.createElement(tag);if(txt)el.textContent=txt;return el;};
- const button=(label,action)=>{const b=node('button',label);b.type='button';b.onclick=action;return b;};
- const field=(label,value,change,max)=>{const l=node('label',label),i=node('input');i.value=value;i.maxLength=max;i.oninput=()=>change(i.value);l.append(i);return l;};
- function draw(){host.replaceChildren();rows.forEach((m,index)=>{const row=node('div');row.className='artist-member-edit-row';const nameField=field('이름',m.name,v=>m.name=v,150);if(m.catalog_target)nameField.querySelector('input').readOnly=true;row.append(nameField,field('담당 파트',m.roles,v=>m.roles=v,150));if(search)mountRelationshipPicker(row,m,search,t=>{if(t){m.catalog_target=t;m.name=t.name;}else delete m.catalog_target;draw();});const label=node('label','상태'),select=node('select');Object.entries(statuses).forEach(([v,t])=>{const opt=node('option',t);opt.value=v;select.append(opt);});select.value=m.status;select.onchange=()=>m.status=select.value;label.append(select);row.append(label);m.periods.forEach((p,i)=>{const period=node('div');period.className='artist-member-edit-period';period.append(field('가입 연도',p.begin,v=>p.begin=v,4),field('탈퇴 연도',p.end,v=>p.end=v,4),button('기간 삭제',()=>{m.periods.splice(i,1);draw();}));row.append(period);});row.append(button('활동 기간 추가',()=>{if(m.periods.length<12){m.periods.push({begin:'',end:''});draw();}}),button('멤버 삭제',()=>{rows.splice(index,1);draw();}));host.append(row);});host.append(button('멤버 추가',()=>{if(rows.length<100){rows.push({name:'',roles:'',status:'current',periods:[]});draw();}}));}
- draw();return {value:()=>normalizeMembers(rows),dispose:()=>host.replaceChildren()};
-}
+export function mountMembersEditor(host,input,search=null){return mountCompactRelationshipEditor(host,input,{search,normalize:normalizeMembers,member:true});}
