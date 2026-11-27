@@ -9,8 +9,8 @@ export function mergePublicRelated(manual,reverse){const out=[],byKey=new Map();
 export function relationshipCard(row,{roles='',periods='',label=''}={}){
  let target=null;try{target=normalizeTarget(row.catalog_target);}catch{}
  const photo='<span class="artist-relation-thumb"'+(target?' data-relation-photo="'+esc(target.name)+'"':'')+' aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-2a7 7 0 0 1 14 0v2"/></svg></span>';
- const info='<span class="artist-relation-info"><strong>'+esc(row.name)+'</strong>'+((label||periods)?'<small>'+esc([label,periods].filter(Boolean).join(' · '))+'</small>':'')+'</span>';
- const content=photo+info+(roles?'<span class="artist-relation-role">'+esc(roles)+'</span>':'')+(target?'<span class="artist-relation-arrow" aria-hidden="true">›</span>':'');
+ const info='<span class="artist-relation-info"><strong>'+esc(row.name)+'</strong>'+((roles||label)?'<small class="artist-relation-subtitle">'+esc([roles,label].filter(Boolean).join(' · '))+'</small>':'')+'</span>';
+ const content=photo+info+(periods?'<span class="artist-relation-period">'+esc(periods)+'</span>':'')+(target?'<span class="artist-relation-arrow" aria-hidden="true">›</span>':'');
  // Use the existing verified Catalog navigation handler, not a new navigation path.
  const link=target?catalogLink('artist',target.name,row.name,{trusted:false}):'';
  const end='>'+esc(row.name)+'</button>';
