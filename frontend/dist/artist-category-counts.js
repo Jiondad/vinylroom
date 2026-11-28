@@ -42,10 +42,15 @@ export function artistWorkListLabel(category,result){
  return (category||'전체')+' · 표시 '+result.total.toLocaleString()+'개 / 소장본 '+result.holdings_total.toLocaleString()+'장';
 }
 export function artistWorkEdition(row){
- const e=row?.edition;
- if(typeof e==='string')return e.trim();
- if(Array.isArray(e?.attributes))return e.attributes.filter(x=>typeof x==='string'&&x.trim()).join(' · ');
- return '';
+ let e=row?.edition;
+ // SQLite json_extract returns structured edition metadata as JSON text.
+ if(typeof e==='string'){
+  e=e.trim();
+  if(!/^[{\[]/.test(e))return e;
+  try{e=JSON.parse(e);}catch{return '';}
+ }
+ const attributes=Array.isArray(e)?e:e?.attributes;
+ return Array.isArray(attributes)?attributes.filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim()).join(' · '):'';
 }
 export function artistWorkMemberMarkup(a,{esc,formatLabel,catalogTypeLabel}){
  if(!(a.holding_count>1)||!Array.isArray(a.work_members))return '';
