@@ -1,4 +1,4 @@
-import {mergePublicRelated,relatedListMarkup} from './artist-relationship-links.js';
+import {mergePublicRelated,relatedListMarkup,relationshipPhotoPath} from './artist-relationship-links.js';
 import {publicMembers} from './artist-members.js';
 import {NAS_URL} from './config.js';
 import {mountArtistPortrait,ensureArtistGalleryStyle,ARTIST_MANIFEST,ARTIST_ASSETS} from './artist-gallery-integration.js';
@@ -24,15 +24,17 @@ export async function mountArtistHome(host,{name,albums=[],total,canManage=()=>f
 
  // The same cached NAS manifest used by Artist Home/Gallery; no per-member API call.
  function hydrateRelationshipPhotos(){
+  function attach(slot,path){
+   if(!isHomeCurrent()||!slot.isConnected||!host.contains(slot)||slot.querySelector('img')||!relationshipPhotoPath(path))return;
+   const img=host.ownerDocument.createElement('img');img.alt='';img.loading='lazy';img.decoding='async';img.addEventListener('load',()=>{if(slot.contains(img))slot.classList.add('has-photo');},{once:true});img.addEventListener('error',()=>{img.remove();slot.classList.remove('has-photo');},{once:true});
+   img.src=new URL(path,sameOriginAssetBase(ARTIST_ASSETS)).href;slot.append(img);
+   if(img.complete&&img.naturalWidth>0)slot.classList.add('has-photo');
+  }
+  for(const slot of host.querySelectorAll('[data-relation-direct-photo]'))attach(slot,slot.dataset.relationDirectPhoto);
   const slots=[...host.querySelectorAll('[data-relation-photo]')];if(!slots.length)return;
   void loadArtistProfiles(ARTIST_MANIFEST).then(profiles=>{
    if(!isHomeCurrent())return;
-   for(const slot of slots){if(!slot.isConnected||!host.contains(slot)||slot.querySelector('img'))continue;const entry=profileFor(profiles,slot.dataset.relationPhoto);
-    if(!entry||entry.assetBaseUrl!==ARTIST_ASSETS)continue;
-    const img=host.ownerDocument.createElement('img');img.alt='';img.loading='lazy';img.decoding='async';img.addEventListener('load',()=>{if(slot.contains(img))slot.classList.add('has-photo');},{once:true});img.addEventListener('error',()=>{img.remove();slot.classList.remove('has-photo');},{once:true});
-    img.src=new URL(entry.thumb,sameOriginAssetBase(ARTIST_ASSETS)).href;slot.append(img);
-    if(img.complete&&img.naturalWidth>0)slot.classList.add('has-photo');
-   }
+   for(const slot of slots){const entry=profileFor(profiles,slot.dataset.relationPhoto);if(entry?.assetBaseUrl===ARTIST_ASSETS)attach(slot,entry.thumb);}
   }).catch(()=>{});
  }
  function render(message=''){

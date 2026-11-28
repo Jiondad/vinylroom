@@ -1,4 +1,4 @@
-import {normalizeTarget,relationshipCard,relationshipRows,mountCompactRelationshipEditor} from './artist-relationship-links.js';
+import {normalizeTarget,relationshipCard,relationshipRows,mountCompactRelationshipEditor,relationshipPhotoFields} from './artist-relationship-links.js';
 // W12 manual artist membership. No inferred identity or external calls.
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text=(v,max,label)=>{if(typeof v!=='string'||v.length>max||/[\x00-\x1f\x7f]/.test(v))throw Error(label+' 형식을 확인하세요.');return v.trim();};
@@ -19,7 +19,7 @@ export function normalizeMembers(input){
  return out;
 }
 export function renderMembers(input){
- const rows=normalizeMembers(input);if(!rows.length)return '';
+ const rows=normalizeMembers(input).map((r,i)=>({...r,...relationshipPhotoFields(input[i])}));if(!rows.length)return '';
  const period=p=>p.begin&&p.end?p.begin+'–'+p.end:p.begin?p.begin+'–':'–'+p.end;
  return '<section class="artist-members" aria-label="밴드 멤버"><h2>Band Members</h2>'+Object.entries(statuses).map(([status,label])=>{const members=rows.filter(m=>m.status===status);return members.length?'<div class="artist-members-group"><h3>'+label+' <small>('+members.length+')</small></h3>'+relationshipRows(members,m=>relationshipCard(m,{roles:m.roles,periods:m.periods.map(period).join(' · ')}))+'</div>':'';}).join('')+'</section>';
 }
@@ -30,4 +30,4 @@ export function memberUpdate(kind,rows,originalKind,originalRows){
  const members=normalizeMembers(rows);
  return kind===originalKind&&JSON.stringify(members)===JSON.stringify(originalRows)?null:{artist_kind:kind,members};
 }
-export function mountMembersEditor(host,input,search=null){return mountCompactRelationshipEditor(host,input,{search,normalize:normalizeMembers,member:true});}
+export function mountMembersEditor(host,input,search=null,photo=null){return mountCompactRelationshipEditor(host,input,{search,normalize:normalizeMembers,member:true,photo});}

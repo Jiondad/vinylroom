@@ -1,14 +1,14 @@
-import {normalizeRelated,mountRelatedEditor} from './artist-relationship-links.js';
+import {normalizeRelated,mountRelatedEditor,relationshipPhotoFields,relationshipPhotoPath} from './artist-relationship-links.js';
 import {normalizeMembers,mountMembersEditor,memberUpdate} from './artist-members.js';
 import {NAS_URL} from './config.js';
 import {invalidateArtistProfiles} from './artist-image-core.js';
-import {ARTIST_MANIFEST} from './artist-gallery-integration.js';
+import {ARTIST_MANIFEST,ARTIST_ASSETS} from './artist-gallery-integration.js';
 
 const base=NAS_URL+'/v2/artist-profiles/';
 const node=(tag,label)=>{const el=document.createElement(tag);if(label)el.textContent=label;return el;};
 
 export function createArtistProfileManager({allowed,token,onUpdated}){
- let available=false,lastCheck=0,introAvailable=false,membersAvailable=false,relationshipAvailable=false;
+ let available=false,lastCheck=0,introAvailable=false,membersAvailable=false,relationshipAvailable=false,relationshipPhotosAvailable=false;
  async function request(path,{body=null}={}){
   if(!allowed())throw Error('관리자 권한이 필요합니다.');
   const access=await token();
@@ -21,7 +21,7 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
  async function verify(){
   if(!allowed()){available=false;return false;}
   if(available&&Date.now()-lastCheck<30000)return true;
-  try{const data=await request('capabilities');available=data.enabled===true&&data.schema===1;introAvailable=data.introduction===true;membersAvailable=data.members===true&&data.artist_kind===true;relationshipAvailable=data.relationship_links===true;lastCheck=Date.now();}
+  try{const data=await request('capabilities');available=data.enabled===true&&data.schema===1;introAvailable=data.introduction===true;membersAvailable=data.members===true&&data.artist_kind===true;relationshipAvailable=data.relationship_links===true;relationshipPhotosAvailable=data.relationship_photos===true;lastCheck=Date.now();}
   catch{available=false;}
   return available;
  }
@@ -94,7 +94,8 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
   const intro=node('textarea');intro.rows=4;intro.maxLength=2000;intro.value=data.introduction||'';intro.disabled=!introAvailable;
   intro.setAttribute('aria-label','아티스트 소개');if(!introAvailable)intro.title='NAS 소개 저장 연결이 필요합니다.';
   introLabel.append(intro);let originalIntro=intro.value;
-  const canLink=relationshipAvailable;
+  const canLink=relationshipAvailable;let photoBusy=false;
+  const photoOptions=kind=>relationshipPhotosAvailable?{allowed:()=>!photoBusy&&(kind!=='members'||(originalKind==='group'&&kindSelect.value==='group')),assetUrl:path=>ARTIST_ASSETS+relationshipPhotoPath(path),save:(name,file)=>changeRelationshipPhoto(kind,name,file)}:null;
   const searchRelationships=async q=>{const result=await request('candidates'+params+'&relationship_query='+encodeURIComponent(q));if(!Array.isArray(result.items))throw Error('검색 응답 형식을 확인하세요.');return result.items;};
   const kindPanel=node('fieldset');kindPanel.className='vr-ae-kind-panel';kindPanel.hidden=!membersAvailable;
   const kindLabel=node('label','아티스트 유형'),kindSelect=node('select');
@@ -103,14 +104,14 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
   kindSelect.value=originalKind;kindLabel.append(kindSelect);kindPanel.append(kindLabel);
   const membersHost=node('div');membersHost.className='vr-ae-members-host';kindPanel.append(membersHost);
   let originalMembers=null,membersEditor=null;
-  if(membersAvailable){try{originalMembers=normalizeMembers(data.members);membersEditor=mountMembersEditor(membersHost,originalMembers,canLink?searchRelationships:null);}catch{kindPanel.hidden=true;membersAvailable=false;message.textContent='멤버 응답 형식을 확인하세요. 사진과 소개는 편집할 수 있습니다.';}}
+  if(membersAvailable){try{originalMembers=normalizeMembers(data.members);membersEditor=mountMembersEditor(membersHost,data.members,canLink?searchRelationships:null,photoOptions('members'));}catch{kindPanel.hidden=true;membersAvailable=false;message.textContent='멤버 응답 형식을 확인하세요. 사진과 소개는 편집할 수 있습니다.';}}
   const syncKind=()=>{membersHost.hidden=kindSelect.value!=='group';};kindSelect.onchange=syncKind;syncKind();
   const memberSave=node('button','유형·멤버 저장');memberSave.type='button';memberSave.className='vr-ae-member-save';kindPanel.append(memberSave);
   const relatedPanel=node('fieldset');relatedPanel.className='vr-ae-kind-panel';relatedPanel.hidden=!canLink;
   relatedPanel.append(node('legend','관련 아티스트 관리'));
   const relatedHost=node('div');relatedPanel.append(relatedHost);
   let originalRelated=null,relatedEditor=null;
-  if(canLink){try{originalRelated=normalizeRelated(data.related_artists);relatedEditor=mountRelatedEditor(relatedHost,originalRelated,searchRelationships);}catch{relatedPanel.hidden=true;message.textContent='관련 아티스트 응답을 확인하세요.';}}
+  if(canLink){try{originalRelated=normalizeRelated(data.related_artists);relatedEditor=mountRelatedEditor(relatedHost,data.related_artists,searchRelationships,photoOptions('related_artists'));}catch{relatedPanel.hidden=true;message.textContent='관련 아티스트 응답을 확인하세요.';}}
   const relatedSave=node('button','관련 아티스트 저장');relatedSave.type='button';relatedPanel.append(relatedSave);
   const controls=node('div');controls.className='vr-ae-editor-actions';
   const save=node('button','기본 정보 저장');save.type='submit';
@@ -128,30 +129,46 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
   form.append(header,tabs,...tabItems.map(t=>t[2]),footer);cover.append(form);
   const focus=document.activeElement;document.body.append(cover);
   const onKey=e=>{if(e.key==='Escape')close();};
-  function close(force=false){if(force!==true&&hasUnsaved()&&!window.confirm('저장하지 않은 변경사항이 있습니다. 닫을까요?'))return;++selection;resetPhoto();document.removeEventListener('keydown',onKey);cover.remove();focus?.focus?.();}
+  function close(force=false){if(photoBusy){message.textContent='사진 저장 중입니다.';return;}if(force!==true&&hasUnsaved()&&!window.confirm('저장하지 않은 변경사항이 있습니다. 닫을까요?'))return;++selection;resetPhoto();document.removeEventListener('keydown',onKey);cover.remove();focus?.focus?.();}
   function hasUnsaved(){if(chosenFile||autoSelect?.value==='auto'||intro.value!==originalIntro)return true;try{return !!(membersEditor&&memberUpdate(kindSelect.value,kindSelect.value==='group'?membersEditor.value():[],originalKind,originalMembers))||!!(relatedEditor&&JSON.stringify(relatedEditor.value())!==JSON.stringify(originalRelated));}catch{return true;}}
   // Editing is explicit-close only: a text selection ending outside the form can synthesize a backdrop click.
   topClose.onclick=close;cancel.onclick=close;document.addEventListener('keydown',onKey);cancel.focus();
+  async function changeRelationshipPhoto(kind,name,file){
+   if(photoBusy||!relationshipPhotosAvailable)throw Error('사진 저장 상태를 확인하세요.');
+   photoBusy=true;kindPanel.disabled=true;relatedPanel.disabled=true;for(const b of controls.querySelectorAll('button'))b.disabled=true;
+   try{
+    if(!await verify())throw Error('관리자 권한을 다시 확인하세요.');
+    const body={action:file?'relationship_photo_set':'relationship_photo_clear',relationship_kind:kind,relationship_name:name};
+    if(file){const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));body.image=btoa(binary);body.admin_upload=true;}
+    const result=await request('manage'+params,{body});
+    if(file&&!relationshipPhotoFields(result).photo_thumb)throw Error('사진 저장 응답을 확인하세요. 편집창을 다시 열어 확인할 수 있습니다.');
+    if(!file&&(result.photo_thumb!==null||result.photo_full!==null))throw Error('사진 삭제 응답을 확인하세요.');
+    message.textContent=file?'사진 저장 완료':'사진 삭제 완료';
+    try{await onUpdated();}catch{message.textContent='사진 저장 상태는 반영되었습니다. 화면을 새로고침하세요.';}
+    return result;
+   }finally{photoBusy=false;kindPanel.disabled=false;relatedPanel.disabled=false;for(const b of controls.querySelectorAll('button'))b.disabled=false;}
+  }
   async function change(action,extra={},introUpdate=null){
+   if(photoBusy)return;
    if(!await verify())throw Error('관리자 권한을 다시 확인하세요.');
    kindPanel.disabled=true;relatedPanel.disabled=true;for(const button of controls.querySelectorAll('button'))button.disabled=true;
    try{for(const step of (action==='delete'?['hide','clear']:action==='auto'?['clear','unhide']:[action]))await request('manage'+params,{body:{action:step,...extra}});if(introUpdate!==null&&action!=='introduction')await request('manage'+params,{body:{action:'introduction',introduction:introUpdate}});invalidateArtistProfiles(ARTIST_MANIFEST);if(action!=='delete')originalIntro=intro.value;resetPhoto();file.value='';if(autoSelect)autoSelect.value='';message.textContent='기본 정보 저장 완료';await onUpdated();for(const button of controls.querySelectorAll('button'))button.disabled=false;}
    catch(err){message.textContent=err.message;}finally{kindPanel.disabled=false;relatedPanel.disabled=false;for(const button of controls.querySelectorAll('button'))button.disabled=false;}
   }
-  memberSave.onclick=async()=>{if(!membersAvailable||!membersEditor)return;let payload;try{payload=memberUpdate(kindSelect.value,kindSelect.value==='group'?membersEditor.value():[],originalKind,originalMembers);if(!payload){message.textContent='변경할 유형이나 멤버 정보가 없습니다.';return;}}catch(err){message.textContent=err.message;return;}
+  memberSave.onclick=async()=>{if(photoBusy||!membersAvailable||!membersEditor)return;let payload;try{payload=memberUpdate(kindSelect.value,kindSelect.value==='group'?membersEditor.value():[],originalKind,originalMembers);if(!payload){message.textContent='변경할 유형이나 멤버 정보가 없습니다.';return;}}catch(err){message.textContent=err.message;return;}
    kindPanel.disabled=true;relatedPanel.disabled=true;for(const b of controls.querySelectorAll('button'))b.disabled=true;
-   try{await request('manage'+params,{body:{action:'members',...payload}});originalKind=payload.artist_kind;if(payload.members)originalMembers=payload.members;message.textContent='유형·멤버 저장 완료';await onUpdated();}
+   try{await request('manage'+params,{body:{action:'members',...payload}});originalKind=payload.artist_kind;if(payload.members){originalMembers=payload.members;membersEditor.setSavedRows(payload.members);}message.textContent='유형·멤버 저장 완료';await onUpdated();}
    catch(err){message.textContent=err.message;}finally{kindPanel.disabled=false;relatedPanel.disabled=false;for(const b of controls.querySelectorAll('button'))b.disabled=false;}
   };
-  relatedSave.onclick=async()=>{if(!relatedEditor)return;let rows;try{rows=relatedEditor.value();if(JSON.stringify(rows)===JSON.stringify(originalRelated)){message.textContent='변경할 관련 아티스트가 없습니다.';return;}}catch(e){message.textContent=e.message;return;}
+  relatedSave.onclick=async()=>{if(photoBusy||!relatedEditor)return;let rows;try{rows=relatedEditor.value();if(JSON.stringify(rows)===JSON.stringify(originalRelated)){message.textContent='변경할 관련 아티스트가 없습니다.';return;}}catch(e){message.textContent=e.message;return;}
    relatedPanel.disabled=true;kindPanel.disabled=true;for(const b of controls.querySelectorAll('button'))b.disabled=true;
-   try{await request('manage'+params,{body:{action:'related_artists',related_artists:rows}});originalRelated=rows;message.textContent='관련 아티스트 저장 완료';await onUpdated();}
+   try{await request('manage'+params,{body:{action:'related_artists',related_artists:rows}});originalRelated=rows;relatedEditor.setSavedRows(rows);message.textContent='관련 아티스트 저장 완료';await onUpdated();}
    catch(e){message.textContent=e.message;}finally{relatedPanel.disabled=false;kindPanel.disabled=false;for(const b of controls.querySelectorAll('button'))b.disabled=false;}
   };
   hide.onclick=()=>void change('delete');
   form.onsubmit=async event=>{
    event.preventDefault();
-   if(activeTab!=='basic')return;
+   if(photoBusy||activeTab!=='basic')return;
    const picked=chosenFile;
    const changedIntro=introAvailable&&intro.value!==originalIntro?intro.value:null;
    if(autoSelect?.value==='auto'){await change('auto',{},changedIntro);return;}
