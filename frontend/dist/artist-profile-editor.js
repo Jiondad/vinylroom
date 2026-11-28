@@ -130,7 +130,8 @@ export function createArtistProfileManager({allowed,token,onUpdated}){
   const onKey=e=>{if(e.key==='Escape')close();};
   function close(force=false){if(force!==true&&hasUnsaved()&&!window.confirm('저장하지 않은 변경사항이 있습니다. 닫을까요?'))return;++selection;resetPhoto();document.removeEventListener('keydown',onKey);cover.remove();focus?.focus?.();}
   function hasUnsaved(){if(chosenFile||autoSelect?.value==='auto'||intro.value!==originalIntro)return true;try{return !!(membersEditor&&memberUpdate(kindSelect.value,kindSelect.value==='group'?membersEditor.value():[],originalKind,originalMembers))||!!(relatedEditor&&JSON.stringify(relatedEditor.value())!==JSON.stringify(originalRelated));}catch{return true;}}
-  topClose.onclick=close;cancel.onclick=close;cover.onclick=e=>{if(e.target===cover)close();};document.addEventListener('keydown',onKey);cancel.focus();
+  // Editing is explicit-close only: a text selection ending outside the form can synthesize a backdrop click.
+  topClose.onclick=close;cancel.onclick=close;document.addEventListener('keydown',onKey);cancel.focus();
   async function change(action,extra={},introUpdate=null){
    if(!await verify())throw Error('관리자 권한을 다시 확인하세요.');
    kindPanel.disabled=true;relatedPanel.disabled=true;for(const button of controls.querySelectorAll('button'))button.disabled=true;
