@@ -73,7 +73,8 @@ export function stageRelationshipRow(rows,name,target,defaults={},max=150){
  return {name,...defaults,...(t?{catalog_target:t}:{})};
 }
 // Role choices use the existing comma-separated roles field; no NAS schema change.
-export const MEMBER_ROLE_OPTIONS=Object.freeze(['Vocal','Guitar','Lead Guitar','Rhythm Guitar','Acoustic Guitar','Slide Guitar','Mandolin','Bass','Drums','Piano','Keyboard','Synth','Percussion','Violin','Flute','Harmonica','Sitar','Chorus']);
+export const MEMBER_ROLE_GROUPS=Object.freeze([["보컬",["Vocal","Chorus"]],["현악기",["Guitar","Lead Guitar","Rhythm Guitar","Acoustic Guitar","Slide Guitar","Pedal Steel Guitar","Bass","Double Bass","Mandolin","Banjo","Sitar","Violin","Cello"]],["건반악기",["Piano","Keyboard","Synth","Organ","Mellotron","Accordion"]],["타악기",["Drums","Percussion"]],["관악기",["Flute","Harmonica","Saxophone","Trumpet","Trombone","Clarinet"]],["기타",["Programming"]]].map(([label,roles])=>Object.freeze([label,Object.freeze(roles)])));
+export const MEMBER_ROLE_OPTIONS=Object.freeze(MEMBER_ROLE_GROUPS.flatMap(([,roles])=>roles));
 export function memberRoleKey(value){const k=String(value??'').trim().normalize('NFC').toLowerCase();return k==='rythm guitar'?'rhythm guitar':k;}
 export function memberRoleParts(value){return String(value??'').split(',').map(v=>v.trim()).filter(Boolean);}
 export function toggleMemberRole(value,role){
@@ -88,12 +89,12 @@ export function mountMemberRolePicker(host,value,onChange){
  const doc=host.ownerDocument,node=(tag,t)=>{const e=doc.createElement(tag);if(t)e.textContent=t;return e;};
  const button=(label,action)=>{const b=node('button',label);b.type='button';b.onclick=action;return b;};
  const group=node('fieldset');group.className='artist-role-picker';group.append(node('legend','담당 파트 · 복수 선택'));
- const grid=node('div');grid.className='artist-role-choices';const message=node('small');message.className='artist-role-message';message.setAttribute('role','status');
+ const grid=node('div');grid.className='artist-role-groups';const message=node('small');message.className='artist-role-message';message.setAttribute('role','status');
  const custom=node('div');custom.className='artist-role-custom';const entry=node('input');entry.type='text';entry.placeholder='기타 파트 직접 입력';entry.setAttribute('aria-label','기타 담당 파트');entry.maxLength=150;
  let current=String(value??'');const choices=[...MEMBER_ROLE_OPTIONS];const known=new Set(choices.map(memberRoleKey));
  for(const part of memberRoleParts(current)){const key=memberRoleKey(part);if(!known.has(key)){choices.push(part);known.add(key);}}
  function update(role){try{const next=toggleMemberRole(current,role);current=next;onChange(next);message.textContent='';draw();return true;}catch(e){message.textContent=e.message;return false;}}
- function draw(){const selected=new Set(memberRoleParts(current).map(memberRoleKey));grid.replaceChildren();for(const role of choices){const b=button(role,()=>{if(update(role))Array.from(grid.children).find(x=>x.textContent===role)?.focus();});b.className='artist-role-chip';b.setAttribute('aria-pressed',String(selected.has(memberRoleKey(role))));grid.append(b);}}
+ function draw(){const selected=new Set(memberRoleParts(current).map(memberRoleKey)),standard=new Set(MEMBER_ROLE_OPTIONS.map(memberRoleKey));grid.replaceChildren();const extra=choices.filter(v=>!standard.has(memberRoleKey(v)));const sections=[...MEMBER_ROLE_GROUPS,...(extra.length?[['직접 입력',extra]]:[])];for(const [label,roles] of sections){const section=node('div');section.className='artist-role-group';section.setAttribute('role','group');section.setAttribute('aria-label',label);const heading=node('span',label);heading.className='artist-role-group-label';const chips=node('div');chips.className='artist-role-choices';for(const role of roles){const b=button(role,()=>{if(update(role))Array.from(grid.querySelectorAll('.artist-role-chip')).find(x=>x.textContent===role)?.focus();});b.className='artist-role-chip';b.setAttribute('aria-pressed',String(selected.has(memberRoleKey(role))));chips.append(b);}section.append(heading,chips);grid.append(section);}}
  function add(){const role=entry.value.trim(),key=memberRoleKey(role);if(!key){message.textContent='파트 이름을 입력하세요.';return;}if(memberRoleParts(current).some(v=>memberRoleKey(v)===key)){message.textContent='이미 선택된 파트입니다.';return;}const existing=choices.find(v=>memberRoleKey(v)===key);if(!existing){choices.push(role);known.add(key);}if(update(existing||role)){entry.value='';entry.focus();}else if(!existing){choices.pop();known.delete(key);}}
  const addButton=button('추가',add);entry.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();e.stopPropagation();add();}};custom.append(entry,addButton);group.append(grid,custom,message);host.append(group);draw();
 }
