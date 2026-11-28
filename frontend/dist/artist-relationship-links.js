@@ -73,7 +73,7 @@ export function stageRelationshipRow(rows,name,target,defaults={},max=150){
  return {name,...defaults,...(t?{catalog_target:t}:{})};
 }
 // Role choices use the existing comma-separated roles field; no NAS schema change.
-export const MEMBER_ROLE_OPTIONS=Object.freeze(['Vocal','Guitar','Lead Guitar','Rhythm Guitar','Acoustic Guitar','Slide Guitar','Bass','Drums','Piano','Keyboard','Synth','Percussion','Violin','Flute','Harmonica','Sitar','Chorus']);
+export const MEMBER_ROLE_OPTIONS=Object.freeze(['Vocal','Guitar','Lead Guitar','Rhythm Guitar','Acoustic Guitar','Slide Guitar','Mandolin','Bass','Drums','Piano','Keyboard','Synth','Percussion','Violin','Flute','Harmonica','Sitar','Chorus']);
 export function memberRoleKey(value){const k=String(value??'').trim().normalize('NFC').toLowerCase();return k==='rythm guitar'?'rhythm guitar':k;}
 export function memberRoleParts(value){return String(value??'').split(',').map(v=>v.trim()).filter(Boolean);}
 export function toggleMemberRole(value,role){
